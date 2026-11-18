@@ -1,0 +1,25 @@
+{
+  "settings": {
+    "language": "de",
+    "terrainMaxZoom": 14,
+    "basemapMaxZoom": 15,
+    "skiMaxZoom": 16,
+    "contourInterval": 20,
+    "contourIndexInterval": 100
+  },
+  "resorts": [
+    {
+      "id": "oberstdorf-kleinwalsertal",
+      "name": "Oberstdorf – Kleinwalsertal",
+      "skiAreas": [
+        "Kleinwalsertal-Oberstdorf",
+        "Skigebiet Fellhorn/Kanzelwand",
+        "Skigebiet Ifen",
+        "Skigebiet Nebelhorn",
+        "Skigebiet Söllereck",
+        "Skigebiet Heuberg Arena/Walmendingerhorn"
+      ],
+      "marginKm": 2
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "openskimap-local",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local tile server and beginner ski route planner built from OpenSkiData",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:ski": "node scripts/build.mjs --only=ski",
+    "tiles": "tileserver-gl --config tileserver/config.json --bind 127.0.0.1 --port 8080",
+    "planner": "node planner/server.mjs",
+    "start": "node scripts/start.mjs"
+  },
+  "dependencies": {
+    "@mapbox/vector-tile": "3.0.0",
+    "@protomaps/basemaps": "5.7.2",
+    "concaveman": "2.0.0",
+    "d3-contour": "4.0.3",
+    "maplibre-gl": "6.19.0",
+    "pbf": "5.2.0",
+    "pmtiles": "4.4.1",
+    "sharp": "0.35.5",
+    "tileserver-gl": "5.7.0"
+  },
+  "overrides": {
+    "@maplibre/maplibre-gl-native": "6.5.0-pre.1"
+  }
+}

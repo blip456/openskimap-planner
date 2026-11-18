@@ -1,0 +1,744 @@
+{
+  "version": 8,
+  "name": "Ski overlay (runs by steepness)",
+  "center": [
+    10.22774,
+    47.369845
+  ],
+  "zoom": 12,
+  "glyphs": "{fontstack}/{range}.pbf",
+  "sources": {
+    "ski": {
+      "type": "vector",
+      "url": "pmtiles://{ski}",
+      "attribution": "Data: OpenSkiData / OpenSkiMap.org, © OpenStreetMap contributors (ODbL), Skimap.org, Who's On First, © Mapterhorn, Protomaps"
+    }
+  },
+  "layers": [
+    {
+      "id": "ski-run-areas",
+      "type": "fill",
+      "source": "ski",
+      "source-layer": "runs",
+      "minzoom": 11,
+      "filter": [
+        "==",
+        [
+          "geometry-type"
+        ],
+        "Polygon"
+      ],
+      "paint": {
+        "fill-color": [
+          "get",
+          "color"
+        ],
+        "fill-opacity": 0.18
+      }
+    },
+    {
+      "id": "ski-runs-nordic",
+      "type": "line",
+      "source": "ski",
+      "source-layer": "runs",
+      "minzoom": 10,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "nordic"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#2a8c8c",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.48,
+          14,
+          1.2,
+          17,
+          3
+        ],
+        "line-dasharray": [
+          2,
+          1.5
+        ],
+        "line-opacity": 0.85
+      }
+    },
+    {
+      "id": "ski-runs-other",
+      "type": "line",
+      "source": "ski",
+      "source-layer": "runs",
+      "minzoom": 10,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ],
+        [
+          "in",
+          [
+            "get",
+            "kind"
+          ],
+          [
+            "literal",
+            [
+              "skitour",
+              "sled",
+              "hike",
+              "other"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#8a6d3b",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.4,
+          14,
+          1,
+          17,
+          2.5
+        ],
+        "line-dasharray": [
+          1,
+          2
+        ],
+        "line-opacity": 0.8
+      }
+    },
+    {
+      "id": "ski-runs-casing",
+      "type": "line",
+      "source": "ski",
+      "source-layer": "runs",
+      "minzoom": 10,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ],
+        [
+          "any",
+          [
+            "==",
+            [
+              "get",
+              "kind"
+            ],
+            "downhill"
+          ],
+          [
+            "==",
+            [
+              "get",
+              "kind"
+            ],
+            "connection"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#ffffff",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          1.2800000000000002,
+          14,
+          3.2,
+          17,
+          8
+        ],
+        "line-opacity": 0.9
+      }
+    },
+    {
+      "id": "ski-runs-connection",
+      "type": "line",
+      "source": "ski",
+      "source-layer": "runs",
+      "minzoom": 10,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "connection"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#5f6b75",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.5599999999999999,
+          14,
+          1.4,
+          17,
+          3.5
+        ],
+        "line-dasharray": [
+          1.5,
+          1.5
+        ]
+      }
+    },
+    {
+      "id": "ski-runs-slope",
+      "type": "line",
+      "source": "ski",
+      "source-layer": "run_slopes",
+      "minzoom": 10,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": [
+          "match",
+          [
+            "get",
+            "cls"
+          ],
+          "green",
+          "#2e9d3a",
+          "blue",
+          "#1f6fd6",
+          "red",
+          "#d8251d",
+          "black",
+          "#111111",
+          "#7d7d7d"
+        ],
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.8,
+          14,
+          2,
+          17,
+          5
+        ]
+      }
+    },
+    {
+      "id": "ski-lifts-casing",
+      "type": "line",
+      "source": "ski",
+      "source-layer": "lifts",
+      "minzoom": 10,
+      "layout": {
+        "line-cap": "round"
+      },
+      "paint": {
+        "line-color": "#ffffff",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.96,
+          14,
+          2.4,
+          17,
+          6
+        ],
+        "line-opacity": 0.9
+      }
+    },
+    {
+      "id": "ski-lifts",
+      "type": "line",
+      "source": "ski",
+      "source-layer": "lifts",
+      "minzoom": 10,
+      "filter": [
+        "!",
+        [
+          "==",
+          [
+            "get",
+            "liftClass"
+          ],
+          "drag"
+        ]
+      ],
+      "layout": {
+        "line-cap": "round"
+      },
+      "paint": {
+        "line-color": "#7b1fa2",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.48,
+          14,
+          1.2,
+          17,
+          3
+        ]
+      }
+    },
+    {
+      "id": "ski-lifts-drag",
+      "type": "line",
+      "source": "ski",
+      "source-layer": "lifts",
+      "minzoom": 10,
+      "filter": [
+        "==",
+        [
+          "get",
+          "liftClass"
+        ],
+        "drag"
+      ],
+      "paint": {
+        "line-color": "#7b1fa2",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.48,
+          14,
+          1.2,
+          17,
+          3
+        ],
+        "line-dasharray": [
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "id": "ski-lift-stations",
+      "type": "circle",
+      "source": "ski",
+      "source-layer": "spots",
+      "minzoom": 13,
+      "filter": [
+        "==",
+        [
+          "get",
+          "spotType"
+        ],
+        "lift_station"
+      ],
+      "paint": {
+        "circle-color": "#ffffff",
+        "circle-stroke-color": "#7b1fa2",
+        "circle-stroke-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          1,
+          17,
+          2.5
+        ],
+        "circle-radius": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          2.5,
+          17,
+          6
+        ]
+      }
+    },
+    {
+      "id": "ski-runs-oneway",
+      "type": "symbol",
+      "source": "ski",
+      "source-layer": "runs",
+      "minzoom": 15,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "downhill"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "oneway"
+          ],
+          true
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "symbol-spacing": 140,
+        "text-field": "›",
+        "text-font": [
+          "Noto Sans Medium"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          15,
+          22,
+          18,
+          28
+        ],
+        "text-keep-upright": false,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true
+      },
+      "paint": {
+        "text-color": [
+          "get",
+          "color"
+        ],
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "ski-lifts-direction",
+      "type": "symbol",
+      "source": "ski",
+      "source-layer": "lifts",
+      "minzoom": 13,
+      "layout": {
+        "symbol-placement": "line",
+        "symbol-spacing": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          90,
+          17,
+          160
+        ],
+        "text-field": [
+          "case",
+          [
+            "==",
+            [
+              "get",
+              "direction"
+            ],
+            "both"
+          ],
+          "‹ ›",
+          "›"
+        ],
+        "text-font": [
+          "Noto Sans Medium"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          18,
+          17,
+          26
+        ],
+        "text-keep-upright": false,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+        "text-letter-spacing": 0.1
+      },
+      "paint": {
+        "text-color": "#7b1fa2",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2.2
+      }
+    },
+    {
+      "id": "ski-runs-label",
+      "type": "symbol",
+      "source": "ski",
+      "source-layer": "runs",
+      "minzoom": 13,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ],
+        [
+          "!=",
+          [
+            "coalesce",
+            [
+              "get",
+              "label"
+            ],
+            ""
+          ],
+          ""
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "symbol-spacing": 300,
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "label"
+          ],
+          ""
+        ],
+        "text-font": [
+          "Noto Sans Medium"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          12,
+          17,
+          17
+        ],
+        "text-max-angle": 35
+      },
+      "paint": {
+        "text-color": [
+          "case",
+          [
+            "==",
+            [
+              "get",
+              "kind"
+            ],
+            "nordic"
+          ],
+          "#2a8c8c",
+          [
+            "get",
+            "color"
+          ]
+        ],
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2.2
+      }
+    },
+    {
+      "id": "ski-lifts-label",
+      "type": "symbol",
+      "source": "ski",
+      "source-layer": "lifts",
+      "minzoom": 13,
+      "filter": [
+        "!=",
+        [
+          "coalesce",
+          [
+            "get",
+            "label"
+          ],
+          ""
+        ],
+        ""
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "symbol-spacing": 400,
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "label"
+          ],
+          ""
+        ],
+        "text-font": [
+          "Noto Sans Medium"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          12,
+          17,
+          17
+        ],
+        "text-max-angle": 30
+      },
+      "paint": {
+        "text-color": "#7b1fa2",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2.2
+      }
+    },
+    {
+      "id": "ski-areas-label",
+      "type": "symbol",
+      "source": "ski",
+      "source-layer": "ski_areas_labels",
+      "minzoom": 9,
+      "maxzoom": 13,
+      "layout": {
+        "text-field": [
+          "get",
+          "name"
+        ],
+        "text-font": [
+          "Noto Sans Medium"
+        ],
+        "text-size": 13
+      },
+      "paint": {
+        "text-color": "#333333",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2
+      }
+    }
+  ]
+}

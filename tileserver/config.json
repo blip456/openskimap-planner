@@ -1,0 +1,98 @@
+{
+  "options": {
+    "paths": {
+      "root": "",
+      "fonts": "fonts",
+      "sprites": "sprites",
+      "styles": "styles",
+      "pmtiles": "data",
+      "mbtiles": "data"
+    },
+    "formatOptions": {
+      "jpeg": {
+        "quality": 88,
+        "progressive": false
+      },
+      "png": {
+        "compressionLevel": 6
+      }
+    },
+    "allowedHosts": "localhost,127.0.0.1",
+    "maxScaleFactor": 3,
+    "maxSize": 2048,
+    "tileMargin": 64,
+    "serveAllFonts": true,
+    "serveStaticMaps": true,
+    "staticAttributionText": "OpenSkiData / OpenSkiMap.org, © OpenStreetMap contributors, Skimap.org, Who's On First, © Mapterhorn"
+  },
+  "styles": {
+    "ski-overlay": {
+      "style": "ski-overlay.json",
+      "tilejson": {
+        "type": "overlay",
+        "bounds": [
+          10.07804,
+          47.29991,
+          10.37744,
+          47.43978
+        ],
+        "format": "png"
+      }
+    },
+    "ski-overlay-steepness": {
+      "style": "ski-overlay-steepness.json",
+      "tilejson": {
+        "type": "overlay",
+        "bounds": [
+          10.07804,
+          47.29991,
+          10.37744,
+          47.43978
+        ],
+        "format": "png"
+      }
+    },
+    "ski-basemap": {
+      "style": "ski-basemap.json",
+      "tilejson": {
+        "type": "baselayer",
+        "bounds": [
+          10.07804,
+          47.29991,
+          10.37744,
+          47.43978
+        ],
+        "format": "jpg"
+      }
+    },
+    "ski-basemap-steepness": {
+      "style": "ski-basemap-steepness.json",
+      "tilejson": {
+        "type": "baselayer",
+        "bounds": [
+          10.07804,
+          47.29991,
+          10.37744,
+          47.43978
+        ],
+        "format": "jpg"
+      }
+    }
+  },
+  "data": {
+    "ski": {
+      "pmtiles": "ski.pmtiles"
+    },
+    "basemap": {
+      "pmtiles": "basemap.pmtiles"
+    },
+    "terrain": {
+      "pmtiles": "terrain.pmtiles",
+      "encoding": "terrarium",
+      "tileSize": 512
+    },
+    "contours": {
+      "pmtiles": "contours.pmtiles"
+    }
+  }
+}
