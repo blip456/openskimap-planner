@@ -12,7 +12,9 @@
     "build:ski": "node scripts/build.mjs --only=ski",
     "tiles": "tileserver-gl --config build/tileserver/config.json --bind 127.0.0.1 --port 8080",
     "planner": "node planner/server.mjs",
-    "start": "node scripts/start.mjs"
+    "start": "node scripts/start.mjs",
+    "ios:export": "node scripts/export-ios.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "@mapbox/vector-tile": "3.0.0",
