@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-if (!fs.existsSync(path.join(ROOT, 'tileserver/config.json'))) {
-  console.error('tileserver/config.json not found. Run "npm run build" first.');
+if (!fs.existsSync(path.join(ROOT, 'build/tileserver/config.json'))) {
+  console.error('build/tileserver/config.json not found. Run "npm run build" first.');
   process.exit(1);
 }
 

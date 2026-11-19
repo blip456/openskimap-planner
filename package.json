@@ -10,7 +10,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:ski": "node scripts/build.mjs --only=ski",
-    "tiles": "tileserver-gl --config tileserver/config.json --bind 127.0.0.1 --port 8080",
+    "tiles": "tileserver-gl --config build/tileserver/config.json --bind 127.0.0.1 --port 8080",
     "planner": "node planner/server.mjs",
     "start": "node scripts/start.mjs"
   },

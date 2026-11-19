@@ -92,11 +92,10 @@ export function featureDetails(data, id) {
   };
 
   // OSM often splits one signed piste into several sections: describe the whole piste too
-  if (type === 'run' && f.properties.name) {
+  // (`piste` / `pistes` are set by the build, see scripts/lib/piste.mjs)
+  if (type === 'run' && f.properties.piste) {
     const primary = String(f.properties.name).split(/,\s*/)[0];
-    const sections = data.runs.filter(
-      (r) => r.properties.kind === f.properties.kind && String(r.properties.name ?? '').split(/,\s*/).includes(primary),
-    );
+    const sections = data.runs.filter((r) => r.properties.pistes?.includes(`|${f.properties.piste}|`));
     if (sections.length > 1) {
       let length = 0;
       for (const s of sections) {

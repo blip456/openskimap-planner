@@ -1,0 +1,84 @@
+{
+  "id": "7a886694b658",
+  "name": "Parsenn - Heuberg - Roundtrip",
+  "folder": "Ski 2027",
+  "resort": "oberstdorf-kleinwalsertal",
+  "resortName": "Oberstdorf – Kleinwalsertal",
+  "points": [
+    [
+      10.177414555939833,
+      47.355005339656856
+    ],
+    [
+      10.162578772975166,
+      47.347636934830234
+    ],
+    [
+      10.166204285869753,
+      47.34292003207699
+    ],
+    [
+      10.156345470318655,
+      47.342365613332504
+    ],
+    [
+      10.158846279875462,
+      47.3452501716489
+    ],
+    [
+      10.1622054447231,
+      47.348360333237764
+    ]
+  ],
+  "options": {
+    "difficulties": [
+      "novice",
+      "easy"
+    ],
+    "harderRuns": "fallback",
+    "preferEasier": true,
+    "liftGroups": [
+      "gondola",
+      "chair_lift",
+      "rail",
+      "tbar",
+      "platter",
+      "rope_tow",
+      "magic_carpet"
+    ],
+    "avoidDragLifts": false,
+    "liftDown": false,
+    "liftDownGroups": [
+      "gondola",
+      "chair_lift",
+      "rail"
+    ],
+    "includeConnections": true,
+    "linkDistance": 150,
+    "liftWait": 120,
+    "speeds": {
+      "novice": 12,
+      "easy": 14,
+      "intermediate": 10,
+      "advanced": 7,
+      "expert": 5,
+      "freeride": 5,
+      "unknown": 12,
+      "connection": 8,
+      "walk": 3
+    }
+  },
+  "summary": {
+    "distance": 4154.263764319972,
+    "runDistance": 2047.9226955824995,
+    "liftCount": 2,
+    "duration": 1326.6086931497864,
+    "descent": 247.80000000000018,
+    "ascent": 427.29999999999995,
+    "hardest": null,
+    "legs": 5
+  },
+  "gpx": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<gpx version=\"1.1\" creator=\"openskimap-local planner\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n<metadata><name>Parsenn - Heuberg - Roundtrip</name><desc>Data: OpenSkiData / OpenSkiMap.org, © OpenStreetMap contributors (ODbL)</desc></metadata>\n<wpt lat=\"47.3550190\" lon=\"10.1774468\"><ele>1067.5</ele><name>A (start)</name><type>route point</type></wpt>\n<wpt lat=\"47.3476887\" lon=\"10.1625862\"><ele>1245.2</ele><name>B</name><type>route point</type></wpt>\n<wpt lat=\"47.3429191\" lon=\"10.1661753\"><ele>1128.9</ele><name>C</name><type>route point</type></wpt>\n<wpt lat=\"47.3423615\" lon=\"10.1563423\"><ele>1367.9</ele><name>D</name><type>route point</type></wpt>\n<wpt lat=\"47.3453191\" lon=\"10.1588971\"><ele>1310.8</ele><name>E</name><type>route point</type></wpt>\n<wpt lat=\"47.3483556\" lon=\"10.1622130\"><ele>1247.1</ele><name>F (destination)</name><type>route point</type></wpt>\n<wpt lat=\"47.3550190\" lon=\"10.1774468\"><ele>1067.5</ele><name>A→B 1. Take lift: 39 Parsennbahn</name><type>lift</type></wpt>\n<wpt lat=\"47.3485474\" lon=\"10.1620834\"><ele>1255.8</ele><name>A→B 2. Run: 1 Parsenn-Abfahrt (easy)</name><type>run</type></wpt>\n<wpt lat=\"47.3485820\" lon=\"10.1617221\"><ele>1255.9</ele><name>A→B 3. Run: 8 Skiweg Parsenn Heuberg (easy)</name><type>run</type></wpt>\n<wpt lat=\"47.3476887\" lon=\"10.1625862\"><ele>1245.2</ele><name>B→C 1. Run: 8 Skiweg Parsenn Heuberg (easy)</name><type>run</type></wpt>\n<wpt lat=\"47.3424312\" lon=\"10.1626463\"><ele>1186.1</ele><name>B→C 2. Run: 8 Heuberg-Abfahrt (easy)</name><type>run</type></wpt>\n<wpt lat=\"47.3429191\" lon=\"10.1661753\"><ele>1128.9</ele><name>C→D 1. Take lift: 42 Heubergbahn</name><type>lift</type></wpt>\n<wpt lat=\"47.3423615\" lon=\"10.1563423\"><ele>1367.9</ele><name>D→E 1. Run: Unnamed run (easy)</name><type>run</type></wpt>\n<wpt lat=\"47.3453191\" lon=\"10.1588971\"><ele>1310.8</ele><name>E→F 1. Run: Unnamed run (easy)</name><type>run</type></wpt>\n<trk><name>Parsenn - Heuberg - Roundtrip</name><type>skiing</type><trkseg>\n<trkpt lat=\"47.3550190\" lon=\"10.1774468\"><ele>1067.5</ele></trkpt>\n<trkpt lat=\"47.3548886\" lon=\"10.1771371\"><ele>1067.0</ele></trkpt>\n<trkpt lat=\"47.3546488\" lon=\"10.1765678\"><ele>1082.2</ele></trkpt>\n<trkpt lat=\"47.3544178\" lon=\"10.1760195\"><ele>1093.3</ele></trkpt>\n<trkpt lat=\"47.3538786\" lon=\"10.1747393\"><ele>1102.4</ele></trkpt>\n<trkpt lat=\"47.3531841\" lon=\"10.1730907\"><ele>1120.7</ele></trkpt>\n<trkpt lat=\"47.3527168\" lon=\"10.1719812\"><ele>1128.1</ele></trkpt>\n<trkpt lat=\"47.3521194\" lon=\"10.1705629\"><ele>1132.6</ele></trkpt>\n<trkpt lat=\"47.3511721\" lon=\"10.1683141\"><ele>1154.6</ele></trkpt>\n<trkpt lat=\"47.3505843\" lon=\"10.1669188\"><ele>1177.6</ele></trkpt>\n<trkpt lat=\"47.3496090\" lon=\"10.1646034\"><ele>1223.7</ele></trkpt>\n<trkpt lat=\"47.3491628\" lon=\"10.1635443\"><ele>1238.9</ele></trkpt>\n<trkpt lat=\"47.3487306\" lon=\"10.1625279\"><ele>1250.9</ele></trkpt>\n<trkpt lat=\"47.3485474\" lon=\"10.1620834\"><ele>1255.8</ele></trkpt>\n<trkpt lat=\"47.3485647\" lon=\"10.1619027\"><ele>1255.8</ele></trkpt>\n<trkpt lat=\"47.3485820\" lon=\"10.1617221\"><ele>1255.9</ele></trkpt>\n<trkpt lat=\"47.3485386\" lon=\"10.1617137\"><ele>1255.7</ele></trkpt>\n<trkpt lat=\"47.3484620\" lon=\"10.1617496\"><ele>1255.2</ele></trkpt>\n<trkpt lat=\"47.3484086\" lon=\"10.1618113\"><ele>1254.5</ele></trkpt>\n<trkpt lat=\"47.3483537\" lon=\"10.1619530\"><ele>1250.0</ele></trkpt>\n<trkpt lat=\"47.3483626\" lon=\"10.1621174\"><ele>1248.2</ele></trkpt>\n<trkpt lat=\"47.3483556\" lon=\"10.1622130\"><ele>1247.1</ele></trkpt>\n<trkpt lat=\"47.3482969\" lon=\"10.1621905\"><ele>1246.3</ele></trkpt>\n<trkpt lat=\"47.3482159\" lon=\"10.1622110\"><ele>1245.3</ele></trkpt>\n<trkpt lat=\"47.3481131\" lon=\"10.1622868\"><ele>1244.4</ele></trkpt>\n<trkpt lat=\"47.3480321\" lon=\"10.1623655\"><ele>1244.1</ele></trkpt>\n<trkpt lat=\"47.3479313\" lon=\"10.1624982\"><ele>1243.9</ele></trkpt>\n<trkpt lat=\"47.3478523\" lon=\"10.1625478\"><ele>1244.2</ele></trkpt>\n<trkpt lat=\"47.3476887\" lon=\"10.1625862\"><ele>1245.2</ele></trkpt>\n<trkpt lat=\"47.3474677\" lon=\"10.1625691\"><ele>1244.3</ele></trkpt>\n<trkpt lat=\"47.3472467\" lon=\"10.1625519\"><ele>1243.4</ele></trkpt>\n<trkpt lat=\"47.3470257\" lon=\"10.1625433\"><ele>1241.4</ele></trkpt>\n<trkpt lat=\"47.3468134\" lon=\"10.1625948\"><ele>1237.0</ele></trkpt>\n<trkpt lat=\"47.3466012\" lon=\"10.1626463\"><ele>1232.5</ele></trkpt>\n<trkpt lat=\"47.3463976\" lon=\"10.1626577\"><ele>1228.5</ele></trkpt>\n<trkpt lat=\"47.3461941\" lon=\"10.1626692\"><ele>1224.5</ele></trkpt>\n<trkpt lat=\"47.3459905\" lon=\"10.1626806\"><ele>1220.5</ele></trkpt>\n<trkpt lat=\"47.3458034\" lon=\"10.1626649\"><ele>1218.3</ele></trkpt>\n<trkpt lat=\"47.3456164\" lon=\"10.1626491\"><ele>1216.1</ele></trkpt>\n<trkpt lat=\"47.3454293\" lon=\"10.1626334\"><ele>1214.0</ele></trkpt>\n<trkpt lat=\"47.3452422\" lon=\"10.1626177\"><ele>1211.8</ele></trkpt>\n<trkpt lat=\"47.3450552\" lon=\"10.1626019\"><ele>1209.6</ele></trkpt>\n<trkpt lat=\"47.3448681\" lon=\"10.1625862\"><ele>1207.4</ele></trkpt>\n<trkpt lat=\"47.3446471\" lon=\"10.1625461\"><ele>1205.2</ele></trkpt>\n<trkpt lat=\"47.3444261\" lon=\"10.1625061\"><ele>1202.9</ele></trkpt>\n<trkpt lat=\"47.3442051\" lon=\"10.1624660\"><ele>1200.7</ele></trkpt>\n<trkpt lat=\"47.3440306\" lon=\"10.1624546\"><ele>1199.1</ele></trkpt>\n<trkpt lat=\"47.3438562\" lon=\"10.1624431\"><ele>1197.6</ele></trkpt>\n<trkpt lat=\"47.3436817\" lon=\"10.1624317\"><ele>1196.0</ele></trkpt>\n<trkpt lat=\"47.3434801\" lon=\"10.1624489\"><ele>1194.9</ele></trkpt>\n<trkpt lat=\"47.3432784\" lon=\"10.1624660\"><ele>1193.9</ele></trkpt>\n<trkpt lat=\"47.3430768\" lon=\"10.1624832\"><ele>1192.8</ele></trkpt>\n<trkpt lat=\"47.3429227\" lon=\"10.1625176\"><ele>1193.8</ele></trkpt>\n<trkpt lat=\"47.3427686\" lon=\"10.1625519\"><ele>1194.7</ele></trkpt>\n<trkpt lat=\"47.3425999\" lon=\"10.1625991\"><ele>1190.4</ele></trkpt>\n<trkpt lat=\"47.3424312\" lon=\"10.1626463\"><ele>1186.1</ele></trkpt>\n<trkpt lat=\"47.3423004\" lon=\"10.1626978\"><ele>1183.3</ele></trkpt>\n<trkpt lat=\"47.3421695\" lon=\"10.1627493\"><ele>1180.4</ele></trkpt>\n<trkpt lat=\"47.3420397\" lon=\"10.1628669\"><ele>1180.2</ele></trkpt>\n<trkpt lat=\"47.3420059\" lon=\"10.1629583\"><ele>1179.3</ele></trkpt>\n<trkpt lat=\"47.3420093\" lon=\"10.1631437\"><ele>1175.6</ele></trkpt>\n<trkpt lat=\"47.3420532\" lon=\"10.1633501\"><ele>1169.9</ele></trkpt>\n<trkpt lat=\"47.3421455\" lon=\"10.1636146\"><ele>1164.8</ele></trkpt>\n<trkpt lat=\"47.3421982\" lon=\"10.1637656\"><ele>1163.1</ele></trkpt>\n<trkpt lat=\"47.3422509\" lon=\"10.1639166\"><ele>1161.4</ele></trkpt>\n<trkpt lat=\"47.3423370\" lon=\"10.1641000\"><ele>1158.5</ele></trkpt>\n<trkpt lat=\"47.3424715\" lon=\"10.1642133\"><ele>1158.0</ele></trkpt>\n<trkpt lat=\"47.3426061\" lon=\"10.1643266\"><ele>1157.6</ele></trkpt>\n<trkpt lat=\"47.3427164\" lon=\"10.1643920\"><ele>1154.9</ele></trkpt>\n<trkpt lat=\"47.3428267\" lon=\"10.1644573\"><ele>1152.2</ele></trkpt>\n<trkpt lat=\"47.3429779\" lon=\"10.1646032\"><ele>1148.7</ele></trkpt>\n<trkpt lat=\"47.3429924\" lon=\"10.1647963\"><ele>1145.6</ele></trkpt>\n<trkpt lat=\"47.3430070\" lon=\"10.1649895\"><ele>1142.5</ele></trkpt>\n<trkpt lat=\"47.3429983\" lon=\"10.1651783\"><ele>1141.0</ele></trkpt>\n<trkpt lat=\"47.3429896\" lon=\"10.1653671\"><ele>1139.6</ele></trkpt>\n<trkpt lat=\"47.3428803\" lon=\"10.1655941\"><ele>1136.5</ele></trkpt>\n<trkpt lat=\"47.3428151\" lon=\"10.1657362\"><ele>1133.0</ele></trkpt>\n<trkpt lat=\"47.3427089\" lon=\"10.1659731\"><ele>1130.3</ele></trkpt>\n<trkpt lat=\"47.3426988\" lon=\"10.1662254\"><ele>1128.9</ele></trkpt>\n<trkpt lat=\"47.3427029\" lon=\"10.1663120\"><ele>1128.5</ele></trkpt>\n<trkpt lat=\"47.3428267\" lon=\"10.1663370\"><ele>1125.9</ele></trkpt>\n<trkpt lat=\"47.3428775\" lon=\"10.1663225\"><ele>1126.0</ele></trkpt>\n<trkpt lat=\"47.3429003\" lon=\"10.1662933\"><ele>1126.5</ele></trkpt>\n<trkpt lat=\"47.3429191\" lon=\"10.1661753\"><ele>1128.9</ele></trkpt>\n<trkpt lat=\"47.3429053\" lon=\"10.1659315\"><ele>1127.9</ele></trkpt>\n<trkpt lat=\"47.3428797\" lon=\"10.1654814\"><ele>1138.7</ele></trkpt>\n<trkpt lat=\"47.3427194\" lon=\"10.1626544\"><ele>1192.3</ele></trkpt>\n<trkpt lat=\"47.3425677\" lon=\"10.1599793\"><ele>1243.1</ele></trkpt>\n<trkpt lat=\"47.3424748\" lon=\"10.1583395\"><ele>1307.0</ele></trkpt>\n<trkpt lat=\"47.3424093\" lon=\"10.1571850\"><ele>1350.1</ele></trkpt>\n<trkpt lat=\"47.3423919\" lon=\"10.1568778\"><ele>1358.3</ele></trkpt>\n<trkpt lat=\"47.3423615\" lon=\"10.1563423\"><ele>1367.9</ele></trkpt>\n<trkpt lat=\"47.3424645\" lon=\"10.1563276\"><ele>1366.0</ele></trkpt>\n<trkpt lat=\"47.3426456\" lon=\"10.1564271\"><ele>1362.7</ele></trkpt>\n<trkpt lat=\"47.3428267\" lon=\"10.1565266\"><ele>1359.3</ele></trkpt>\n<trkpt lat=\"47.3429349\" lon=\"10.1565741\"><ele>1357.1</ele></trkpt>\n<trkpt lat=\"47.3430430\" lon=\"10.1566216\"><ele>1354.9</ele></trkpt>\n<trkpt lat=\"47.3432301\" lon=\"10.1566803\"><ele>1349.9</ele></trkpt>\n<trkpt lat=\"47.3434171\" lon=\"10.1567390\"><ele>1344.9</ele></trkpt>\n<trkpt lat=\"47.3435431\" lon=\"10.1567615\"><ele>1340.8</ele></trkpt>\n<trkpt lat=\"47.3436690\" lon=\"10.1567840\"><ele>1336.7</ele></trkpt>\n<trkpt lat=\"47.3438510\" lon=\"10.1568583\"><ele>1333.2</ele></trkpt>\n<trkpt lat=\"47.3440330\" lon=\"10.1569326\"><ele>1329.7</ele></trkpt>\n<trkpt lat=\"47.3441887\" lon=\"10.1570447\"><ele>1328.2</ele></trkpt>\n<trkpt lat=\"47.3443473\" lon=\"10.1572210\"><ele>1326.0</ele></trkpt>\n<trkpt lat=\"47.3445059\" lon=\"10.1573974\"><ele>1323.9</ele></trkpt>\n<trkpt lat=\"47.3446645\" lon=\"10.1575737\"><ele>1321.7</ele></trkpt>\n<trkpt lat=\"47.3447721\" lon=\"10.1577840\"><ele>1320.9</ele></trkpt>\n<trkpt lat=\"47.3448797\" lon=\"10.1579943\"><ele>1320.1</ele></trkpt>\n<trkpt lat=\"47.3449669\" lon=\"10.1582475\"><ele>1318.4</ele></trkpt>\n<trkpt lat=\"47.3450542\" lon=\"10.1585007\"><ele>1316.8</ele></trkpt>\n<trkpt lat=\"47.3451867\" lon=\"10.1586989\"><ele>1313.8</ele></trkpt>\n<trkpt lat=\"47.3453191\" lon=\"10.1588971\"><ele>1310.8</ele></trkpt>\n<trkpt lat=\"47.3454516\" lon=\"10.1590953\"><ele>1307.8</ele></trkpt>\n<trkpt lat=\"47.3456136\" lon=\"10.1592746\"><ele>1304.7</ele></trkpt>\n<trkpt lat=\"47.3457756\" lon=\"10.1594539\"><ele>1301.6</ele></trkpt>\n<trkpt lat=\"47.3459376\" lon=\"10.1596332\"><ele>1298.5</ele></trkpt>\n<trkpt lat=\"47.3460712\" lon=\"10.1598752\"><ele>1294.2</ele></trkpt>\n<trkpt lat=\"47.3462048\" lon=\"10.1601173\"><ele>1289.8</ele></trkpt>\n<trkpt lat=\"47.3463373\" lon=\"10.1602989\"><ele>1286.2</ele></trkpt>\n<trkpt lat=\"47.3464699\" lon=\"10.1604805\"><ele>1282.5</ele></trkpt>\n<trkpt lat=\"47.3466024\" lon=\"10.1606622\"><ele>1278.8</ele></trkpt>\n<trkpt lat=\"47.3467349\" lon=\"10.1608438\"><ele>1275.2</ele></trkpt>\n<trkpt lat=\"47.3467873\" lon=\"10.1610069\"><ele>1272.4</ele></trkpt>\n<trkpt lat=\"47.3468396\" lon=\"10.1611700\"><ele>1269.6</ele></trkpt>\n<trkpt lat=\"47.3468948\" lon=\"10.1613717\"><ele>1266.2</ele></trkpt>\n<trkpt lat=\"47.3469501\" lon=\"10.1615734\"><ele>1262.7</ele></trkpt>\n<trkpt lat=\"47.3470752\" lon=\"10.1617494\"><ele>1259.7</ele></trkpt>\n<trkpt lat=\"47.3472002\" lon=\"10.1619253\"><ele>1256.7</ele></trkpt>\n<trkpt lat=\"47.3473689\" lon=\"10.1621142\"><ele>1253.7</ele></trkpt>\n<trkpt lat=\"47.3475375\" lon=\"10.1623030\"><ele>1250.6</ele></trkpt>\n<trkpt lat=\"47.3475896\" lon=\"10.1624006\"><ele>1249.0</ele></trkpt>\n<trkpt lat=\"47.3476759\" lon=\"10.1624299\"><ele>1248.6</ele></trkpt>\n<trkpt lat=\"47.3477474\" lon=\"10.1624240\"><ele>1248.5</ele></trkpt>\n<trkpt lat=\"47.3478312\" lon=\"10.1623930\"><ele>1248.6</ele></trkpt>\n<trkpt lat=\"47.3478927\" lon=\"10.1622982\"><ele>1250.3</ele></trkpt>\n<trkpt lat=\"47.3480326\" lon=\"10.1620850\"><ele>1249.8</ele></trkpt>\n<trkpt lat=\"47.3481725\" lon=\"10.1618717\"><ele>1249.3</ele></trkpt>\n<trkpt lat=\"47.3482242\" lon=\"10.1618178\"><ele>1249.6</ele></trkpt>\n<trkpt lat=\"47.3482690\" lon=\"10.1619988\"><ele>1248.3</ele></trkpt>\n<trkpt lat=\"47.3483095\" lon=\"10.1621119\"><ele>1247.4</ele></trkpt>\n<trkpt lat=\"47.3483556\" lon=\"10.1622130\"><ele>1247.1</ele></trkpt>\n</trkseg></trk>\n</gpx>\n",
+  "createdAt": "2026-11-18T21:33:59.837Z",
+  "updatedAt": "2026-11-18T21:33:59.837Z"
+}

@@ -9,7 +9,7 @@ import { buildSkiAreas } from './ski-areas.mjs';
 import { DEFAULT_FOLDER, RouteStore, StoreError, slug } from './routes-store.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const DATA = path.join(ROOT, 'planner/data');
+const DATA = path.join(ROOT, 'build/planner');
 const PUBLIC = path.join(ROOT, 'planner/public');
 const PORT = Number(process.env.PLANNER_PORT ?? 8081);
 const HOST = process.env.PLANNER_HOST ?? '127.0.0.1';

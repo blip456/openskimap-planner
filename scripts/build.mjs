@@ -32,17 +32,21 @@ import {
 import { featureLabel, liftClass, liftDirection, orientUphill, runColor, runKind } from './lib/ski.mjs';
 import { buildBasemapStyle, buildOverlayStyle } from './lib/styles.mjs';
 import { slopeSegments } from './lib/slope.mjs';
+import { assignPistes } from './lib/piste.mjs';
 import { openPMTiles } from './lib/pmtiles-file.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
+// everything the build creates lives in build/ (safe to delete; `npm run build` recreates it)
+const BUILD = path.join(ROOT, 'build');
 const DIR = {
-  raw: path.join(ROOT, 'data/raw'),
-  work: path.join(ROOT, 'data/work'),
-  tsData: path.join(ROOT, 'tileserver/data'),
-  fonts: path.join(ROOT, 'tileserver/fonts'),
-  sprites: path.join(ROOT, 'tileserver/sprites'),
-  styles: path.join(ROOT, 'tileserver/styles'),
-  planner: path.join(ROOT, 'planner/data'),
+  raw: path.join(BUILD, 'downloads'),
+  work: path.join(BUILD, 'work'),
+  tileserver: path.join(BUILD, 'tileserver'),
+  tsData: path.join(BUILD, 'tileserver/data'),
+  fonts: path.join(BUILD, 'tileserver/fonts'),
+  sprites: path.join(BUILD, 'tileserver/sprites'),
+  styles: path.join(BUILD, 'tileserver/styles'),
+  planner: path.join(BUILD, 'planner'),
 };
 
 const OSD_BASE = 'https://tiles.openskimap.org';
@@ -319,6 +323,7 @@ async function extractResorts(resorts) {
     for (const layer of ['runs', 'lifts', 'spots']) {
       r.features[layer] = r.candidates[layer].filter((c) => bboxIntersects(c.bbox, r.bbox)).map((c) => c.feature);
     }
+    assignPistes(r.features.runs);
     r.skiAreaLabels = r.skiAreaFeatures
       .filter((f) => f.properties.name && bboxIntersects(geometryBbox(f.geometry), r.bbox))
       .filter((f) => f.properties.activities?.includes('downhill') || r.ids.has(f.properties.id))
@@ -807,7 +812,7 @@ function writeStylesAndConfig(resorts, settings) {
   if (hasTerrain) data.terrain = { pmtiles: 'terrain.pmtiles', encoding: 'terrarium', tileSize: 512 };
   if (hasContours) data.contours = { pmtiles: 'contours.pmtiles' };
 
-  writeJson(path.join(ROOT, 'tileserver/config.json'), {
+  writeJson(path.join(DIR.tileserver, 'config.json'), {
     options: {
       paths: {
         root: '',

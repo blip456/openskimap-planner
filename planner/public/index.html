@@ -42,6 +42,17 @@
       <section id="result" hidden>
         <div id="summary"></div>
         <ul id="warnings"></ul>
+        <div id="route-profile">
+          <div class="route-profile-head">
+            <span class="route-profile-title">Gradient profile</span>
+            <div id="profile-color" class="segmented compact" role="group" aria-label="Colour the profile by">
+              <button type="button" data-mode="official" title="Colour by the official piste difficulty">Official</button>
+              <button type="button" data-mode="steepness" title="Colour every slice by its measured gradient">Steepness</button>
+            </div>
+          </div>
+          <div id="route-profile-chart"></div>
+          <div id="route-profile-readout" class="route-profile-readout">Hover the chart to see a point on the map.</div>
+        </div>
         <div id="legs"></div>
         <div class="save-form">
           <input id="route-name" type="text" placeholder="Route name" aria-label="Route name" />
@@ -104,9 +115,17 @@
         <div id="speeds" class="speed-grid"></div>
       </details>
 
-      <details>
+      <details id="map-options">
         <summary>Map</summary>
         <fieldset>
+          <legend>Base map</legend>
+          <label class="check" title="Protomaps basemap with runs and lifts, built by npm run build and served by the local tile server. Works offline."><input type="radio" name="basemap" value="local" /> Protomaps ski map (offline)</label>
+          <label class="check" title="OpenStreetMap with the piste overlay of OpenSnowMap. Needs internet, not the local tile server."><input type="radio" name="basemap" value="online" /> OpenSnowMap (online)</label>
+          <label class="check" title="OpenFreeMap vector map (online) with the OpenSkiData runs and lifts from the local tile server. Needs internet and the tile server."><input type="radio" name="basemap" value="openfreemap" /> OpenFreeMap + OpenSkiData pistes (online)</label>
+          <p class="hint" id="online-hint" hidden>OpenSnowMap: the run and lift lines are pictures here, so they can't be clicked, hidden or coloured by steepness. Routing works as usual.</p>
+          <label class="check" title="Tilt the map with right-click drag or Ctrl + drag"><input type="checkbox" id="terrain3d" /> 3D terrain</label>
+        </fieldset>
+        <fieldset id="ski-layer-options">
           <legend>Show</legend>
           <div class="checks" id="layer-toggles">
             <label class="check"><input type="checkbox" data-layer="downhill" /> Ski runs</label>
@@ -115,7 +134,7 @@
             <label class="check" title="Ski touring, sled runs and winter hiking"><input type="checkbox" data-layer="other" /> Touring &amp; sled</label>
           </div>
         </fieldset>
-        <fieldset>
+        <fieldset id="run-colour-options">
           <legend>Run colours</legend>
           <label class="check"><input type="radio" name="colorBy" value="difficulty" /> Official difficulty</label>
           <label class="check" title="Each part of a run gets the colour of its steepness"><input type="radio" name="colorBy" value="slope" /> Steepness</label>
@@ -148,7 +167,8 @@
 
       <footer>
         Data: <a href="https://openskidata.org" target="_blank" rel="noopener">OpenSkiData</a>, © OpenStreetMap contributors
-        (ODbL), Skimap.org, Who's On First, © Mapterhorn, Protomaps.
+        (ODbL), Skimap.org, Who's On First, © Mapterhorn, Protomaps. Online maps: OpenStreetMap tiles,
+        <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, pistes by <a href="https://www.opensnowmap.org" target="_blank" rel="noopener">OpenSnowMap</a> (CC-BY-SA).
         Always check the piste map and the conditions on the day.
       </footer>
     </aside>

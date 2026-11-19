@@ -10,7 +10,8 @@ A fully local setup built from [OpenSkiData](https://openskidata.org):
 2. **Route planner** (local web app): click start and destination, get a beginner-friendly route over runs and
    lifts with step-by-step directions, and download it as GPX for gpx.studio.
 
-Everything works offline after the build. Internet is only needed by `npm run build`.
+Everything works offline after the build. Internet is only needed by `npm run build`, and by the optional
+online base map in the planner.
 
 ## Requirements
 
@@ -90,6 +91,12 @@ The route updates immediately. The directions are grouped per leg (**A → B**, 
 time, distance, lifts and descent. Click a leg header to collapse it, hover it to highlight that part on the map,
 or press ⤢ to zoom to it.
 
+Above the directions, the **gradient profile** shows the elevation along the whole route, with the route points
+(A, B, C…) marked. Switch its colours between **Official** (the piste difficulty of each run) and **Steepness** (the
+measured gradient of every ~30–50 m slice: green < 10%, blue 10–25%, red 25–40%, black > 40%). Lifts are purple,
+paths and walking parts grey. Hover the chart to see the distance, elevation, gradient and run at that point, with a
+marker on the map.
+
 **Download GPX** saves a track (with elevation), a waypoint per route point (A, B, C…) and a waypoint for every lift
 and run, named per leg (e.g. `B→C 2. Take lift: 28 Zweiländerbahn`). Open the GPX in gpx.studio with *File → Open*.
 
@@ -159,12 +166,31 @@ The settings below the route are grouped in this order (only *Runs* is open at f
 | **Runs** | Allowed run colours, *Prefer easier runs*, *Use ski paths* (connections between runs), and what happens if no route is found: use harder runs (with a warning) or show no route |
 | **Lifts** | Allowed lift types (gondola, chairlift, train, T-bar, button lift, rope tow, magic carpet), *Avoid drag lifts*, *Ride lifts down* (per lift type), waiting time per lift |
 | **Speed** | Your average speed per run colour (see below) |
-| **Map** | What is shown, run colours and extras (see below) |
+| **Map** | Base map (local or online), 3D terrain, what is shown, run colours and extras (see below) |
 | **gpx.studio** | The tile links for gpx.studio, each with a *Copy* button |
 | **Advanced** | Max walk between runs and lifts (default 40 m): fixes small gaps where runs and lifts don't touch in the map data |
 
 ### Map
 
+All map options are in the *Map* section of the panel, and also behind the **layers button** at the bottom left
+of the map (both stay in sync; Esc or a click elsewhere closes it).
+
+- **Base map:**
+  - *Protomaps ski map (offline)*: the map built by `npm run build` (Protomaps basemap + runs and lifts), served
+    by the local tile server. All map features below work with it.
+  - *OpenSnowMap (online)*: OpenStreetMap tiles with the piste overlay of
+    [OpenSnowMap](https://www.opensnowmap.org) and hillshading from Mapterhorn. Fully online: needs internet but
+    not the tile server, and works everywhere in the world. Runs and lifts are part of the picture there, so
+    *Show*, *Run colours* and the info cards on runs and lifts are not available. Routing, search, saved routes
+    and *Ski areas in colour* work as usual.
+  - *OpenFreeMap + OpenSkiData pistes (online)*: the [OpenFreeMap](https://openfreemap.org) vector map (online)
+    with hillshading, and on top the same OpenSkiData runs and lifts as the Protomaps map (from the local tile
+    server). Everything works like on the Protomaps map: info cards, *Show*, *Run colours*. Needs internet
+    **and** the tile server; the runs and lifts only exist for the resorts in `resorts.json`.
+- **3D terrain:** shows the mountains in 3D (also the **3D** button on the map, top right). The map tilts when
+  you switch it on; tilt and turn it with right-click drag or Ctrl + drag, the compass button resets it. The local
+  map uses the built elevation data; the online map (or a build without terrain) uses Mapterhorn's online elevation
+  tiles.
 - **Show:** ski runs, lifts, cross-country trails, and touring & sled routes (incl. winter hiking). Hidden types
   also disappear from the labels and can't be clicked.
 - **Run colours:** *Official difficulty* (the piste colour from OpenStreetMap) or *Steepness*: every ~50 m part of
@@ -278,11 +304,19 @@ scripts/start.mjs         runs tile server + planner together
 planner/graph.mjs         routing network, Dijkstra, GPX export
 planner/server.mjs        planner HTTP server (no dependencies)
 planner/public/           planner web UI (MapLibre GL JS)
-tileserver/config.json    generated TileServer GL config
-tileserver/styles/        generated styles
-tileserver/data/          generated PMTiles (ski, basemap, terrain, contours)
-data/                     downloads and intermediate files
+saved-routes/             routes saved to the "Project folder"
+build/                    everything `npm run build` creates (not in git)
+  downloads/              OpenSkiData downloads (kept to respect the once-per-day download rule)
+  work/                   intermediate files (filtered GeoJSON, contour lines, terrain pieces)
+  tileserver/             what TileServer GL serves:
+    config.json             server config
+    data/                   map tiles (PMTiles: ski, basemap, terrain, contours)
+    styles/                 map styles
+    fonts/, sprites/        label fonts and icons
+  planner/                runs, lifts and places per resort, used for routing and search
 ```
+
+Deleting `build/` is safe: `npm run build` recreates it (the OpenSkiData download is then fetched again).
 
 ## Troubleshooting
 
@@ -291,6 +325,7 @@ data/                     downloads and intermediate files
 - **`objc[…]: Class GNotificationCenterDelegate is implemented in both …`:** harmless warning from two native
   image libraries in TileServer GL on macOS.
 - **Planner map is empty:** the tile server isn't running. Use `npm start`, or `npm run tiles` in a second terminal.
+  Or switch to the online base map under *Map → Base map*.
 - **Node fails with `Library not loaded: …dylib` after a Homebrew update:** run `brew upgrade node`.
 
 ## Data & licenses
@@ -302,3 +337,7 @@ Skimap.org, Who's On First, © [Mapterhorn](https://mapterhorn.com/attribution) 
 
 These tiles are built and hosted locally from the downloadable OpenSkiData files. Using the vector tiles at
 `tiles.openskimap.org` directly is not permitted.
+
+The online base maps load tiles straight from their providers while you browse: OpenStreetMap
+([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)), OpenFreeMap, OpenSnowMap pistes (© opensnowmap.org,
+CC-BY-SA; pistes-only tiles may be used with attribution, no bulk downloading) and Mapterhorn elevation.

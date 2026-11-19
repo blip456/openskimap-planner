@@ -97,6 +97,9 @@ const state = {
     showDistances: true,
     showSkiAreas: false,
     colorBy: 'difficulty',
+    profileColor: 'official', // route gradient chart: 'official' (piste difficulty) or 'steepness'
+    basemap: 'local', // 'local' (own tile server, offline) or 'online' (OpenStreetMap + OpenSnowMap)
+    terrain3d: false,
     ...(stored.display ?? {}),
     layers: { downhill: true, lifts: true, nordic: true, other: true, ...(stored.display?.layers ?? {}) },
   },
@@ -357,25 +360,300 @@ const resortSelect = $('resort');
 for (const r of config.resorts) resortSelect.add(new Option(r.name, r.id, false, r.id === state.resort));
 const currentResort = () => config.resorts.find((r) => r.id === state.resort);
 
+// Online elevation tiles (Mapterhorn), used for 3D on the online map or when no terrain was built.
+// High-resolution tiles only exist in some regions (e.g. the Alps); elsewhere the map falls back to lower zooms.
+const ONLINE_DEM = {
+  type: 'raster-dem',
+  tiles: ['https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'],
+  tileSize: 512,
+  encoding: 'terrarium',
+  maxzoom: 14,
+  attribution: '<a href="https://mapterhorn.com/attribution" target="_blank">© Mapterhorn</a>',
+};
+
+// Fully online map: OpenStreetMap with the transparent piste overlay of OpenSnowMap. Needs no tile server.
+const ONLINE_STYLE = {
+  version: 8,
+  name: 'OpenStreetMap + OpenSnowMap',
+  glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+    },
+    dem: ONLINE_DEM,
+    opensnowmap: {
+      type: 'raster',
+      tiles: ['https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 18,
+      attribution: 'Pistes: <a href="https://www.opensnowmap.org" target="_blank">opensnowmap.org</a> (CC-BY-SA)',
+    },
+  },
+  layers: [
+    { id: 'osm', type: 'raster', source: 'osm' },
+    {
+      id: 'hillshade',
+      type: 'hillshade',
+      source: 'dem',
+      paint: { 'hillshade-exaggeration': 0.3, 'hillshade-shadow-color': '#3d3527' },
+    },
+    { id: 'opensnowmap', type: 'raster', source: 'opensnowmap' },
+  ],
+};
+
+// OpenFreeMap (online vector map, no API key) with hillshading and the OpenSkiData runs and lifts of the local
+// tile server on top. The ski layers keep their ids, so info cards, steepness colours and "Show" work as usual.
+// OpenFreeMap's glyph server has no "Noto Sans Medium"; the other maps do.
+const OPENFREEMAP_FONT = ['Noto Sans Bold'];
+let openFreeMapBase = null;
+async function loadOpenFreeMapStyle() {
+  openFreeMapBase ??= await (await fetch('https://tiles.openfreemap.org/styles/liberty')).json();
+  const style = structuredClone(openFreeMapBase);
+  const at = (id, fallback) => {
+    const i = style.layers.findIndex((l) => l.id === id);
+    return i < 0 ? fallback : i;
+  };
+  style.name = 'OpenFreeMap + OpenSkiData';
+  style.sources.dem = ONLINE_DEM;
+  style.layers.splice(at('water', 0) + 1, 0, structuredClone(ONLINE_STYLE.layers.find((l) => l.id === 'hillshade')));
+
+  try {
+    const overlay = await (await fetch(`${config.tileserver}/styles/ski-overlay/style.json`)).json();
+    style.sources.ski = overlay.sources.ski;
+    const fixFont = (l) => (l.layout?.['text-font'] ? { ...l, layout: { ...l.layout, 'text-font': OPENFREEMAP_FONT } } : l);
+    const lines = overlay.layers.filter((l) => l.type !== 'symbol');
+    const labels = overlay.layers.filter((l) => l.type === 'symbol').map(fixFont);
+    // runs and lifts below OpenFreeMap's labels, their own labels on top (like the Protomaps ski map)
+    style.layers.splice(at('waterway_line_label', style.layers.length), 0, ...lines);
+    style.layers.push(...labels);
+  } catch {
+    showError(
+      `Cannot reach the tile server at ${config.tileserver}, so the runs and lifts are missing. ` +
+        'Start it with "npm start", or use the OpenSnowMap map.',
+    );
+  }
+  return style;
+}
+
+async function styleFor(basemap) {
+  if (basemap === 'online') return ONLINE_STYLE;
+  if (basemap === 'openfreemap') {
+    try {
+      return await loadOpenFreeMapStyle();
+    } catch {
+      showError('Could not load OpenFreeMap (no internet?). Showing the OpenSnowMap map instead.');
+      return ONLINE_STYLE;
+    }
+  }
+  return `${config.tileserver}/styles/ski-basemap/style.json`;
+}
+
+// only the OpenSnowMap map has its pistes as pictures; the other maps use the OpenSkiData vector layers
+const hasSkiLayers = () => state.display.basemap !== 'online';
+const labelFont = () => (state.display.basemap === 'openfreemap' ? OPENFREEMAP_FONT : ['Noto Sans Medium']);
+
 // reopen the map where you left it (if it was the same resort)
 const savedView = stored.view?.resort === state.resort && Array.isArray(stored.view.center) ? stored.view : null;
 const map = new maplibregl.Map({
   container: 'map',
-  style: `${config.tileserver}/styles/ski-basemap/style.json`,
+  style: await styleFor(state.display.basemap),
   ...(savedView
     ? { center: savedView.center, zoom: savedView.zoom, bearing: savedView.bearing ?? 0, pitch: savedView.pitch ?? 0 }
     : { bounds: currentResort()?.bbox, fitBoundsOptions: { padding: 20 } }),
   maxZoom: 19,
+  maxPitch: 85,
   attributionControl: { compact: true },
 });
 map.on('moveend', save);
-map.addControl(new maplibregl.NavigationControl(), 'top-right');
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
 map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
 map.on('error', (e) => {
-  if (String(e.error?.message ?? '').includes('Failed to fetch')) {
-    showError(`Cannot reach the tile server at ${config.tileserver}. Start it with "npm run tiles" (or "npm start").`);
+  if (hasSkiLayers() && String(e.error?.message ?? '').includes('Failed to fetch')) {
+    showError(
+      `Cannot reach the tile server at ${config.tileserver}. Start it with "npm run tiles" (or "npm start"), ` +
+        'or switch to the OpenSnowMap map (fully online) under Map → Base map.',
+    );
   }
 });
+
+// ---------------------------------------------------------------------------
+// Base map switch (local tile server / online) and 3D terrain
+
+async function setBasemap(basemap) {
+  if (basemap === state.display.basemap) return;
+  state.display.basemap = basemap;
+  save();
+  showError(null);
+  closeInfoCard();
+  setHover(null);
+  updateBasemapUI();
+  const style = await styleFor(basemap);
+  if (basemap !== state.display.basemap) return; // switched again while loading
+  // diff: false rebuilds the style completely, so 'style.load' fires and the planner layers are added again
+  map.setStyle(style, { diff: false });
+}
+
+function updateBasemapUI() {
+  const online = !hasSkiLayers();
+  for (const radio of document.querySelectorAll('input[name="basemap"]')) radio.checked = radio.value === state.display.basemap;
+  $('online-hint').hidden = !online;
+  $('ski-layer-options').hidden = online;
+  $('run-colour-options').hidden = online;
+  $('terrain3d').checked = state.display.terrain3d;
+  terrainControl.update();
+  layersControl.sync();
+}
+
+for (const radio of document.querySelectorAll('input[name="basemap"]')) {
+  radio.addEventListener('change', () => radio.checked && setBasemap(radio.value));
+}
+$('terrain3d').addEventListener('change', (e) => setTerrain3d(e.target.checked));
+
+// 3D uses its own elevation source: sharing one with the hillshade layer lowers the rendering quality.
+function applyTerrain() {
+  try {
+    if (!state.display.terrain3d) {
+      if (map.getTerrain()) map.setTerrain(null);
+      return;
+    }
+    if (!map.getSource('terrain-3d')) {
+      const local = map.getStyle().sources?.terrain;
+      map.addSource('terrain-3d', local?.type === 'raster-dem' ? { ...local } : ONLINE_DEM);
+    }
+    map.setTerrain({ source: 'terrain-3d', exaggeration: 1.2 });
+    map.setSky?.({
+      'sky-color': '#9ec9f0',
+      'horizon-color': '#e4eef7',
+      'fog-color': '#f2f5f8',
+      'sky-horizon-blend': 0.6,
+      'horizon-fog-blend': 0.6,
+      'fog-ground-blend': 0.85,
+    });
+  } catch {
+    // the style is still loading (e.g. right after switching base maps); 'style.load' applies it again
+  }
+}
+
+function setTerrain3d(on) {
+  state.display.terrain3d = on;
+  save();
+  updateBasemapUI();
+  applyTerrain();
+  // tilt the map so the relief is visible, and flatten it again when 3D is switched off
+  if (on && map.getPitch() < 30) map.easeTo({ pitch: 60, duration: 800 });
+  else if (!on && map.getPitch() > 0) map.easeTo({ pitch: 0, duration: 600 });
+}
+
+class TerrainControl {
+  onAdd() {
+    this.container = el('div', { className: 'maplibregl-ctrl maplibregl-ctrl-group terrain-ctrl' });
+    this.button = el('button', { type: 'button', className: 'terrain-btn', textContent: '3D' });
+    this.button.addEventListener('click', () => setTerrain3d(!state.display.terrain3d));
+    this.container.append(this.button);
+    this.update();
+    return this.container;
+  }
+  onRemove() {
+    this.container.remove();
+  }
+  update() {
+    if (!this.button) return;
+    this.button.classList.toggle('active', state.display.terrain3d);
+    this.button.setAttribute('aria-pressed', String(state.display.terrain3d));
+    this.button.title = state.display.terrain3d ? 'Show the map flat (2D)' : 'Show the mountains in 3D (tilt with right-click drag)';
+  }
+}
+const terrainControl = new TerrainControl();
+map.addControl(terrainControl, 'top-right');
+
+// Layers button on the map: a copy of the panel's Map section (base map, 3D, what is shown, colours, extras).
+// Every copied input forwards to its original in the panel, so both always stay in sync.
+const LAYERS_SVG =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>';
+
+class LayersControl {
+  onAdd() {
+    this.container = el('div', { className: 'maplibregl-ctrl layers-ctrl' });
+    this.panel = el('div', { className: 'layers-panel', hidden: true });
+    this.panel.setAttribute('role', 'dialog');
+    this.panel.setAttribute('aria-label', 'Map layers');
+    this.button = el('button', { type: 'button', className: 'layers-btn', title: 'Map layers' });
+    this.button.innerHTML = LAYERS_SVG;
+    this.button.setAttribute('aria-expanded', 'false');
+    this.button.addEventListener('click', () => this.toggle());
+    this.container.append(this.panel, el('div', { className: 'maplibregl-ctrl-group' }, this.button));
+    this.build();
+    // Esc while a checkbox in the panel has focus (the global shortcut ignores keys typed in inputs)
+    this.panel.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      this.toggle(false);
+      this.button.focus();
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (this.isOpen() && !this.container.contains(e.target)) this.toggle(false);
+    });
+    return this.container;
+  }
+  onRemove() {
+    this.container.remove();
+  }
+  build() {
+    const source = $('map-options');
+    this.pairs = [];
+    this.mirrors = [];
+    this.panel.replaceChildren(el('div', { className: 'layers-title', textContent: 'Map layers' }));
+    for (const fieldset of source.querySelectorAll(':scope > fieldset')) {
+      const copy = fieldset.cloneNode(true);
+      // the legends are filled in by code and stay in the panel only
+      copy.querySelectorAll('#slope-legend, #ski-area-legend').forEach((n) => n.remove());
+      // ids must stay unique; remember which copied element mirrors which original (for hidden states)
+      for (const node of [copy, ...copy.querySelectorAll('[id]')]) {
+        if (!node.id) continue;
+        this.mirrors.push([$(node.id), node]);
+        node.removeAttribute('id');
+      }
+      const originals = fieldset.querySelectorAll('input');
+      copy.querySelectorAll('input').forEach((input, i) => {
+        const original = originals[i];
+        // radios with the same name would form one group with the panel's radios
+        if (input.name) input.name = `layers-${input.name}`;
+        input.addEventListener('change', () => {
+          if (input.type === 'radio' && !input.checked) return;
+          original.checked = input.checked;
+          original.dispatchEvent(new Event('change'));
+          this.sync();
+        });
+        this.pairs.push([original, input]);
+      });
+      this.panel.append(copy);
+    }
+    source.addEventListener('change', () => this.sync());
+    this.sync();
+  }
+  sync() {
+    if (!this.pairs) return;
+    for (const [original, copy] of this.pairs) copy.checked = original.checked;
+    for (const [original, copy] of this.mirrors) copy.hidden = original.hidden;
+  }
+  isOpen() {
+    return !this.panel.hidden;
+  }
+  toggle(open = !this.isOpen()) {
+    if (open) this.sync();
+    this.panel.hidden = !open;
+    this.button.classList.toggle('active', open);
+    this.button.setAttribute('aria-expanded', String(open));
+  }
+}
+const layersControl = new LayersControl();
+map.addControl(layersControl, 'bottom-left');
+updateBasemapUI();
 
 function switchResort(id, { keepPoints = false } = {}) {
   state.resort = id;
@@ -389,36 +667,78 @@ function switchResort(id, { keepPoints = false } = {}) {
 }
 resortSelect.addEventListener('change', () => switchResort(resortSelect.value));
 
-// Chevron pointing right (= along the line direction), drawn on a canvas so no font is needed.
-function arrowImage() {
-  const size = 48;
+// Chevron pointing right (= along the line direction), drawn on a canvas so no font is needed and it sits
+// exactly on the line. `both` draws "‹ ›" for lifts that run both ways.
+function arrowImage(color = '#1d2329', { both = false } = {}) {
+  const width = both ? 64 : 48;
+  const height = 48;
   const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
+  c.width = width;
+  c.height = height;
   const ctx = c.getContext('2d');
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   const path = () => {
     ctx.beginPath();
-    ctx.moveTo(17, 12);
-    ctx.lineTo(31, 24);
-    ctx.lineTo(17, 36);
+    if (both) {
+      ctx.moveTo(24, 12);
+      ctx.lineTo(10, 24);
+      ctx.lineTo(24, 36);
+      ctx.moveTo(40, 12);
+      ctx.lineTo(54, 24);
+      ctx.lineTo(40, 36);
+    } else {
+      ctx.moveTo(17, 12);
+      ctx.lineTo(31, 24);
+      ctx.lineTo(17, 36);
+    }
   };
   path();
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 12;
   ctx.stroke();
   path();
-  ctx.strokeStyle = '#1d2329';
+  ctx.strokeStyle = color;
   ctx.lineWidth = 6;
   ctx.stroke();
-  return ctx.getImageData(0, 0, size, size);
+  return ctx.getImageData(0, 0, width, height);
+}
+
+// The ski styles draw one-way and lift direction arrows as the text "›", which the font puts slightly below the
+// middle of the line. In the planner they are replaced by arrow images in the colour of the run or lift.
+// Images are made on demand ("arrow:<colour>" / "arrow-both:<colour>") when the map asks for them.
+map.on('styleimagemissing', (e) => {
+  const m = String(e.id).match(/^arrow(-both)?:(#[0-9a-fA-F]{3,8})$/);
+  if (m && !map.hasImage(e.id)) map.addImage(e.id, arrowImage(m[2], { both: !!m[1] }), { pixelRatio: 2 });
+});
+
+function useArrowImages() {
+  const icon = (id, image, size) => {
+    if (!map.getLayer(id)) return;
+    map.setLayoutProperty(id, 'text-field', '');
+    map.setLayoutProperty(id, 'icon-image', image);
+    map.setLayoutProperty(id, 'icon-size', size);
+    map.setLayoutProperty(id, 'icon-rotation-alignment', 'map');
+    map.setLayoutProperty(id, 'icon-keep-upright', false);
+    map.setLayoutProperty(id, 'icon-allow-overlap', true);
+    map.setLayoutProperty(id, 'icon-ignore-placement', true);
+  };
+  icon('ski-runs-oneway', ['concat', 'arrow:', ['get', 'color']], ['interpolate', ['linear'], ['zoom'], 15, 0.75, 18, 1]);
+  icon(
+    'ski-lifts-direction',
+    ['case', ['==', ['get', 'direction'], 'both'], `arrow-both:${LIFT_COLOR}`, `arrow:${LIFT_COLOR}`],
+    ['interpolate', ['linear'], ['zoom'], 13, 0.65, 17, 0.95],
+  );
 }
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
 
-map.on('load', () => {
-  map.addImage('route-arrow', arrowImage(), { pixelRatio: 2 });
+// Runs for the first style and again after every base map switch (a new style drops all planner layers).
+map.on('style.load', () => {
+  runLabelBaseFilter = null;
+  skiAreasShown = null;
+  if (!map.hasImage('route-arrow')) map.addImage('route-arrow', arrowImage(), { pixelRatio: 2 });
+  useArrowImages();
   for (const id of ['route', 'route-highlight', 'route-distances', 'search-highlight', 'hover-highlight', 'info-highlight']) {
     map.addSource(id, { type: 'geojson', data: EMPTY });
   }
@@ -543,7 +863,7 @@ map.on('load', () => {
     source: 'route-distances',
     layout: {
       'text-field': ['get', 'label'],
-      'text-font': ['Noto Sans Medium'],
+      'text-font': labelFont(),
       'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 14],
       'text-offset': [0, -1.1],
       'text-anchor': 'bottom',
@@ -556,6 +876,7 @@ map.on('load', () => {
   addSlopeLayer();
   applyDisplay();
   applyLayerFilter();
+  applyTerrain();
   if (state.result) setRouteData(state.result);
 });
 
@@ -714,7 +1035,7 @@ function addSkiAreaLayers() {
       layout: {
         ...hidden,
         'text-field': ['case', ['get', 'region'], ['concat', 'Region: ', ['get', 'name']], ['get', 'name']],
-        'text-font': ['Noto Sans Medium'],
+        'text-font': labelFont(),
         'text-size': ['case', ['get', 'region'], 12, 14],
         'text-max-width': 10,
         'symbol-sort-key': ['case', ['get', 'region'], 1, 0],
@@ -1077,6 +1398,10 @@ document.addEventListener('keydown', (e) => {
     }
     // Esc closes the open info card / search pin first, then leaves plan mode
     if (e.key === 'Escape') {
+      if (layersControl.isOpen()) {
+        layersControl.toggle(false);
+        return;
+      }
       if (infoPopup) {
         closeInfoCard();
         return;
@@ -1506,7 +1831,8 @@ function pickFeature(point) {
 
 // Vector tiles cut lines at tile edges, so a rendered feature is only the piece inside one tile.
 // Collect every loaded piece with the same OpenSkiData id to highlight the whole run or lift.
-// For runs, also include the other sections of the same named piste (OSM splits pistes into sections).
+// For runs, also include the other sections of the same piste (grouped by the build: same name and piste
+// number, one section continuing where the other ends).
 function wholeGeometry(f) {
   if (f.source !== 'ski' || !f.properties.id || f.geometry.type === 'Point') return f.geometry;
   let pieces;
@@ -1514,11 +1840,11 @@ function wholeGeometry(f) {
     pieces = map.querySourceFeatures('ski', { sourceLayer: 'runs', filter: ['==', ['get', 'id'], f.properties.id] });
     const named = pieces.find((p) => p.properties.name);
     if (named) return wholeGeometry({ ...named, source: 'ski', sourceLayer: 'runs', geometry: named.geometry });
-  } else if (f.sourceLayer === 'runs' && f.properties.name) {
-    const primary = String(f.properties.name).split(/,\s*/)[0];
-    pieces = map
-      .querySourceFeatures('ski', { sourceLayer: 'runs', filter: ['==', ['get', 'kind'], f.properties.kind ?? ''] })
-      .filter((p) => String(p.properties.name ?? '').split(/,\s*/).includes(primary));
+  } else if (f.sourceLayer === 'runs' && f.properties.piste) {
+    pieces = map.querySourceFeatures('ski', {
+      sourceLayer: 'runs',
+      filter: ['in', `|${f.properties.piste}|`, ['coalesce', ['get', 'pistes'], '']],
+    });
   } else {
     pieces = map.querySourceFeatures('ski', { sourceLayer: f.sourceLayer, filter: ['==', ['get', 'id'], f.properties.id] });
   }
@@ -2118,9 +2444,15 @@ function renderResult(r) {
     `${fmtDist(r.summary.runDistance)} skiing`,
     `${r.summary.liftCount} lift${r.summary.liftCount === 1 ? '' : 's'}`,
     `↓ ${Math.round(r.summary.descent)} m`,
-  ];
-  $('summary').replaceChildren(...chips.map((t) => el('span', { className: 'chip', textContent: t })));
+  ].map((t) => [t]);
+  const gradient = routeGradient(r);
+  if (gradient) {
+    chips.push([`avg ${Math.round(gradient.avg * 100)}%`, 'Average gradient of the downhill runs (descent ÷ horizontal distance)']);
+    if (gradient.max != null) chips.push([`max ${Math.round(gradient.max * 100)}%`, 'Steepest 30 m section of the downhill runs']);
+  }
+  $('summary').replaceChildren(...chips.map(([t, title]) => el('span', { className: 'chip', textContent: t, ...(title ? { title } : {}) })));
   $('warnings').replaceChildren(...r.warnings.map((w) => el('li', { textContent: `⚠ ${w}` })));
+  renderRouteProfile(r);
 
   // One collapsible group per leg (A → B, B → C, …); collapsed groups are remembered (also across reloads).
   const n = state.points.length;
@@ -2199,6 +2531,238 @@ function zoomTo(coords) {
   const b = new maplibregl.LngLatBounds();
   coords.forEach((c) => b.extend([c[0], c[1]]));
   map.fitBounds(b, { padding: 80, maxZoom: 16 });
+}
+
+// ---------------------------------------------------------------------------
+// Route gradient profile: elevation along the whole route, coloured by the official difficulty of each run
+// or by the measured gradient of ~30–50 m slices. Lifts and walking parts keep their own colour.
+
+// map marker that follows the mouse on the chart (a hoisted function, so it can be used before this line runs)
+function profileCursor() {
+  profileCursor.marker ??= new maplibregl.Marker({ element: el('div', { className: 'profile-cursor' }) });
+  return profileCursor.marker;
+}
+
+function routeProfilePoints(r) {
+  const points = []; // { d, e, lon, lat, step }
+  let d = 0;
+  // consecutive steps share their boundary point; it is kept in both so every step has its own piece
+  r.steps.forEach((st, stepIndex) => {
+    st.coordinates.forEach((c, i) => {
+      const prev = points.at(-1);
+      if (prev) d += haversineM([prev.lon, prev.lat], c);
+      const e = c[2] ?? (i === 0 ? st.eleStart : st.eleEnd);
+      points.push({ d, e, lon: c[0], lat: c[1], step: stepIndex });
+    });
+  });
+  return points;
+}
+
+function haversineM(a, b) {
+  const R = 6371008.8;
+  const toRad = (x) => (x * Math.PI) / 180;
+  const dLat = toRad(b[1] - a[1]);
+  const dLon = toRad(b[0] - a[0]);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[1])) * Math.cos(toRad(b[1])) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+// Average and steepest gradient of the downhill runs on the route (lifts, paths and walking are left out).
+// The steepest section uses the same 30 m window as the info card (planner/feature-info.mjs).
+function routeGradient(r) {
+  const points = routeProfilePoints(r);
+  let horizontal = 0;
+  let descent = 0;
+  let max = null;
+  r.steps.forEach((st, stepIndex) => {
+    if (st.type !== 'run' || st.runKind !== 'downhill') return;
+    const pts = points.filter((p) => p.step === stepIndex);
+    if (pts.length < 2) return;
+    horizontal += pts.at(-1).d - pts[0].d;
+    for (let i = 1; i < pts.length; i++) descent += Math.max(0, pts[i - 1].e - pts[i].e);
+    let j = 0;
+    for (let i = 0; i < pts.length; i++) {
+      while (j < pts.length && pts[j].d - pts[i].d < 30) j++;
+      if (j >= pts.length) break;
+      max = Math.max(max ?? 0, Math.abs(pts[j].e - pts[i].e) / (pts[j].d - pts[i].d));
+    }
+  });
+  return horizontal > 0 ? { avg: descent / horizontal, max } : null;
+}
+
+// colour + legend entry of one route step in "official" mode
+function officialStyle(st) {
+  if (st.type === 'lift') return { color: LIFT_COLOR, key: 'lift', label: 'Lift' };
+  if (st.type === 'walk' || st.runKind !== 'downhill') return { color: WALK_COLOR, key: 'walk', label: 'Path / walk' };
+  const info = DIFFICULTY_INFO[st.difficulty] ?? DIFFICULTY_INFO.unknown;
+  return { color: st.color ?? info.color, key: st.difficulty ?? 'unknown', label: info.label };
+}
+
+// Coloured pieces of the profile: one per step (official) or slices of roughly equal length (steepness).
+function routeProfileSegments(r, points, mode) {
+  const segments = [];
+  const total = points.at(-1).d || 1;
+  const sliceLength = Math.max(30, total / 80);
+  const push = (from, to) => {
+    if (to <= from) return;
+    const st = r.steps[points[from].step];
+    const horizontal = points[to].d - points[from].d;
+    const slope = horizontal > 0 ? Math.abs(points[to].e - points[from].e) / horizontal : 0;
+    let style = officialStyle(st);
+    if (mode === 'steepness' && st.type === 'run' && st.runKind === 'downhill') {
+      const cls = slopeClass(slope);
+      style = { color: cls.color, key: `slope-${cls.id}`, label: cls.label };
+    }
+    segments.push({ from, to, slope, step: points[from].step, ...style });
+  };
+  let start = 0;
+  for (let i = 1; i <= points.length; i++) {
+    const a = points[start];
+    const b = points[i];
+    if (!b || b.step !== a.step) {
+      push(start, i - 1);
+      start = i;
+      continue;
+    }
+    const st = r.steps[a.step];
+    if (mode === 'steepness' && st.type === 'run' && st.runKind === 'downhill' && b.d - a.d >= sliceLength) {
+      push(start, i);
+      start = i;
+    }
+  }
+  return segments;
+}
+
+function renderRouteProfile(r) {
+  const box = $('route-profile');
+  profileCursor().remove();
+  const points = r ? routeProfilePoints(r) : [];
+  box.hidden = points.length < 2 || points.at(-1).d < 1;
+  for (const b of $('profile-color').querySelectorAll('button')) {
+    b.classList.toggle('active', b.dataset.mode === state.display.profileColor);
+    b.setAttribute('aria-pressed', String(b.dataset.mode === state.display.profileColor));
+  }
+  if (box.hidden) return;
+
+  const mode = state.display.profileColor;
+  const segments = routeProfileSegments(r, points, mode);
+  const ns = 'http://www.w3.org/2000/svg';
+  const W = 320;
+  const H = 140;
+  const pad = { left: 46, right: 8, top: 8, bottom: 22 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+  const total = points.at(-1).d;
+  const eles = points.map((p) => p.e);
+  const rawMin = Math.min(...eles);
+  const rawMax = Math.max(...eles);
+  const step = niceStep(Math.max(rawMax - rawMin, 10));
+  const min = Math.floor(rawMin / step) * step;
+  const max = Math.max(Math.ceil(rawMax / step) * step, min + step);
+  const x = (d) => pad.left + (d / total) * plotW;
+  const y = (e) => pad.top + plotH - ((e - min) / (max - min)) * plotH;
+  const baseY = pad.top + plotH;
+  const node = (tag, attrs, text) => {
+    const n = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  const svg = node('svg', {
+    viewBox: `0 0 ${W} ${H}`,
+    class: 'card-profile',
+    role: 'img',
+    'aria-label': `Route profile, ${fmtKm(total)}, from ${Math.round(eles[0])} m to ${Math.round(eles.at(-1))} m`,
+  });
+  for (let e = min; e <= max + 0.01; e += step) {
+    svg.append(node('line', { x1: pad.left, x2: W - pad.right, y1: y(e), y2: y(e), class: 'prof-grid' }));
+    svg.append(node('text', { x: pad.left - 6, y: y(e), class: 'prof-label prof-label-y' }, `${e} m`));
+  }
+  const path = (from, to) => points.slice(from, to + 1).map((p, n) => `${n ? 'L' : 'M'}${x(p.d).toFixed(1)},${y(p.e).toFixed(1)}`).join(' ');
+  for (const s of segments) {
+    const d0 = x(points[s.from].d).toFixed(1);
+    const d1 = x(points[s.to].d).toFixed(1);
+    svg.append(node('path', { d: `${path(s.from, s.to)} L${d1},${baseY} L${d0},${baseY} Z`, fill: s.color, 'fill-opacity': '0.72' }));
+  }
+  svg.append(node('path', { d: path(0, points.length - 1), fill: 'none', stroke: '#3c4650', 'stroke-width': '1.4', 'stroke-linejoin': 'round' }));
+
+  // route points (A, B, C, …) where the legs meet
+  const n = state.points.length;
+  const pointMark = (d, i) => {
+    svg.append(node('line', { x1: x(d), x2: x(d), y1: pad.top, y2: baseY, class: 'prof-leg' }));
+    svg.append(node('circle', { cx: x(d), cy: pad.top + 6, r: 6, fill: markerColor(i, n) }));
+    svg.append(node('text', { x: x(d), y: pad.top + 6, class: 'prof-leg-label' }, letter(i)));
+  };
+  pointMark(0, 0);
+  for (const leg of r.legs.slice(1)) {
+    const p = points.find((q) => r.steps[q.step].leg === leg.index);
+    if (p) pointMark(p.d, leg.index);
+  }
+  pointMark(total, r.legs.length);
+
+  svg.append(node('line', { x1: pad.left, x2: W - pad.right, y1: baseY, y2: baseY, class: 'prof-axis' }));
+  for (const [d, anchor] of [[0, 'start'], [total / 2, 'middle'], [total, 'end']]) {
+    svg.append(node('text', { x: x(d), y: H - 6, class: 'prof-label', 'text-anchor': anchor }, d === 0 ? '0' : fmtKm(d)));
+  }
+
+  const cross = node('line', { y1: pad.top, y2: baseY, class: 'prof-cross', visibility: 'hidden' });
+  const dot = node('circle', { r: 3.5, fill: '#fff', stroke: '#1d2329', 'stroke-width': 2, visibility: 'hidden' });
+  svg.append(cross, dot);
+  const hit = node('rect', { x: pad.left, y: pad.top, width: plotW, height: plotH, fill: 'transparent' });
+  svg.append(hit);
+  const readout = $('route-profile-readout');
+  const idleText = 'Hover the chart to see a point on the map.';
+  readout.textContent = idleText;
+  hit.addEventListener('mousemove', (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const d = Math.min(total, Math.max(0, ((((ev.clientX - rect.left) / rect.width) * W - pad.left) / plotW) * total));
+    let i = 1;
+    while (i < points.length - 1 && points[i].d < d) i++;
+    const a = points[i - 1];
+    const b = points[i];
+    const t = (d - a.d) / (b.d - a.d || 1);
+    const e = a.e + (b.e - a.e) * t;
+    const seg = segments.find((s) => d >= points[s.from].d && d <= points[s.to].d) ?? segments.at(-1);
+    const st = r.steps[seg.step];
+    for (const n of [cross, dot]) n.setAttribute('visibility', 'visible');
+    cross.setAttribute('x1', x(d));
+    cross.setAttribute('x2', x(d));
+    dot.setAttribute('cx', x(d));
+    dot.setAttribute('cy', y(e));
+    const gradient = st.type === 'lift' ? '' : ` · ${Math.round(seg.slope * 100)}%`;
+    readout.textContent = `${fmtKm(d)} · ${Math.round(e)} m${gradient} · ${stepTitle(st)}`;
+    profileCursor().setLngLat([a.lon + (b.lon - a.lon) * t, a.lat + (b.lat - a.lat) * t]).addTo(map);
+  });
+  hit.addEventListener('mouseleave', () => {
+    for (const n of [cross, dot]) n.setAttribute('visibility', 'hidden');
+    readout.textContent = idleText;
+    profileCursor().remove();
+  });
+
+  const legend = el('div', { className: 'prof-legend' });
+  const order =
+    mode === 'steepness'
+      ? [...SLOPE_CLASSES.map((c) => `slope-${c.id}`), 'walk', 'lift']
+      : [...Object.keys(DIFFICULTY_INFO), 'walk', 'lift'];
+  const used = new Map(segments.map((s) => [s.key, s]));
+  for (const key of order) {
+    const s = used.get(key);
+    if (!s) continue;
+    const sw = el('span', { className: 'swatch' });
+    sw.style.background = s.color;
+    legend.append(el('span', { className: 'prof-legend-item' }, sw, document.createTextNode(s.label)));
+  }
+  $('route-profile-chart').replaceChildren(el('div', { className: 'card-profile-wrap' }, svg, legend));
+}
+
+for (const b of $('profile-color').querySelectorAll('button')) {
+  b.addEventListener('click', () => {
+    if (state.display.profileColor === b.dataset.mode) return;
+    state.display.profileColor = b.dataset.mode;
+    save();
+    renderRouteProfile(state.result);
+  });
 }
 
 $('route-name').value = state.routeName;
