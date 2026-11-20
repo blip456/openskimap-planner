@@ -1,0 +1,332 @@
+/* Design tokens: ski route planner (PWA + desktop).
+ * Copy this file to app/src/ui/tokens.css. Source of truth: docs/design/spec.md §1.
+ * Values follow iOS 26 system colours and metrics. 1 CSS px = 1 iOS pt on iPhone.
+ * Piste and route colours are copied from scripts/lib/styles.mjs and planner/public/app.js: do not change them here
+ * without changing the map style too (better: generate them from packages/core/src/styles). */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---------- System colours (light) ---------- */
+  --accent: #007aff;               /* system blue; the only tint colour of the UI */
+  --accent-pressed: #0062cc;
+  --on-accent: #ffffff;
+  --green: #34c759;                /* switches "on", success */
+  --red: #ff3b30;                  /* destructive */
+  --orange: #ff9500;               /* warnings, "changed since saved" */
+  --yellow: #ffcc00;
+  --teal: #30b0c7;
+  --indigo: #5856d6;
+  --purple: #af52de;
+  --gray: #8e8e93;
+
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, 0.6);    /* secondary text */
+  --label-3: rgba(60, 60, 67, 0.3);    /* tertiary text, chevrons, placeholders */
+  --label-4: rgba(60, 60, 67, 0.18);
+  --separator: rgba(60, 60, 67, 0.29); /* 0.5px hairlines */
+  --separator-opaque: #c6c6c8;
+
+  --fill-1: rgba(120, 120, 128, 0.2);  /* switch off track, slider track */
+  --fill-2: rgba(120, 120, 128, 0.16); /* segmented control track */
+  --fill-3: rgba(118, 118, 128, 0.12); /* search field, round close buttons in sheets */
+  --fill-4: rgba(116, 116, 128, 0.08); /* hover on rows */
+
+  --bg: #ffffff;
+  --bg-grouped: #f2f2f7;               /* sheet / page background behind inset groups */
+  --bg-cell: #ffffff;                  /* inset group cells */
+  --bg-cell-pressed: #e5e5ea;
+  --bg-elevated: #ffffff;              /* popovers, menus on desktop */
+  --scrim: rgba(0, 0, 0, 0.25);        /* behind the Menu sheet */
+  --toast-bg: rgba(28, 28, 30, 0.92);  /* toasts are solid, not glass (saves one blur) */
+  --toast-label: #ffffff;
+  --focus-ring: color-mix(in srgb, var(--accent) 70%, transparent);
+
+  /* ---------- Map and piste colours (identical in light and dark) ---------- */
+  --piste-novice: #2e9d3a;
+  --piste-easy: #1f6fd6;
+  --piste-intermediate: #d8251d;
+  --piste-advanced: #111111;
+  --piste-expert: #111111;
+  --piste-freeride: #ef7d00;
+  --piste-unknown: #7d7d7d;
+  --lift: #7b1fa2;
+  --nordic: #2a8c8c;
+  --connection: #5f6b75;               /* ski paths and walking */
+  --route-casing: #ffffff;
+  --route-highlight: #ffe066;
+  --slope-lt10: #2e9d3a;               /* steepness classes, scripts/lib/slope.mjs */
+  --slope-10-25: #1f6fd6;
+  --slope-25-40: #d8251d;
+  --slope-gt40: #111111;
+  --point-start: #2e9d3a;              /* route point A */
+  --point-stop: #1f6fd6;               /* B, C, … between start and end */
+  --point-end: #d8251d;                /* last point */
+  --swatch-border: rgba(0, 0, 0, 0.12);/* around colour swatches; makes black visible in dark mode */
+  --user-location: #007aff;            /* blue dot: always system blue, also in dark mode */
+  --user-location-stale: #8e8e93;
+
+  /* ---------- Glass (navigation layer only) ---------- */
+  --glass-fill: rgba(250, 250, 252, 0.6);
+  --glass-fill-strong: rgba(250, 250, 252, 0.78);  /* sheets at medium: text sits on it */
+  --glass-blur: 20px;
+  --glass-saturate: 180%;
+  --glass-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  --glass-rim: inset 0 0.5px 0 rgba(255, 255, 255, 0.85),  /* top highlight */
+               inset 0 0 0 0.5px rgba(255, 255, 255, 0.5);   /* edge */
+  --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --glass-label: #1c1c1e;              /* icon + text colour on glass */
+  --glass-pill: rgba(0, 0, 0, 0.08);   /* selected tab pill */
+  --glass-pill-pressed: rgba(0, 0, 0, 0.16);
+  --glass-fill-moving: rgba(246, 246, 248, 0.94); /* fallback without blur while the map moves (§5) */
+  --tint-fill: color-mix(in srgb, var(--accent) 88%, transparent); /* tinted glass: Plan route on */
+
+  /* ---------- Radii (concentric: inner = outer − padding) ---------- */
+  --r-xs: 4px;     /* colour swatches */
+  --r-sm: 8px;     /* small chips inside cells, kbd */
+  --r-icon: 7px;   /* 29px Settings icon tiles */
+  --r-md: 12px;    /* text fields, chart */
+  --r-cell: 26px;  /* inset grouped sections (iOS 26) */
+  --r-card: 22px;  /* search results panel, popovers */
+  --r-sheet: 38px; /* sheet top corners; desktop panel uses --r-panel */
+  --r-panel: 24px;
+  --r-pill: 999px; /* any capsule: radius = height / 2 */
+
+  /* ---------- Spacing (4 pt grid) ---------- */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 8px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 20px;
+  --sp-7: 24px;
+  --sp-8: 32px;
+  --sp-9: 40px;
+  --edge: 16px;        /* distance of map controls from the screen edge (plus safe area) */
+  --cell-pad-x: 16px;  /* text inset inside cells */
+  --cell-min-h: 44px;  /* single-line cell; 52px with an icon tile, 60px with a subtitle */
+  --group-gap: 32px;   /* between inset groups (incl. header) */
+
+  /* ---------- Sizes ---------- */
+  --hit: 44px;          /* minimum touch target everywhere */
+  --ctl: 48px;          /* round glass map buttons (menu, locate, compass) */
+  --ctl-sm: 36px;       /* round buttons in sheet headers (✕, share); hit area still 44 */
+  --tabbar-h: 64px;     /* tab capsule and search circle */
+  --tab-item-h: 56px;   /* pill inside the tab capsule: 64 − 2 × 4 */
+  --marker: 28px;       /* route point A/B/C */
+  --sheet-handle-w: 36px;
+  --sheet-handle-h: 5px;
+  --panel-w: 380px;     /* desktop floating panel */
+
+  /* ---------- Safe areas ---------- */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  /* tab bar floats into the home-indicator area, like iOS 26 (34 − 12 = 22px from the bottom on Face ID phones) */
+  --tabbar-bottom: max(calc(var(--safe-bottom) - 12px), 12px);
+  --controls-bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + 16px); /* Plan + Locate row */
+  --controls-top: calc(var(--safe-top) + 6px);
+
+  /* ---------- Type (iOS text styles at the default Dynamic Type size, Large) ----------
+   * rem is set by html { font: -apple-system-body } on iOS (= 17px, follows Dynamic Type),
+   * and 17px elsewhere; desktop with a mouse uses 15px (see spec §1.6). Map chrome uses px and does not scale. */
+  --font: system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  --font-rounded: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif; /* numbers in chips and markers */
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  /* size / line height, relative to body 17 */
+  --t-large-title: 2rem;      /* 34/41 bold: Menu root title */
+  --t-large-title-lh: 1.206;
+  --t-title1: 1.647rem;       /* 28/34 bold: onboarding */
+  --t-title2: 1.294rem;       /* 22/28 bold: info card name */
+  --t-title3: 1.176rem;       /* 20/25 semibold: sheet titles */
+  --t-headline: 1rem;         /* 17/22 semibold */
+  --t-body: 1rem;             /* 17/22 */
+  --t-callout: 0.941rem;      /* 16/21 */
+  --t-subhead: 0.882rem;      /* 15/20 */
+  --t-footnote: 0.765rem;     /* 13/18: section headers/footers, row subtitles */
+  --t-caption: 0.706rem;      /* 12/16 */
+  --t-caption2: 0.647rem;     /* 11/13: map credit, tab labels use 10px fixed */
+  --lh-tight: 1.2;
+  --lh: 1.3;
+
+  /* ---------- Layers ---------- */
+  --z-map: 0;
+  --z-credit: 5;
+  --z-controls: 10;     /* glass buttons on the map */
+  --z-mode-pill: 15;    /* "Tap the map to add points" */
+  --z-sheet: 20;
+  --z-tabbar: 30;       /* floats above the sheet, also at the large detent */
+  --z-search: 40;       /* search field + results, above the keyboard */
+  --z-modal: 50;        /* Menu sheet + scrim; desktop popover */
+  --z-toast: 60;
+  --z-alert: 70;        /* confirm dialogs (Delete data?) */
+  --z-dev: 90;          /* dev overlay */
+
+  /* ---------- Motion ---------- */
+  --dur-instant: 100ms;  /* press-in */
+  --dur-fast: 150ms;     /* fades, colour changes */
+  --dur-base: 250ms;     /* small moves, tab pill */
+  --dur-sheet: 500ms;    /* sheet detent changes (spring settles in ~495ms) */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  /* SwiftUI .spring(response: 0.4, dampingFraction: 0.82): sheets, search field morph */
+  --spring-sheet: linear(0, 0.061, 0.197, 0.357, 0.513, 0.649, 0.76, 0.845, 0.907, 0.95, 0.978, 0.996, 1.005, 1.01, 1.011, 1.011, 1.009, 1.007, 1.006, 1.004, 1);
+  /* .spring(response: 0.25, dampingFraction: 0.7): press release, tab pill, switch thumb (290ms) */
+  --spring-press: linear(0, 0.056, 0.186, 0.349, 0.513, 0.662, 0.786, 0.882, 0.952, 0.999, 1.028, 1.042, 1.046, 1.044, 1.038, 1.031, 1.023, 1.016, 1.01, 1.006, 1);
+  --dur-press: 290ms;
+  --press-scale: 0.94;
+}
+
+/* ---------- Dark ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #0a84ff;
+    --accent-pressed: #409cff;
+    --green: #30d158;
+    --red: #ff453a;
+    --orange: #ff9f0a;
+    --yellow: #ffd60a;
+    --teal: #40c8e0;
+    --indigo: #5e5ce6;
+    --purple: #bf5af2;
+
+    --label: #ffffff;
+    --label-2: rgba(235, 235, 245, 0.6);
+    --label-3: rgba(235, 235, 245, 0.3);
+    --label-4: rgba(235, 235, 245, 0.16);
+    --separator: rgba(84, 84, 88, 0.6);
+    --separator-opaque: #38383a;
+
+    --fill-1: rgba(120, 120, 128, 0.36);
+    --fill-2: rgba(120, 120, 128, 0.32);
+    --fill-3: rgba(118, 118, 128, 0.24);
+    --fill-4: rgba(118, 118, 128, 0.18);
+
+    --bg: #000000;
+    --bg-grouped: #1c1c1e;      /* sheets are "elevated" in iOS: #1C1C1E with #2C2C2E cells (owner screenshot) */
+    --bg-cell: #2c2c2e;
+    --bg-cell-pressed: #3a3a3c;
+    --bg-elevated: #2c2c2e;
+    --scrim: rgba(0, 0, 0, 0.45);
+    --toast-bg: rgba(242, 242, 247, 0.94);
+    --toast-label: #000000;
+    --swatch-border: rgba(255, 255, 255, 0.35);
+
+    --glass-fill: rgba(30, 30, 34, 0.7);
+    --glass-fill-strong: rgba(28, 28, 30, 0.84);
+    --glass-rim: inset 0 0.5px 0 rgba(255, 255, 255, 0.22),
+                 inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
+    --glass-label: #ffffff;
+    --glass-pill: rgba(255, 255, 255, 0.14);
+    --glass-pill-pressed: rgba(255, 255, 255, 0.24);
+    --glass-fill-moving: rgba(36, 36, 40, 0.94);
+  }
+}
+
+/* ---------- Increase contrast (iOS: Settings › Accessibility › Display › Increase Contrast) ---------- */
+@media (prefers-contrast: more) {
+  :root {
+    --glass-fill: rgba(250, 250, 252, 0.92);
+    --glass-fill-strong: rgba(250, 250, 252, 0.97);
+    --glass-rim: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+    --label-2: rgba(60, 60, 67, 0.85);
+    --label-3: rgba(60, 60, 67, 0.6);
+    --separator: rgba(60, 60, 67, 0.6);
+    --focus-ring: var(--accent);
+  }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root {
+    --glass-fill: rgba(28, 28, 30, 0.94);
+    --glass-fill-strong: rgba(28, 28, 30, 0.98);
+    --glass-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+    --label-2: rgba(235, 235, 245, 0.85);
+    --label-3: rgba(235, 235, 245, 0.6);
+    --separator: rgba(235, 235, 245, 0.45);
+  }
+}
+
+/* ---------- Solid interface (in-app switch: Menu › Appearance; Safari has no prefers-reduced-transparency) ---------- */
+:root[data-solid] {
+  --glass-filter: none;
+  --glass-fill: #f9f9f9;
+  --glass-fill-strong: #f9f9f9;
+  --glass-rim: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-solid] {
+    --glass-fill: #1c1c1e;
+    --glass-fill-strong: #1c1c1e;
+    --glass-rim: inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+  }
+}
+/* the browser setting also triggers it where supported (Chrome, Firefox) */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass-filter: none; --glass-fill: #f9f9f9; --glass-fill-strong: #f9f9f9; }
+}
+@media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
+  :root { --glass-fill: #1c1c1e; --glass-fill-strong: #1c1c1e; }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --spring-sheet: linear(0, 1);
+    --spring-press: linear(0, 1);
+    --dur-sheet: 200ms;   /* sheets cross-fade instead of sliding (spec §4.8) */
+    --dur-press: 0ms;
+    --dur-base: 0ms;
+    --press-scale: 1;
+  }
+}
+
+/* ---------- Base ---------- */
+html {
+  font-family: var(--font);
+  font-size: 17px;
+  -webkit-text-size-adjust: 100%;
+  background: var(--bg-grouped); /* iOS 26 samples this for the status bar area */
+}
+@supports (font: -apple-system-body) {
+  /* iOS Safari: 17px at the default text size, follows Dynamic Type. Only on touch screens: on macOS it is 13px.
+   * The family/weight it sets are reset on body. */
+  @media (pointer: coarse) {
+    html { font: -apple-system-body; }
+  }
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) {
+  html { font-size: 15px; } /* desktop density, like Apple Maps on Mac */
+}
+body {
+  font-family: var(--font);
+  font-size: var(--t-body);
+  line-height: var(--lh);
+  color: var(--label);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The one glass recipe. Use on: tab capsule, search button/field, map buttons, mode pill, sheet, search results. */
+.glass {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-rim), var(--glass-shadow);
+  color: var(--glass-label);
+}
+/* set on <html> by the map while it moves, only if profiling shows dropped frames (spec §5) */
+:root[data-map-moving] .glass:not(.glass-sheet) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--glass-fill-moving);
+}
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
