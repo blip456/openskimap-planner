@@ -10,12 +10,14 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:ski": "node scripts/build.mjs --only=ski",
+    "build:pwa-data": "node scripts/build-pwa-data.mjs",
     "tiles": "tileserver-gl --config build/tileserver/config.json --bind 127.0.0.1 --port 8080",
     "planner": "node planner/server.mjs",
     "start": "node scripts/start.mjs",
     "typecheck": "tsc -p packages/core",
     "test:core": "node --test \"packages/core/test/**/*.test.mjs\"",
-    "test": "npm run typecheck && npm run test:core"
+    "test": "npm run typecheck && npm run test:core && npm run test:scripts",
+    "test:scripts": "node --test \"scripts/test/**/*.test.mjs\""
   },
   "dependencies": {
     "@mapbox/vector-tile": "3.0.0",

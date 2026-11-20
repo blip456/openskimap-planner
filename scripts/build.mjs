@@ -486,7 +486,7 @@ async function extractPlaces(resorts) {
   await archive.close();
 }
 
-function writePlannerData(resorts) {
+function writePlannerData(resorts, zoom) {
   fs.mkdirSync(DIR.planner, { recursive: true });
   const index = resorts.map((r) => ({
     id: r.id,
@@ -504,6 +504,7 @@ function writePlannerData(resorts) {
         bbox: r.bbox,
         builtAt: new Date().toISOString(),
         source: readJson(path.join(DIR.raw, 'metadata.json'), {})?.source ?? null,
+        zoom,
         runs: r.features.runs.filter((f) => f.geometry.type === 'LineString'),
         runAreas: r.features.runs.filter((f) => f.geometry.type !== 'LineString'),
         lifts: r.features.lifts.filter((f) => f.geometry.type === 'LineString'),
@@ -535,72 +536,167 @@ function writeRegion(resorts) {
   return { file, hash: hash(region) };
 }
 
-async function extractBasemap(region, settings, state) {
-  const out = path.join(DIR.tsData, 'basemap.pmtiles');
-  const key = hash([region.hash, settings.basemapMaxZoom]);
-  if (fs.existsSync(out) && state.basemap === key && !args.refreshBasemap) {
-    log('Basemap: up to date');
+// Extracts are cached per zoom: build/work/<kind>/z<N>/<region hash>.pmtiles. The files in build/tileserver/data
+// are hard links to (or copies of) the selected cache entry, so switching back to an earlier zoom needs no download.
+function linkOrCopy(src, dst) {
+  if (path.resolve(src) === path.resolve(dst)) return;
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  fs.rmSync(dst, { force: true });
+  try {
+    fs.linkSync(src, dst);
+  } catch {
+    fs.copyFileSync(src, dst);
+  }
+}
+
+// Shared by basemap, terrain and contours: use the file in tileserver/data if it matches, else the cache, else build.
+async function useCached({ label, out, cache, upToDate, refresh, build }) {
+  if (!refresh && fs.existsSync(out) && upToDate) {
+    if (!fs.existsSync(cache)) linkOrCopy(out, cache); // adopt files from an older build into the cache
+    log(`${label}: up to date`);
     return false;
   }
-  const builds = await (await fetch(PROTOMAPS_BUILDS)).json();
-  const latest = builds.map((b) => b.key).sort().at(-1);
-  log(`Basemap: extracting Protomaps build ${latest} (z0-${settings.basemapMaxZoom})…`);
-  await run('pmtiles', [
-    'extract', `${PROTOMAPS_BASE}/${latest}`, out,
-    `--region=${region.file}`,
-    `--maxzoom=${settings.basemapMaxZoom ?? 15}`,
-    '--download-threads=8',
-  ]);
-  state.basemap = key;
-  state.basemapBuild = latest;
+  if (!refresh && fs.existsSync(cache)) {
+    log(`${label}: reusing stored extract ${path.relative(BUILD, cache)}`);
+    linkOrCopy(cache, out);
+    return true;
+  }
+  fs.mkdirSync(path.dirname(cache), { recursive: true });
+  const tmp = cache.replace(/\.pmtiles$/, '.tmp.pmtiles'); // tippecanoe decides the format from the extension
+  fs.rmSync(tmp, { force: true });
+  try {
+    await build(tmp);
+  } catch (err) {
+    fs.rmSync(tmp, { force: true });
+    try {
+      fs.rmdirSync(path.dirname(cache)); // only succeeds when empty
+    } catch {}
+    throw err;
+  }
+  fs.renameSync(tmp, cache);
+  linkOrCopy(cache, out);
   return true;
 }
 
-async function extractTerrain(resorts, region, settings, state) {
-  const out = path.join(DIR.tsData, 'terrain.pmtiles');
-  const maxZoom = settings.terrainMaxZoom ?? 14;
-  const key = hash([region.hash, maxZoom]);
-  if (fs.existsSync(out) && state.terrain === key && !args.refreshBasemap) {
-    log('Terrain: up to date');
-    return false;
-  }
-  const dir = path.join(DIR.work, 'terrain');
-  fs.rmSync(dir, { recursive: true, force: true });
-  fs.mkdirSync(dir, { recursive: true });
-
-  log('Terrain: extracting Mapterhorn z0-12…');
-  const parts = [path.join(dir, 'planet.pmtiles')];
-  await run('pmtiles', [
-    'extract', `${MAPTERHORN_BASE}/planet.pmtiles`, parts[0],
-    `--region=${region.file}`, `--maxzoom=${Math.min(12, maxZoom)}`, '--download-threads=8',
-  ]);
-
-  if (maxZoom > 12) {
-    const z6 = new Set();
-    for (const r of resorts) {
-      const t = tileRange(r.bbox, 6);
-      for (let x = t.x0; x <= t.x1; x++) for (let y = t.y0; y <= t.y1; y++) z6.add(`6-${x}-${y}`);
-    }
-    for (const name of z6) {
-      const url = `${MAPTERHORN_BASE}/${name}.pmtiles`;
-      if (!(await exists(url))) {
-        log(`Terrain: no high-resolution file ${name}, using z12 there`);
-        continue;
-      }
-      log(`Terrain: extracting high-resolution ${name} z13-${maxZoom}…`);
-      const file = path.join(dir, `${name}.pmtiles`);
+async function extractBasemap(region, settings, state) {
+  const zoom = settings.basemapMaxZoom ?? 15;
+  const key = hash([region.hash, zoom]);
+  const cache = path.join(DIR.work, 'basemap', `z${zoom}`, `${region.hash}.pmtiles`);
+  const metaFile = `${cache}.json`;
+  const changed = await useCached({
+    label: `Basemap z${zoom}`,
+    out: path.join(DIR.tsData, 'basemap.pmtiles'),
+    cache,
+    upToDate: state.basemap === key,
+    refresh: args.refreshBasemap,
+    build: async (tmp) => {
+      const builds = await (await fetch(PROTOMAPS_BUILDS)).json();
+      const latest = builds.map((b) => b.key).sort().at(-1);
+      log(`Basemap: extracting Protomaps build ${latest} (z0-${zoom})…`);
       await run('pmtiles', [
-        'extract', url, file, `--region=${region.file}`, `--maxzoom=${maxZoom}`, '--download-threads=8',
+        'extract', `${PROTOMAPS_BASE}/${latest}`, tmp,
+        `--region=${region.file}`,
+        `--maxzoom=${zoom}`,
+        '--download-threads=8',
       ]);
-      parts.push(file);
+      writeJson(metaFile, { build: latest });
+    },
+  });
+  state.basemap = key;
+  state.basemapBuild = readJson(metaFile, null)?.build ?? state.basemapBuild ?? null;
+  return changed;
+}
+
+async function confirm(question) {
+  if (args.yes) return true;
+  if (!process.stdin.isTTY) {
+    throw new Error('This needs your confirmation, but there is no terminal to ask. Run it again with --yes to continue.');
+  }
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await new Promise((resolve) => rl.question(`${question} [y/N] `, resolve));
+  rl.close();
+  return /^y(es)?$/i.test(answer.trim());
+}
+
+// Which Mapterhorn high-resolution files (zoom 13 and up) exist for the region, and how deep they go.
+async function findHighResPieces(resorts, maxZoom) {
+  const names = new Set();
+  for (const r of resorts) {
+    const t = tileRange(r.bbox, 6);
+    for (let x = t.x0; x <= t.x1; x++) for (let y = t.y0; y <= t.y1; y++) names.add(`6-${x}-${y}`);
+  }
+  const pieces = [];
+  for (const name of names) {
+    const url = `${MAPTERHORN_BASE}/${name}.pmtiles`;
+    if (!(await exists(url))) {
+      log(`Terrain: no high-resolution data (${name}); the zoom 12 data is used there`);
+      continue;
+    }
+    const header = await new PMTiles(url).getHeader();
+    const zoom = Math.min(maxZoom, header.maxZoom);
+    if (zoom < maxZoom) log(`Terrain: high-resolution data ${name} only goes up to zoom ${header.maxZoom}; using ${zoom} there`);
+    pieces.push({ name, url, zoom });
+  }
+  return pieces;
+}
+
+async function extractTerrain(resorts, region, settings, state) {
+  const requested = settings.terrainMaxZoom ?? 14;
+  const key = hash([region.hash, requested]);
+  const cache = path.join(DIR.work, 'terrain', `z${requested}`, `${region.hash}.pmtiles`);
+  const out = path.join(DIR.tsData, 'terrain.pmtiles');
+  const changed = await useCached({
+    label: `Terrain z${requested}`,
+    out,
+    cache,
+    upToDate: state.terrain === key,
+    refresh: args.refreshBasemap,
+    build: async (tmp) => {
+      // what exists: planet file up to zoom 12, high-resolution files for zoom 13 and up (only some regions)
+      const pieces = requested > 12 ? await findHighResPieces(resorts, requested) : [];
+      const effective = pieces.length ? Math.max(12, ...pieces.map((p) => p.zoom)) : Math.min(12, requested);
+      if (requested > 12 && effective < requested) {
+        log(`Terrain: requested zoom ${requested}, the highest available for this region is ${effective}`);
+      }
+      const est = estimateTerrain(resorts.map((r) => r.bbox), effective);
+      log(`Terrain: about ${est.tiles.toLocaleString('en')} tiles to download, roughly ${formatBytes(est.bytes)} (zoom 0-${effective})`);
+      if (effective > CONFIRM_ABOVE_ZOOM && !(await confirm(`Terrain zoom ${effective} is big (about ${formatBytes(est.bytes)}). Continue?`))) {
+        throw new Error('Cancelled. Choose a lower zoom (for example z16) or use --yes.');
+      }
+
+      const work = path.join(DIR.work, 'terrain', `tmp-z${requested}`);
+      fs.rmSync(work, { recursive: true, force: true });
+      fs.mkdirSync(work, { recursive: true });
+      try {
+        log(`Terrain: extracting Mapterhorn z0-${Math.min(12, requested)}…`);
+        const parts = [path.join(work, 'planet.pmtiles')];
+        await run('pmtiles', [
+          'extract', `${MAPTERHORN_BASE}/planet.pmtiles`, parts[0],
+          `--region=${region.file}`, `--maxzoom=${Math.min(12, requested)}`, '--download-threads=8',
+        ]);
+        for (const piece of pieces) {
+          log(`Terrain: extracting high-resolution ${piece.name} z13-${piece.zoom}…`);
+          const file = path.join(work, `${piece.name}.pmtiles`);
+          await run('pmtiles', [
+            'extract', piece.url, file, `--region=${region.file}`, `--maxzoom=${piece.zoom}`, '--download-threads=8',
+          ]);
+          parts.push(file);
+        }
+        if (parts.length === 1) fs.copyFileSync(parts[0], tmp);
+        else await run('pmtiles', ['merge', ...parts, tmp]);
+      } finally {
+        fs.rmSync(work, { recursive: true, force: true });
+      }
+    },
+  });
+  // old layout: loose parts directly in build/work/terrain (the cache now holds the merged file)
+  if (fs.existsSync(cache)) {
+    for (const f of ['planet.pmtiles', ...fs.readdirSync(path.dirname(path.dirname(cache))).filter((n) => /^\d+-\d+-\d+\.pmtiles$/.test(n))]) {
+      fs.rmSync(path.join(DIR.work, 'terrain', f), { force: true });
     }
   }
-
-  fs.rmSync(out, { force: true });
-  if (parts.length === 1) fs.copyFileSync(parts[0], out);
-  else await run('pmtiles', ['merge', ...parts, out]);
   state.terrain = key;
-  return true;
+  return changed;
 }
 
 // ---------------------------------------------------------------------------
@@ -690,18 +786,26 @@ async function buildDem(archive, bbox, z, file) {
   return `${file}.tif`;
 }
 
-async function buildContours(resorts, settings, state, terrainChanged) {
+async function buildContours(resorts, settings, state) {
   const out = path.join(DIR.tsData, 'contours.pmtiles');
   const terrain = path.join(DIR.tsData, 'terrain.pmtiles');
   const interval = settings.contourInterval ?? 20;
   const index = settings.contourIndexInterval ?? 100;
+  // the contours only depend on the terrain extract (its key holds region + zoom) and the intervals
   const key = hash([state.terrain, interval, index]);
-  if (fs.existsSync(out) && state.contours === key && !terrainChanged && !args.refreshBasemap) {
-    log('Contours: up to date');
-    return;
-  }
   if (!fs.existsSync(terrain)) throw new Error('terrain.pmtiles missing; cannot build contours');
+  await useCached({
+    label: 'Contours',
+    out,
+    cache: path.join(DIR.work, 'contours-cache', `${key}.pmtiles`),
+    upToDate: state.contours === key,
+    refresh: args.refreshBasemap,
+    build: (tmp) => buildContoursFile(resorts, interval, index, terrain, tmp),
+  });
+  state.contours = key;
+}
 
+async function buildContoursFile(resorts, interval, index, terrain, out) {
   const dir = path.join(DIR.work, 'contours');
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
@@ -751,7 +855,6 @@ async function buildContours(resorts, settings, state, terrainChanged) {
     '--attribution=© Mapterhorn',
     path.join(dir, 'contours.geojson'),
   ]);
-  state.contours = key;
 }
 
 // ---------------------------------------------------------------------------
@@ -859,12 +962,67 @@ function writeStylesAndConfig(resorts, settings) {
 
 // ---------------------------------------------------------------------------
 
+// Zoom levels that were really built, read from the PMTiles headers (terrain can be lower than requested).
+async function readActualZoom() {
+  const zoom = {};
+  for (const name of ['terrain', 'basemap', 'ski', 'contours']) {
+    const file = path.join(DIR.tsData, `${name}.pmtiles`);
+    if (!fs.existsSync(file)) {
+      zoom[name] = null;
+      continue;
+    }
+    const archive = openPMTiles(file);
+    zoom[name] = (await archive.getHeader()).maxZoom;
+    await archive.close();
+  }
+  return zoom;
+}
+
+async function writeBuildInfo(requested, state) {
+  const meta = readJson(path.join(DIR.raw, 'metadata.json'), {});
+  const actual = await readActualZoom();
+  const info = {
+    builtAt: new Date().toISOString(),
+    // zoom levels really built (read from the PMTiles files); `requested` is what was asked for
+    zoom: { terrain: actual.terrain, basemap: actual.basemap, ski: actual.ski, contours: actual.contours },
+    requested,
+    source: {
+      openSkiData: { finishedAt: meta.run?.finishedAt ?? null, openStreetMapTimestamp: meta.source?.openStreetMap?.dataTimestamp ?? null },
+      protomaps: { build: state.basemapBuild ?? null },
+      mapterhorn: true,
+    },
+  };
+  writeJson(BUILD_INFO, info);
+  state.zoom = info.zoom;
+  state.requestedZoom = requested;
+  return info;
+}
+
 async function main() {
   const config = readJson(path.join(ROOT, 'resorts.json'), null);
   if (!config?.resorts?.length) throw new Error('resorts.json has no resorts');
-  const settings = config.settings ?? {};
   const statePath = path.join(DIR.work, 'state.json');
   const state = readJson(statePath, {});
+
+  // zoom: --terrain-zoom etc. > z<N> > resorts.json
+  let zoom;
+  try {
+    zoom = resolveZoom(args, config.settings ?? {});
+  } catch (err) {
+    if (err instanceof ArgError) throw new Error(err.message);
+    throw err;
+  }
+  if (onlySki) {
+    // only the ski zoom is used; keep the terrain and basemap zoom of the last full build
+    zoom.terrain = state.requestedZoom?.terrain ?? zoom.terrain;
+    zoom.basemap = state.requestedZoom?.basemap ?? zoom.basemap;
+    if (args.zoom.terrain !== null || args.zoom.basemap !== null) log('--only=ski: terrain and basemap zoom are ignored');
+  }
+  const settings = { ...(config.settings ?? {}), terrainMaxZoom: zoom.terrain, basemapMaxZoom: zoom.basemap, skiMaxZoom: zoom.ski };
+  log(`Zoom levels: terrain ${zoom.terrain}, basemap ${zoom.basemap}, ski ${zoom.ski}`);
+  if (zoom.basemap < 13 && !onlySki) {
+    log('  note: below basemap zoom 13 the map has no huts or restaurants, so the search finds fewer places');
+  }
 
   await downloadOpenSkiData();
   const resorts = resolveResorts(config);
@@ -875,17 +1033,19 @@ async function main() {
     const region = writeRegion(resorts);
     await extractBasemap(region, settings, state);
     writeJson(statePath, state);
-    const terrainChanged = await extractTerrain(resorts, region, settings, state);
+    await extractTerrain(resorts, region, settings, state);
     writeJson(statePath, state);
-    await buildContours(resorts, settings, state, terrainChanged);
+    await buildContours(resorts, settings, state);
     writeJson(statePath, state);
     await downloadAssets();
   }
 
   await extractPlaces(resorts);
-  writePlannerData(resorts);
+  const info = await writeBuildInfo(zoom, state);
+  writeJson(statePath, state);
+  writePlannerData(resorts, info.zoom);
   writeStylesAndConfig(resorts, settings);
-  log('Done.');
+  log(`Done (terrain z${info.zoom.terrain}, basemap z${info.zoom.basemap}, ski z${info.zoom.ski}).`);
 }
 
 main().catch((err) => {

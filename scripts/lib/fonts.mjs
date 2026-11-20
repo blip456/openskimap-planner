@@ -5,8 +5,14 @@
 export const BASE_RANGE_STARTS = [0, 256, 512, 768, 8192];
 /** Extra symbols the map styles draw themselves ("›", "‹ ›") are in range 8192 (U+2039/203A). */
 
-/** Keys whose text can end up as a label on the map or in a list. */
-const LABEL_KEY = /^(name|name:[\w-]+|alt_name|short_name|loc_name|official_name|int_name|old_name|ref|operator|brand|label|title|abbr)$/i;
+/**
+ * Keys whose text can show up as a label. The map style shows `name:<language>`, falling back to `name:en` and `name`;
+ * other translations (name:zh, name:ja, ...) are never drawn, so they must not add glyph ranges.
+ */
+export function labelKeyTest(language = 'en') {
+  const names = new Set(['name', 'name2', 'name3', `name:${language}`, 'name:en', 'alt_name', 'short_name', 'loc_name', 'official_name', 'ref', 'operator', 'brand', 'label', 'title', 'abbr']);
+  return (key) => names.has(key);
+}
 
 export const rangeFile = (start) => `${start}-${start + 255}.pbf`;
 
@@ -23,13 +29,13 @@ export function rangesForText(texts, into = new Set()) {
 }
 
 /** Visits every label-like string value (keys like name, name:de, ref) anywhere in a parsed JSON value. */
-export function* labelStrings(value, key = '') {
+export function* labelStrings(value, accept = labelKeyTest(), key = '') {
   if (typeof value === 'string') {
-    if (LABEL_KEY.test(key)) yield value;
+    if (accept(key)) yield value;
   } else if (Array.isArray(value)) {
-    for (const v of value) yield* labelStrings(v, key);
+    for (const v of value) yield* labelStrings(v, accept, key);
   } else if (value && typeof value === 'object') {
-    for (const [k, v] of Object.entries(value)) yield* labelStrings(v, k);
+    for (const [k, v] of Object.entries(value)) yield* labelStrings(v, accept, k);
   }
 }
 

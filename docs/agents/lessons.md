@@ -45,3 +45,30 @@ wrong assumption. Format:
 - **What happened:** `require('playwright')` failed under Node 24.
 - **Root cause:** Playwright is installed globally for Node 22 only (`/opt/node22/lib/node_modules`).
 - **Prevention:** run scripts that need it with `NODE_PATH=/opt/node22/lib/node_modules`.
+
+## 2026-11-20 · phase 2 · font stacks found by walking the style are not only font names
+- **What happened:** the first `build:pwa-data` run stopped with "Noto Sans Devanagari Regular v1/0-255.pbf is missing". An
+  earlier version of the walker also picked up words like `get` and `min_zoom`.
+- **Root cause:** the Protomaps style puts `text-font` inside expressions (`case`, `literal`, `format`), for non-Latin
+  scripts. Fonts for those scripts are not downloaded by the build, and expression arrays also look like lists of strings.
+- **Prevention:** `fontStacksOf` (scripts/lib/pwa-package.mjs) separates plain lists (required) from `["literal", [...]]`
+  fonts in expressions (optional, skipped with a log line when not in the build). Test: "font stacks come from the styles".
+
+## 2026-11-20 · phase 2 · scanning all `name:*` keys adds useless glyph ranges
+- **What happened:** the first label scan wanted CJK glyph ranges (23552 and others) for a resort in Bavaria.
+- **Root cause:** the Protomaps tiles carry translations (`name:zh`, `name:ja`, ...). The style only draws `name`,
+  `name:<language>` and `name:en`.
+- **Prevention:** `labelKeyTest(language)` in scripts/lib/fonts.mjs only accepts the keys the style can draw. Test: "label scan".
+
+## 2026-11-20 · phase 2 · `z14` is not the same as the resorts.json default
+- **What happened:** `build:pwa-data z14` after `z12` downloaded a new basemap (z14), not the stored z15 one.
+- **Root cause:** by design `z<N>` sets basemap to min(N, 15), so `z14` means basemap 14, while the default settings are
+  terrain 14 and basemap 15. Two builds can also have the same terrain zoom (same ZIP name) with a different basemap zoom.
+- **Prevention:** to return to the defaults run `npm run build` without a zoom (everything is reused from `build/work/`).
+  The README says what `z<N>` sets. The manifest records all three zoom levels.
+
+## 2026-11-20 · phase 2 · tippecanoe picks the output format from the file extension
+- **What happened:** (caught before it failed) the cache writes to a temporary file first; `x.pmtiles.tmp` would have made
+  tippecanoe write MBTiles.
+- **Root cause:** tippecanoe decides pmtiles or mbtiles from the name ending in `.pmtiles`.
+- **Prevention:** temporary names end in `.tmp.pmtiles` (`useCached` in scripts/build.mjs).

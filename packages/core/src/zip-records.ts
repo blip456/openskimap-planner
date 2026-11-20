@@ -18,6 +18,8 @@ export interface ZipRecordInput {
   crc: number;
   dosTime: number;
   dosDate: number;
+  /** write the ZIP64 fields even if the values fit in 32 bits (for tests) */
+  zip64?: boolean;
 }
 
 export interface ZipCentralInput extends ZipRecordInput {
@@ -36,15 +38,16 @@ export function dosDateTime(date: Date): { dosTime: number; dosDate: number } {
 }
 
 const needs64 = (n: number): boolean => n >= ZIP_MAX32;
+const entry64 = (e: ZipRecordInput): boolean => e.zip64 === true || needs64(e.size);
 
 /** Length of the local header (header + name + extra) for an entry. The file data follows directly. */
-export function zipLocalHeaderLength(name: string, size: number): number {
-  return 30 + enc.encode(name).length + (needs64(size) ? 20 : 0);
+export function zipLocalHeaderLength(name: string, size: number, zip64 = false): number {
+  return 30 + enc.encode(name).length + (zip64 || needs64(size) ? 20 : 0);
 }
 
 export function zipLocalHeader(e: ZipRecordInput): Uint8Array {
   const name = enc.encode(e.name);
-  const big = needs64(e.size);
+  const big = entry64(e);
   const extraLen = big ? 20 : 0;
   const out = new Uint8Array(30 + name.length + extraLen);
   const v = new DataView(out.buffer);
@@ -72,8 +75,8 @@ export function zipLocalHeader(e: ZipRecordInput): Uint8Array {
 
 export function zipCentralHeader(e: ZipCentralInput): Uint8Array {
   const name = enc.encode(e.name);
-  const bigSize = needs64(e.size);
-  const bigOffset = needs64(e.offset);
+  const bigSize = entry64(e);
+  const bigOffset = e.zip64 === true || needs64(e.offset);
   const extraValues: number[] = [];
   if (bigSize) extraValues.push(e.size, e.size); // uncompressed, compressed
   if (bigOffset) extraValues.push(e.offset);
@@ -81,7 +84,7 @@ export function zipCentralHeader(e: ZipCentralInput): Uint8Array {
   const out = new Uint8Array(46 + name.length + extraLen);
   const v = new DataView(out.buffer);
   v.setUint32(0, ZIP_SIG_CENTRAL, true);
-  v.setUint16(4, extraLen ? 45 : 20, true);
+  v.setUint16(4, (3 << 8) | (extraLen ? 45 : 20), true); // made by: Unix
   v.setUint16(6, extraLen ? 45 : 20, true);
   v.setUint16(8, 0x0800, true);
   v.setUint16(10, 0, true);
@@ -92,6 +95,7 @@ export function zipCentralHeader(e: ZipCentralInput): Uint8Array {
   v.setUint32(24, bigSize ? ZIP_MAX32 : e.size, true);
   v.setUint16(28, name.length, true);
   v.setUint16(30, extraLen, true);
+  v.setUint32(38, (0o100644 << 16) >>> 0, true); // file mode rw-r--r--
   v.setUint32(42, bigOffset ? ZIP_MAX32 : e.offset, true);
   out.set(name, 46);
   if (extraLen) {
@@ -108,8 +112,8 @@ export function zipCentralHeader(e: ZipCentralInput): Uint8Array {
 }
 
 /** End of central directory; adds the ZIP64 end record and locator when a value does not fit. */
-export function zipEndRecords(count: number, centralOffset: number, centralSize: number): Uint8Array {
-  const zip64 = count >= ZIP_MAX16 || needs64(centralOffset) || needs64(centralSize);
+export function zipEndRecords(count: number, centralOffset: number, centralSize: number, forceZip64 = false): Uint8Array {
+  const zip64 = forceZip64 || count >= ZIP_MAX16 || needs64(centralOffset) || needs64(centralSize);
   const out = new Uint8Array(22 + (zip64 ? 56 + 20 : 0));
   const v = new DataView(out.buffer);
   let p = 0;

@@ -293,6 +293,38 @@ only needs a higher `terrainMaxZoom` if you want sharper hillshading.
 - `npm run build -- --only=ski`: rebuild only ski tiles, styles and planner data from the local download (seconds).
 - `npm run build -- --refresh-basemap`: re-extract the latest Protomaps basemap, terrain and contours.
 - `npm run build -- --refresh`: force a new OpenSkiData download (respect the once-per-day rule).
+- `npm test`: type check and tests of the shared code and the build scripts.
+
+### Zoom level per build
+
+The map pictures can be built sharper or smaller. Add `z<N>` to the build command:
+
+```sh
+npm run build z12           # small: terrain and basemap up to zoom 12
+npm run build z15           # sharper hillshading
+npm run build -- --terrain-zoom=16 --basemap-zoom=14 --ski-zoom=16   # each one on its own
+```
+
+- `z<N>` sets the terrain to zoom N (1 to 18) and the basemap to the smaller of N and 15. Ski runs stay at 16.
+  The long options win over `z<N>`, and `z<N>` wins over `resorts.json`.
+- Before the terrain download the build shows how many tiles and how many MB to expect. Above zoom 16 it asks
+  you to confirm (use `--yes` to skip the question). Where Mapterhorn has no data for a zoom, the build says so and
+  uses the highest zoom that exists.
+- Every zoom is stored in `build/work/` (for example `build/work/terrain/z14/`). When you go back to a zoom you built
+  before, nothing is downloaded again.
+- Below basemap zoom 13 the map has no huts and restaurants, so the search finds fewer places.
+
+## Data file for the phone
+
+```sh
+npm run build:pwa-data        # pack the current build/ into one ZIP
+npm run build:pwa-data z12    # build at zoom 12 first (if needed), then pack
+```
+
+This creates `build/pwa/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip`. It holds the map files, the planner data
+(with the search index and ski areas already computed), the fonts the labels need and the icons. The ZIP is not
+compressed, so the phone can copy the big files straight out of it. At the end the command prints the size of every
+file and the total. `manifest.json` inside the ZIP lists the zoom levels, the data dates and a SHA-256 for each file.
 
 ## Project layout
 

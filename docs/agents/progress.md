@@ -4,7 +4,7 @@
 | --- | --- |
 | 0 Plan | done (merged to main) |
 | 1 Shared core | done (waiting for commit) |
-| 2 Data ZIP + zoom levels | to do |
+| 2 Data ZIP + zoom levels | done (waiting for commit) |
 | 3 App skeleton + dev commands | to do |
 | 4 Feature parity | to do |
 | 5 PWA + import | to do |
@@ -60,3 +60,32 @@ resort JSON 12 ms; search index 8 ms; ski areas 82 ms. Well under the 1 s goal o
 - **Check on the real iPhone (phase 7):** blur cost while panning with a sheet open, Dynamic Type via
   `-apple-system-body` in standalone mode, search field position above the keyboard (`visualViewport`).
 - **Questions for the owner:** none blocking.
+
+### 2026-11-20 · phase 2 · senior engineer · data ZIP + zoom levels
+**Done**
+- `scripts/build.mjs`: zoom per build (`z<N>`, `--terrain-zoom=`, `--basemap-zoom=`, `--ski-zoom=`, `--yes`), validation,
+  terrain tile/size estimate with confirmation above zoom 16, highest-available-zoom handling per Mapterhorn file,
+  per-zoom caches in `build/work/` (hard links into `build/tileserver/data`), `build/build-info.json` and `state.json`
+  with the zoom levels really built. Details in decisions.md.
+- `scripts/build-pwa-data.mjs` + `npm run build:pwa-data [z<N>] [long flags]`: runs the build first when `build/` is
+  missing or the zoom differs from the last build, then writes `build/pwa/openskimap-data-YYYY-MM-DD-z<terrain>.zip`
+  (STORE, streaming, ZIP64-capable, SHA-256 per file in `manifest.json`), with precomputed `searchIndex` and `skiAreas`
+  inside `planner/<resort>.json`, only the needed glyph ranges, sprites. Prints a size report.
+- Core (for phase 5): `zip-records.ts`, `sha256.ts` (incremental), `data-package.ts` (`openDataPackage(read, size)`,
+  `readZipEntries`, `parseManifest`, `checkManifestFiles`, `verifyEntrySha256`, injectable SHA-256 factory).
+- Tests: `npm test` = typecheck + 71 core tests (8 new, incl. a test on the real ZIP) + 14 script tests. Mutation
+  check on the ZIP64 boundary fails the test as expected.
+
+**How to verify**
+- `npm test`; `npm run build:pwa-data`; `unzip -tq build/pwa/*.zip` and `zipinfo` (all `stor`); `npm run build z12` then
+  `npm run build` shows "reusing stored extract" (no download). Old planner: `npm run planner`, POST `/api/route` works.
+- Sizes (Oberstdorf): z14 (basemap 15) 45.6 MB; z12 (basemap 12) 12.5 MB.
+
+**Open issues / notes**
+- `z<N>` also lowers the basemap (min(N, 15)), so `z14` is not the default (terrain 14 + basemap 15). The ZIP name only has
+  the terrain zoom, so two builds with different basemap zoom can have the same name (the manifest has all three).
+- Basemap below zoom 13: the search has no huts/restaurants (places are read from the basemap).
+- Fonts for non-Latin scripts (Devanagari etc.) are in the style but not downloaded by the build; such labels would have no text.
+- A real archive above 4 GB was not built (disk/time); ZIP64 is covered by unit tests only. z17 estimate for Oberstdorf: 11,335
+  tiles, about 1.6 GB.
+- The shell had stale `build/work/contours/` scratch files (about 290 MB); they are only temporary and safe to delete.

@@ -57,3 +57,38 @@ Full spec: `docs/design/spec.md`, tokens: `docs/design/tokens.css`, mockups: `do
   stays px. Desktop root 15 px.
 - **Map style stays light in dark mode**; only the UI follows the system theme.
 - **Icons: Lucide** (`@lucide/svelte`, per-icon imports) + 3 custom SVGs (location-heading, compass needle, logo).
+
+## 2026-11-20 · phase 2 · zoom per build, caches, data ZIP (senior engineer)
+- **Argument parsing in `scripts/lib/build-args.mjs`** (pure, tested). `z<N>` = terrain N (1-18), basemap min(N, 15), ski
+  unchanged; long flags override `z<N>`, which overrides `resorts.json`. Ranges: terrain 1-18, basemap 1-15, ski 8-18
+  (the ski tiles start at zoom 8). Unknown options and bad numbers stop the build with a clear message.
+- **Estimate:** tile count per zoom comes from the resort bboxes (`tileRange`, an upper bound when resorts overlap).
+  Size = tiles x 155 KB, a constant measured on the Oberstdorf z14 extract (150-156 KB per tile for zoom 12-14; the
+  estimate is within 10% of the real 36 MB file). The question above zoom 16 uses the zoom that will really be
+  downloaded (after checking what Mapterhorn has), `--yes` skips it, no terminal without `--yes` aborts.
+- **Highest available terrain zoom:** for each `6-x-y` high-resolution file the build reads the PMTiles header
+  (`maxZoom`); each file is extracted up to `min(N, its maxZoom)`. Missing files fall back to the zoom 12 planet file. Both
+  cases are logged.
+- **Caches:** `build/work/terrain/z<N>/<region hash>.pmtiles`, `build/work/basemap/z<N>/<region hash>.pmtiles` (+ `.json`
+  with the Protomaps build), `build/work/contours-cache/<key>.pmtiles` (key = terrain key + intervals, so contours follow
+  the terrain). Files in `build/tileserver/data` are hard links to the cache entry (copy if linking fails). Files from the
+  older layout are adopted into the cache when their state key matches. `--refresh-basemap` ignores the caches.
+- **Actual zoom:** `build/build-info.json` has `zoom` (read from the PMTiles headers) and `requested`; the same goes in
+  `state.json` and in a new `zoom` field of the planner JSON (old planner ignores it).
+- **Search places at low basemap zoom:** places come from the basemap at its max zoom, so a basemap below 13 has no huts or
+  restaurants. The build prints a note. Not worked around (would need a second basemap download).
+- **Data ZIP:** the planner file in the ZIP is the planner JSON plus `searchIndex` and `skiAreas` (one file, one parse in
+  the worker); `build/planner/*.json` for the old planner is unchanged. `manifest.plannerFormat.precomputed` says so.
+  Manifest: `formatVersion` 1, `buildDate`, `source` (OpenSkiData date, Protomaps build), `zoom` {terrain, basemap, ski}
+  (actual), `resorts` (with `planner` path), `files` {path, size, sha256}. Terrain and contours are optional for the reader
+  (a lighter package is possible later); the builder always includes all four.
+- **Fonts:** stacks come from the styles' `text-font`; the 3 Noto Sans stacks are packed. Ranges: 0, 256, 512, 768, 8192
+  always, plus ranges with characters in label-like fields of the planner data, ski GeoJSON and basemap tiles. For the
+  Oberstdorf data that is only the 5 base ranges (1.3 MB for 3 stacks instead of about 70 MB).
+- **Core additions (no DOM, no Node):** `zip-records.ts` (local/central/end records, ZIP64), `sha256.ts` (incremental,
+  because WebCrypto cannot hash in chunks; the app can use it or inject its own), `data-package.ts` (reader: ZIP64 central
+  directory, STORE only, manifest validation, SHA-256 check by chunks). The Node writer is `scripts/lib/zip-writer.mjs`
+  (two passes: hash, then write; real CRC in the headers, no data descriptors). `makeZip` is unchanged (golden test).
+- **ZIP64:** entry sizes and offsets of 4 GB and more, and 65,535 entries or more, use ZIP64 records. Tested with forced
+  records and with a virtual 5 GB archive for the reader; a real 4 GB file is not part of the tests.
+- **`npm test`** now also runs `test:scripts` (`scripts/test/*.test.mjs`).

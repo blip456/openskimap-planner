@@ -53,9 +53,9 @@ export async function describeSources(sources, onFile = () => {}) {
 
 /**
  * Writes entries (from describeSources) to `outFile`. `date` sets the file times.
- * Returns { size, zip64 } where zip64 tells if any ZIP64 record was needed.
+ * Returns { size, zip64 } where zip64 tells if any ZIP64 record was written. `forceZip64` writes them always (tests).
  */
-export async function writeZip(outFile, entries, { date = new Date(), onProgress = () => {} } = {}) {
+export async function writeZip(outFile, entries, { date = new Date(), onProgress = () => {}, forceZip64 = false } = {}) {
   const { dosTime, dosDate } = dosDateTime(date);
   const tmp = `${outFile}.tmp`;
   const fh = await fs.promises.open(tmp, 'w');
@@ -71,7 +71,7 @@ export async function writeZip(outFile, entries, { date = new Date(), onProgress
   };
   try {
     for (const e of entries) {
-      const rec = { name: e.name, size: e.size, crc: e.crc, dosTime, dosDate };
+      const rec = { name: e.name, size: e.size, crc: e.crc, dosTime, dosDate, zip64: forceZip64 };
       central.push({ ...rec, offset });
       await put(zipLocalHeader(rec));
       let written = 0;
@@ -85,7 +85,7 @@ export async function writeZip(outFile, entries, { date = new Date(), onProgress
     const centralOffset = offset;
     for (const c of central) await put(zipCentralHeader(c));
     const centralSize = offset - centralOffset;
-    const end = zipEndRecords(central.length, centralOffset, centralSize);
+    const end = zipEndRecords(central.length, centralOffset, centralSize, forceZip64);
     await put(end);
     await fh.close();
     fs.renameSync(tmp, outFile);
