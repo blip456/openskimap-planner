@@ -278,33 +278,60 @@ Real Liquid Glass (with light refraction) only exists in native iOS 26 apps. On 
 ### 8.1 Principles we follow (from Apple's HIG / WWDC25)
 
 - **Two layers.** The map is the content. Glass is used **only** for the navigation layer floating on top: bottom bar, sheet, map control groups. No glass on glass, no glass inside content (cards, lists, charts use solid surfaces).
-- **Floating bottom bar.** A centred capsule with round buttons inside, floating above the home indicator, not full width. It shrinks (icons only, smaller) when the sheet is pulled up or while the map is being moved.
+- **Floating bottom bar.** A centred capsule with round buttons inside, floating above the home indicator, not full width.
 - **Sheets.** Bottom sheet inset from the screen edges, with detents (small ≈ summary, medium ≈ half, large ≈ full). At full height it attaches to the edges and becomes solid.
 - **Concentric shapes.** Capsules have radius = half their height. Inner radius = outer radius − padding, so buttons sit neatly inside the bar and the sheet follows the screen corners.
 - **Touch targets** of at least 44 × 44 pt. Icons can be smaller as long as the hit area is 44.
 - **Tint only for the main action** (e.g. *Plan route* / *Start from my location*), using the app's accent colour. Run colours stay the official piste colours.
 - **System font:** `system-ui, -apple-system, "SF Pro Text", sans-serif`.
 
-### 8.2 Bottom bar (iPhone)
+### 8.2 Design reference: the native test app (branch `ios-app-test`)
+
+The native SwiftUI test app on branch `ios-app-test` is the reference for the iPhone layout. It covers about 80% of the target. Its source (`ios/OpenSkiPlanner/Views/*.swift`, `Components/Glass.swift`) is the reference for the sub-agents. The PWA copies its layout and behaviour, not its code.
+
+**Main screen (map):**
 
 ```
- ╭──────────────────────────────────────────╮
- │  (🔍)   (✏️ Plan)   (📍)   (⛰ Layers)  (⚙) │   ← one glass capsule, round buttons
- ╰──────────────────────────────────────────╯
+ ┌───────────────────────────────────────────┐
+ │ 21:52                            ▂▄▆ 70%  │  map runs under the status bar
+ │ (🔍)                       (↶)(⬡ 3D) (N)  │  top: search · undo · 3D · compass
+ │                                           │
+ │                 full-screen map           │
+ │                                           │
+ │                                     (➤)   │  my location, above the bar
+ │  ╭─────────────────────────────────────╮  │
+ │  │   ⤳ Route     🔖 Saved     🗺 Map    │  │  one glass capsule, icon + label
+ │  ╰─────────────────────────────────────╯  │
+ └───────────────────────────────────────────┘
 ```
 
-Search · plan mode · my location (tap: centre, again: follow, again: follow with compass) · map layers sheet · settings. The exact set is decided in phase 4 with the screens. Undo/redo, 3D and the compass reset sit in a small glass group on the map, top right.
+- **Top left:** a round glass **search** button. Tapping it stretches the capsule to the right into a search field. The results appear in a glass panel below it.
+- **Top right:** **undo** and **3D** as glass capsules, with the **compass** button (appears when the map is rotated; tap resets north).
+- **Bottom right:** a round glass **my location** button above the bar. Tap: centre on your position. Tap again: follow. Tap a third time: follow with compass heading.
+- **Bottom:** one glass capsule with three tabs, **Route · Saved · Map** (icon + label). The open tab keeps a highlight pill. Each tab opens a sheet.
 
-### 8.3 Sheets
+**Sheets:** iOS-style detents **medium** and **large** plus a drag handle. Content uses the iOS "inset grouped" look from the screenshots: a section title above rounded groups, rows with iOS switches, and a checkmark for single choices (like *Official difficulty / Steepness*).
 
-| Sheet | Small | Medium | Large |
-| --- | --- | --- | --- |
-| **Route** | Total time, distance, lifts, descent; Share GPX | Directions per leg + gradient profile | Settings for this route, save |
-| **Info card** (tap on run/lift/place) | Name, type, key numbers, *use as start/destination/stop* | Full stats + profile | – |
-| **Search** | Search field + results (keyboard open) | | |
-| **Layers / Settings / Data** | | Map options, online/offline switch, import, storage | |
+| Tab / sheet | Content |
+| --- | --- |
+| **Route** | Name, route points A, B, C… (remove, reverse, clear), summary (distance, time, descent, ascent, lifts), warnings, gradient profile (scrub with your finger), directions per leg (collapsible), **Share GPX** in the header, row **Route settings** → runs, lifts, speed, advanced. |
+| **Saved** | Save the current route (name, folder), routes grouped by folder, swipe to delete, open a route, export/import backup, share a folder as ZIP. |
+| **Map** | Show (runs, lifts, cross-country, touring & sled), run colours, extras (ski areas in colour, route arrows, route distances), terrain (3D), base map. Further down: **Online mode**, **Data** (import, storage, zoom levels of the data), **Solid interface**, and on desktop **gpx.studio**. |
+| **Info card** (tap a run, lift or place) | Medium: name, type, key numbers, *use as start / destination / stop*. Large: all stats + elevation profile. |
 
-Drag rules: below the top detent every drag moves the sheet. At the top detent the content scrolls, and a downward drag at scroll position 0 moves the sheet again. The map gets `padding` equal to the sheet height, so the route is never hidden behind it. Own Svelte implementation with pointer events (no React libraries).
+**Things to do better than the test app** (seen in the screenshots):
+- The compass is cut off at the right edge, and the 3D capsule and compass overlap. They become separate buttons that stay fully on screen.
+- The MapLibre attribution button (ⓘ) sits under the tab bar. It moves above the bar, or into the Map sheet.
+- A disabled undo button almost disappears on a light map. It gets a clearer disabled state, and is hidden when there is nothing to undo.
+- The location button is close to the bar. It gets a fixed gap that respects the safe area.
+
+**Plan mode vs. explore mode.** In the test app every tap on the map adds a route point. In the web planner a tap opens an info card unless plan mode is on. Proposal: the **Route** sheet has a *Plan route* switch at the top. While it is on, a small glass pill "Tap the map to add points" shows at the top of the map with a ✕ to stop. In explore mode a **long press** on the map adds a point directly. To be confirmed in phase 4.
+
+**Logo and icons.** The yeti logo and the icon script from `ios-app-test` (`planner/public/logo.svg`, `scripts/icons.mjs`) are reused for the PWA icons (apple-touch-icon, manifest icons, favicon).
+
+### 8.3 Sheet behaviour
+
+Drag rules: below the top detent every drag moves the sheet. At the top detent the content scrolls, and a downward drag at scroll position 0 moves the sheet again. The map gets `padding` equal to the sheet height, so the route is never hidden behind it. While a sheet is open the tab bar stays visible below it (as in the test app), and the active tab is highlighted. Own Svelte implementation with pointer events (no React libraries).
 
 ### 8.4 Desktop layout (≥ 900 px wide)
 
