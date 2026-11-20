@@ -85,8 +85,8 @@ The current `planner/` folder stays working until the new app reaches feature pa
 
 | Script | What it does |
 | --- | --- |
-| `npm run build` | Data build, as today (needs tippecanoe, pmtiles, GDAL). |
-| `npm run build:pwa-data` | Packs `build/` into `build/pwa/openskimap-data-<date>.zip` for import on the phone. |
+| `npm run build` | Data build, as today (needs tippecanoe, pmtiles, GDAL). Accepts a zoom level, e.g. `npm run build z12` (see §5.1). |
+| `npm run build:pwa-data` | Packs `build/` into `build/pwa/openskimap-data-<date>-z<zoom>.zip` for import on the phone. Also accepts a zoom level: `npm run build:pwa-data z13` builds the data first if needed. |
 | `npm run build:app` | Builds the PWA into `app/dist` (this is what Vercel runs). |
 | `npm run build:desktop` | Builds the app for the desktop target. |
 | `npm start` | Desktop: TileServer GL + desktop server with the desktop app. |
@@ -214,6 +214,37 @@ sprites/light*.json|png
 - `navigator.storage.persist()` is requested after the first import. Its result is shown on the storage screen.
 - Size: `terrainMaxZoom` has the biggest effect. The build prints the ZIP size per file, so you can decide on zoom 13 or 14 for the terrain.
 
+### 5.1 Zoom level per build
+
+Today the zoom levels are fixed in `resorts.json` (`terrainMaxZoom`, `basemapMaxZoom`, `skiMaxZoom`). You can now also set them per build on the command line, to try out sharpness against file size. `resorts.json` stays the default.
+
+**Short form:** `npm run build z<N>` or `npm run build:pwa-data z<N>`, for example:
+
+```sh
+npm run build z12          # small: terrain and basemap up to zoom 12
+npm run build z15          # sharper hillshading and basemap detail
+npm run build:pwa-data z13 # build the data at zoom 13 and pack the ZIP
+```
+
+`z<N>` sets the **maximum level of detail of the map pictures**:
+
+| Data | Effect of `z<N>` | Why |
+| --- | --- | --- |
+| Terrain (hillshading, 3D, contours) | max zoom = N (1–18) | This drives both the sharpness and most of the size: every extra level is about 4× more terrain tiles. |
+| Basemap (roads, forest, labels) | max zoom = min(N, 15) | Protomaps has no data above 15. Above that the map is zoomed in from 15 ("overzoomed"), which looks fine. |
+| Ski runs and lifts | unchanged (16) | Small files. Lower zooms would make the run and lift lines visibly coarse when you zoom in. |
+
+You can still zoom the map in further than N. The app then enlarges the last level, so the hillshading just gets softer.
+
+**Long form**, to set each one separately: `npm run build -- --terrain-zoom=16 --basemap-zoom=14 --ski-zoom=16`. These override `z<N>`, and `z<N>` overrides `resorts.json`.
+
+**Practical details:**
+- Before downloading, the build shows an estimate of the number of terrain tiles and the size. Above zoom 16 it asks for confirmation (skip it with `--yes`), because zoom 17–18 can mean several GB.
+- High-resolution terrain above zoom 12 only exists in some regions; the Alps are covered. Where it is missing, the build says so and uses the highest available level.
+- Extracts are kept per zoom level in `build/work/`. Switching back to a zoom you built before reuses the stored files instead of downloading again.
+- The ZIP file name contains the zoom (`…-z13.zip`) and `manifest.json` records all three zoom levels. The app's storage screen shows them, so you can see which version is on the phone.
+- The desktop build simply uses whatever was built last.
+
 ## 6. Online and offline mode
 
 A switch in Settings (also visible as a small status in the glass bar). Default: **offline** in the PWA, **online** on desktop.
@@ -314,7 +345,7 @@ Each phase ends with a check (tests, build, screenshots in iPhone and desktop si
 | # | Phase | Result |
 | --- | --- | --- |
 | 1 | **Shared core** | `packages/core` in TypeScript, unit tests, golden route tests against the old `graph.mjs`. Old planner still works, using the core. |
-| 2 | **Data ZIP** | `npm run build:pwa-data`, manifest, limited font ranges, precomputed search index/ski areas. Size report. |
+| 2 | **Data ZIP + zoom levels** | `npm run build:pwa-data`, manifest, limited font ranges, precomputed search index/ski areas. Zoom per build (`z<N>` and long flags), size estimate, cache per zoom. Size report. |
 | 3 | **App skeleton** | Vite + Svelte + TS, map from PMTiles via `DataSource` (desktop server + local), routing worker, a basic route on screen. Desktop server replaces `planner/server.mjs`. `dev:desktop` and `dev:pwa` work (incl. *Load data from build/* and the dev overlay). Worker start time measured. |
 | 4 | **Feature parity** | Route points, directions per leg, gradient profile, info cards, search, saved routes, settings (runs, lifts, speed, map), undo/redo, ski areas, 3D, online maps, gpx.studio (desktop). Old `planner/` removed. |
 | 5 | **PWA + import** | Manifest, icons, service worker (vite-plugin-pwa), import flow, storage screen, `persist()`, offline/online switch. Vercel config. `preview:pwa` and `dev:pwa -- --phone` (mkcert). |
