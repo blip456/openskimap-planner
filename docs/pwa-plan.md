@@ -294,34 +294,49 @@ The native SwiftUI test app on branch `ios-app-test` is the reference for the iP
 ```
  ┌───────────────────────────────────────────┐
  │ 21:52                            ▂▄▆ 70%  │  map runs under the status bar
- │ (🔍)                       (↶)(⬡ 3D) (N)  │  top: search · undo · 3D · compass
+ │ (≡)                        (↶)(⬡ 3D) (N)  │  top: menu · undo · 3D · compass
  │                                           │
  │                 full-screen map           │
  │                                           │
- │                                     (➤)   │  my location, above the bar
- │  ╭─────────────────────────────────────╮  │
- │  │   ⤳ Route     🔖 Saved     🗺 Map    │  │  one glass capsule, icon + label
- │  ╰─────────────────────────────────────╯  │
+ │ (✏️ Plan)                           (➤)   │  plan mode · my location
+ │  ╭──────────────────────────────╮  ╭───╮  │
+ │  │  ⤳ Route   🔖 Saved   🗺 Map  │  │ 🔍 │  │  tab capsule + separate search button
+ │  ╰──────────────────────────────╯  ╰───╯  │
  └───────────────────────────────────────────┘
 ```
 
-- **Top left:** a round glass **search** button. Tapping it stretches the capsule to the right into a search field. The results appear in a glass panel below it.
+- **Top left:** a round glass **menu** button (≡). It opens the settings menu (see below).
 - **Top right:** **undo** and **3D** as glass capsules, with the **compass** button (appears when the map is rotated; tap resets north).
-- **Bottom right:** a round glass **my location** button above the bar. Tap: centre on your position. Tap again: follow. Tap a third time: follow with compass heading.
-- **Bottom:** one glass capsule with three tabs, **Route · Saved · Map** (icon + label). The open tab keeps a highlight pill. Each tab opens a sheet.
+- **Bottom left:** the **Plan route** button, within thumb reach because you switch it often. Tinted while plan mode is on.
+- **Bottom right:** a round glass **my location** button. Tap: centre on your position. Tap again: follow. Tap a third time: follow with compass heading.
+- **Bottom:** one glass capsule with three tabs, **Route · Saved · Map** (icon + label), the open tab keeps a highlight pill. Each tab opens a sheet. **Search** is a separate round glass button next to the capsule, the iOS 26 pattern for a search tab. Tapping it opens a search field above the keyboard with the results in a glass panel.
 
 **Sheets:** iOS-style detents **medium** and **large** plus a drag handle. Content uses the iOS "inset grouped" look from the screenshots: a section title above rounded groups, rows with iOS switches, and a checkmark for single choices (like *Official difficulty / Steepness*).
 
 | Tab / sheet | Content |
 | --- | --- |
 | **Route** | Name, route points A, B, C… (remove, reverse, clear), summary (distance, time, descent, ascent, lifts), warnings, gradient profile (scrub with your finger), directions per leg (collapsible), **Share GPX** in the header, row **Route settings** → runs, lifts, speed, advanced. |
-| **Saved** | Save the current route (name, folder), routes grouped by folder, swipe to delete, open a route, export/import backup, share a folder as ZIP. |
-| **Map** | Show (runs, lifts, cross-country, touring & sled), run colours, extras (ski areas in colour, route arrows, route distances), terrain (3D), base map. Further down: **Online mode**, **Data** (import, storage, zoom levels of the data), **Solid interface**, and on desktop **gpx.studio**. |
-| **Info card** (tap a run, lift or place) | Medium: name, type, key numbers, *use as start / destination / stop*. Large: all stats + elevation profile. |
+| **Saved** | Save the current route (name, folder), routes grouped by folder, swipe to delete, open a route, share a folder as ZIP. |
+| **Map** | Only what you see on the map: show (runs, lifts, cross-country, touring & sled), run colours, extras (ski areas in colour, route arrows, route distances), 3D terrain, base map. |
+| **Info card** (tap a run, lift or place in explore mode) | Medium: name, type, key numbers, *use as start / destination / stop*. Large: all stats + elevation profile. |
+
+**Menu (≡).** A traditional iOS settings screen, like the iOS Settings app: a large sheet with a title, inset grouped lists and rows with a chevron (›) that open a sub-page, with a back button. Contents:
+
+| Group | Rows |
+| --- | --- |
+| **Resort** | Current resort (pick another one from the imported data) |
+| **Connection** | **Online mode** switch, with a line explaining what it adds |
+| **Data** (PWA) | Import data file · Installed data (resorts, build date, zoom levels, space used, free space, storage protected yes/no) · Delete data |
+| **Routes** | Export backup · Import backup |
+| **Appearance** | Solid interface (no glass) · Units stay metric |
+| **gpx.studio** (desktop build only) | The tile links with *Copy* buttons |
+| **About** | App version, *update available → reload*, data sources and licences, map credits (moves the ⓘ attribution here) |
+
+The exact rows are finalised in phase 4; settings that change the route (runs, lifts, speed) stay in the Route sheet because you change them while planning.
 
 **Things to do better than the test app** (seen in the screenshots):
 - The compass is cut off at the right edge, and the 3D capsule and compass overlap. They become separate buttons that stay fully on screen.
-- The MapLibre attribution button (ⓘ) sits under the tab bar. It moves above the bar, or into the Map sheet.
+- The MapLibre attribution button (ⓘ) sits under the tab bar. The credits move into the menu (*About*); a short credit line stays visible on the map, clear of the bar.
 - A disabled undo button almost disappears on a light map. It gets a clearer disabled state, and is hidden when there is nothing to undo.
 - The location button is close to the bar. It gets a fixed gap that respects the safe area.
 
