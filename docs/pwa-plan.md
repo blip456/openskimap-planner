@@ -90,8 +90,46 @@ The current `planner/` folder stays working until the new app reaches feature pa
 | `npm run build:app` | Builds the PWA into `app/dist` (this is what Vercel runs). |
 | `npm run build:desktop` | Builds the app for the desktop target. |
 | `npm start` | Desktop: TileServer GL + desktop server with the desktop app. |
-| `npm run dev` | Vite dev server (with the desktop server as data backend). |
+| `npm run dev:desktop` | Development of the desktop version: Vite dev server (hot reload) + desktop server + TileServer GL. See §2.1. |
+| `npm run dev:pwa` | Development of the PWA: Vite dev server with the PWA target, data from the browser's storage. See §2.1. |
+| `npm run dev:pwa -- --phone` | Same, but reachable from your iPhone on the local network over HTTPS. |
+| `npm run preview:pwa` | Builds the real PWA and serves it locally, with service worker, to test install and offline. |
 | `npm test` | Unit tests of `packages/core` + app tests. |
+
+### 2.1 Development workflow
+
+You can run both versions while developing and give feedback on them. Both use Vite with hot reload: a code change shows up in the browser at once, without losing the map position.
+
+**`npm run dev:desktop`** opens the desktop version on <http://localhost:5173>. It starts three things:
+- the Vite dev server for the frontend,
+- the desktop server, which serves the data from `build/` and the desktop API,
+- TileServer GL, for the gpx.studio links.
+
+It behaves like `npm start`, but with hot reload and source maps for debugging.
+
+**`npm run dev:pwa`** opens the PWA version on <http://localhost:5174>. It runs the Vite dev server with `VITE_TARGET=pwa`, with no desktop server and no tile server, exactly like on Vercel. The data comes from the browser's storage, just like on the iPhone.
+
+- **Getting data in:** use the real import flow with the ZIP from `npm run build:pwa-data`. Chrome and Safari on the Mac support the same storage (OPFS).
+- **Quick option for development only:** a button *Load data from build/*. The dev server offers the latest ZIP from `build/pwa/`, and the app imports it through the same import code as on the phone. So you don't need to pick a file each time, and the import itself still gets tested.
+- **Service worker:** it is off in `dev:pwa`, because it gets in the way of hot reload. Install and offline behaviour are tested with `npm run preview:pwa`.
+- **Development overlay:** a small panel, only in dev builds, that can:
+  - show simulated iPhone safe areas (notch, home indicator), because desktop browsers don't have them,
+  - switch between online and offline mode,
+  - set a fake GPS position and compass heading on the map (for example "stand at the top of the Kanzelwandbahn").
+
+**Three ways to look at the PWA, from quick to most realistic:**
+
+| How | Good for | Limits |
+| --- | --- | --- |
+| **Chrome DevTools device mode** (iPhone size, touch, location override) on `dev:pwa` | Fast layout and touch work: sheets, bar, chart scrubbing | Chrome engine, not Safari. Safe areas only through the dev overlay. |
+| **Xcode iOS Simulator** (Safari on a simulated iPhone, Mac only) on `dev:pwa` or `preview:pwa` | Real iOS Safari: safe areas, add to home screen, standalone mode, simulated GPS position | Free with Xcode. No real compass or GPS, and performance differs from a real phone. |
+| **Your iPhone** on `npm run dev:pwa -- --phone` or a Vercel preview | Everything real: GPS, compass, smoothness, share sheet | Location, storage and service workers need HTTPS (see below). |
+
+**HTTPS for the iPhone during development.** Location, storage and the service worker only work on HTTPS, or on `localhost`, which the phone can't use for your Mac. There are two options:
+- `--phone` starts Vite on your local network with a certificate made by **mkcert**. You install mkcert's root certificate on the iPhone once (a profile in Settings). After that the phone trusts `https://<your-mac>.local:5174`.
+- Simpler, but not live: push the branch. Vercel makes a **preview deployment** for every push, with its own HTTPS link that you can open and install on the phone.
+
+The plan supports both. The README will explain the one-time mkcert setup.
 
 ## 3. Architecture
 
@@ -277,9 +315,9 @@ Each phase ends with a check (tests, build, screenshots in iPhone and desktop si
 | --- | --- | --- |
 | 1 | **Shared core** | `packages/core` in TypeScript, unit tests, golden route tests against the old `graph.mjs`. Old planner still works, using the core. |
 | 2 | **Data ZIP** | `npm run build:pwa-data`, manifest, limited font ranges, precomputed search index/ski areas. Size report. |
-| 3 | **App skeleton** | Vite + Svelte + TS, map from PMTiles via `DataSource` (desktop server + local), routing worker, a basic route on screen. Desktop server replaces `planner/server.mjs`. Worker start time measured. |
+| 3 | **App skeleton** | Vite + Svelte + TS, map from PMTiles via `DataSource` (desktop server + local), routing worker, a basic route on screen. Desktop server replaces `planner/server.mjs`. `dev:desktop` and `dev:pwa` work (incl. *Load data from build/* and the dev overlay). Worker start time measured. |
 | 4 | **Feature parity** | Route points, directions per leg, gradient profile, info cards, search, saved routes, settings (runs, lifts, speed, map), undo/redo, ski areas, 3D, online maps, gpx.studio (desktop). Old `planner/` removed. |
-| 5 | **PWA + import** | Manifest, icons, service worker (vite-plugin-pwa), import flow, storage screen, `persist()`, offline/online switch. Vercel config. |
+| 5 | **PWA + import** | Manifest, icons, service worker (vite-plugin-pwa), import flow, storage screen, `persist()`, offline/online switch. Vercel config. `preview:pwa` and `dev:pwa -- --phone` (mkcert). |
 | 6 | **iPhone features** | Location, start from my location, compass, follow modes, wake lock, GPX share. |
 | 7 | **Liquid Glass UI + responsive** | Final design, desktop layout, accessibility (reduce transparency/motion), performance pass. |
 | 8 | **Docs** | README for both builds, Vercel setup, how to move the ZIP to the iPhone. |
