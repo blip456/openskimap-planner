@@ -325,7 +325,10 @@ The native SwiftUI test app on branch `ios-app-test` is the reference for the iP
 - A disabled undo button almost disappears on a light map. It gets a clearer disabled state, and is hidden when there is nothing to undo.
 - The location button is close to the bar. It gets a fixed gap that respects the safe area.
 
-**Plan mode vs. explore mode.** In the test app every tap on the map adds a route point. In the web planner a tap opens an info card unless plan mode is on. Proposal: the **Route** sheet has a *Plan route* switch at the top. While it is on, a small glass pill "Tap the map to add points" shows at the top of the map with a ✕ to stop. In explore mode a **long press** on the map adds a point directly. To be confirmed in phase 4.
+**Plan mode vs. explore mode (decided).** Same logic as the current desktop planner on `main`, on both iPhone and desktop:
+- **Plan mode on:** every tap on the map adds a route point (A, B, C…), also on top of a run or lift.
+- **Plan mode off (explore):** a tap on a run, lift or place opens its info card. A tap on empty map does nothing.
+- Plan mode is switched with a **Plan route** button on the map (glass capsule, tinted while on) and with the **P** key on desktop. While it's on, a small glass pill at the top says "Tap the map to add points" with a ✕ to stop. Info cards and search results can still add points in both modes.
 
 **Logo and icons.** The yeti logo and the icon script from `ios-app-test` (`planner/public/logo.svg`, `scripts/icons.mjs`) are reused for the PWA icons (apple-touch-icon, manifest icons, favicon).
 
@@ -359,7 +362,7 @@ The same components, arranged like Apple Maps on Mac: the sheet becomes a **floa
 | --- | --- |
 | Hover a run/lift to highlight | Tap highlights and opens the info card in a bottom sheet. Hover stays on devices with a mouse (`(hover: hover)` media query). |
 | Hover the elevation/gradient chart | Drag a finger along the chart (pointer events). The value tooltip follows the finger, and a marker moves on the map. |
-| Click map in plan mode adds a point | Tap adds a point in plan mode. Long-press adds a point in explore mode. Drag markers with a finger (bigger hit area). |
+| Click map in plan mode adds a point | Unchanged: tap adds a point in plan mode, tap opens an info card in explore mode. Drag markers with a finger (bigger hit area). |
 | Side panel with sections | Bottom sheet with detents (small: route summary · medium: directions · large: everything). On desktop a side panel. |
 | Keyboard shortcuts | Kept on desktop. On the phone: undo/redo buttons. |
 | Layers button | Glass button → sheet with map options. |
