@@ -1,0 +1,629 @@
+{
+ "id": "mini",
+ "name": "Mini resort",
+ "bbox": [
+  9.99,
+  46.99,
+  10.11,
+  47.02
+ ],
+ "runs": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10,
+      47.01,
+      1800
+     ],
+     [
+      10.005,
+      47.0075,
+      1600
+     ],
+     [
+      10.006,
+      47.005,
+      1400
+     ],
+     [
+      10.004,
+      47.0025,
+      1200
+     ],
+     [
+      10.0003,
+      47.0003,
+      1002
+     ]
+    ]
+   },
+   "properties": {
+    "id": "run-blue",
+    "name": "Blue Valley",
+    "ref": "1",
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "1 Blue Valley",
+    "uses": [
+     "downhill"
+    ],
+    "kind": "downhill",
+    "difficulty": "easy",
+    "color": "#1f6fd6",
+    "oneway": null
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10,
+      47.01,
+      1800
+     ],
+     [
+      9.998,
+      47.005,
+      1400
+     ],
+     [
+      10.0003,
+      47.0003,
+      1002
+     ]
+    ]
+   },
+   "properties": {
+    "id": "run-red",
+    "name": "Red Direct",
+    "ref": "2",
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "2 Red Direct",
+    "uses": [
+     "downhill"
+    ],
+    "kind": "downhill",
+    "difficulty": "intermediate",
+    "color": "#d8251d",
+    "oneway": null
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10,
+      47,
+      1000
+     ],
+     [
+      10.005,
+      47,
+      1000
+     ],
+     [
+      10.0098,
+      47,
+      1000
+     ]
+    ]
+   },
+   "properties": {
+    "id": "path-village",
+    "name": "Village path",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Village path",
+    "uses": [
+     "connection"
+    ],
+    "kind": "connection",
+    "difficulty": null,
+    "color": "#7d7d7d",
+    "oneway": null
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.0102,
+      47.003,
+      1150
+     ],
+     [
+      10.0104,
+      47.0015,
+      1070
+     ],
+     [
+      10.0102,
+      47.0001,
+      1001
+     ]
+    ]
+   },
+   "properties": {
+    "id": "run-green",
+    "name": "Green Practice",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Green Practice",
+    "uses": [
+     "downhill"
+    ],
+    "kind": "downhill",
+    "difficulty": "novice",
+    "color": "#2e9d3a",
+    "oneway": null
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.0098,
+      47.0002,
+      1001
+     ],
+     [
+      10.006,
+      47.004,
+      1300
+     ],
+     [
+      10.0004,
+      47.0098,
+      1795
+     ]
+    ]
+   },
+   "properties": {
+    "id": "run-reversed",
+    "name": "Drawn Uphill",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Drawn Uphill",
+    "uses": [
+     "downhill"
+    ],
+    "kind": "downhill",
+    "difficulty": "easy",
+    "color": "#1f6fd6",
+    "oneway": null
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.0102,
+      47,
+      1000
+     ],
+     [
+      10.02,
+      47,
+      1000
+     ]
+    ]
+   },
+   "properties": {
+    "id": "path-east",
+    "name": "East path",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "East path",
+    "uses": [
+     "connection"
+    ],
+    "kind": "connection",
+    "difficulty": null,
+    "color": "#7d7d7d",
+    "oneway": null
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.02,
+      47.01,
+      1900
+     ],
+     [
+      10.022,
+      47.005,
+      1450
+     ],
+     [
+      10.0202,
+      47.0002,
+      1002
+     ]
+    ]
+   },
+   "properties": {
+    "id": "run-black",
+    "name": "Black Wall",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Black Wall",
+    "uses": [
+     "downhill"
+    ],
+    "kind": "downhill",
+    "difficulty": "advanced",
+    "color": "#111111",
+    "oneway": null
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.02,
+      47.01,
+      1900
+     ],
+     [
+      10.01,
+      47.003,
+      1150
+     ]
+    ]
+   },
+   "properties": {
+    "id": "run-closed",
+    "name": "Closed Shortcut",
+    "ref": null,
+    "status": "abandoned",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Closed Shortcut",
+    "uses": [
+     "downhill"
+    ],
+    "kind": "downhill",
+    "difficulty": "novice",
+    "color": "#2e9d3a",
+    "oneway": null
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.1,
+      47.01,
+      1500
+     ],
+     [
+      10.1,
+      47,
+      1000
+     ]
+    ]
+   },
+   "properties": {
+    "id": "run-far",
+    "name": "Far Blue",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Far Blue",
+    "uses": [
+     "downhill"
+    ],
+    "kind": "downhill",
+    "difficulty": "easy",
+    "color": "#1f6fd6",
+    "oneway": null
+   }
+  }
+ ],
+ "lifts": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10,
+      47.01,
+      1800
+     ],
+     [
+      10,
+      47.005,
+      1400
+     ],
+     [
+      10,
+      47,
+      1000
+     ]
+    ]
+   },
+   "properties": {
+    "id": "lift-gondola",
+    "name": "Valley Gondola",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Valley Gondola",
+    "liftType": "gondola",
+    "oneway": null,
+    "duration": 480,
+    "stations": [
+     {
+      "coordinates": [
+       10,
+       47.005,
+       1400
+      ],
+      "name": "Middle",
+      "position": "mid-station",
+      "entry": true,
+      "exit": true
+     }
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.01,
+      47,
+      1000
+     ],
+     [
+      10.01,
+      47.003,
+      1150
+     ]
+    ]
+   },
+   "properties": {
+    "id": "lift-tbar",
+    "name": "Kids T-bar",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Kids T-bar",
+    "liftType": "t-bar",
+    "oneway": null,
+    "duration": null,
+    "stations": []
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.02,
+      47,
+      1000
+     ],
+     [
+      10.02,
+      47.01,
+      1900
+     ]
+    ]
+   },
+   "properties": {
+    "id": "lift-cable",
+    "name": "Peak Cable Car",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Peak Cable Car",
+    "liftType": "cable_car",
+    "oneway": null,
+    "duration": 300,
+    "stations": []
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      10.1,
+      47,
+      1000
+     ],
+     [
+      10.1,
+      47.01,
+      1500
+     ]
+    ]
+   },
+   "properties": {
+    "id": "lift-far",
+    "name": "Far Chair",
+    "ref": null,
+    "status": "operating",
+    "skiAreaIds": [
+     "area-main"
+    ],
+    "skiAreas": [
+     {
+      "id": "area-main",
+      "name": "Mini Ski Area"
+     }
+    ],
+    "label": "Far Chair",
+    "liftType": "chair_lift",
+    "oneway": null,
+    "duration": null,
+    "stations": []
+   }
+  }
+ ],
+ "spots": [],
+ "places": [
+  {
+   "name": "Minidorf",
+   "kind": "locality",
+   "coordinates": [
+    10.003,
+    46.999
+   ]
+  },
+  {
+   "name": "Gipfelhütte",
+   "kind": "alpine_hut",
+   "coordinates": [
+    10.0201,
+    47.0101
+   ],
+   "elevation": 1895
+  },
+  {
+   "name": "Großer Spitz",
+   "kind": "peak",
+   "coordinates": [
+    10.025,
+    47.012
+   ],
+   "elevation": 2001
+  },
+  {
+   "name": "Parkplatz Talstation",
+   "kind": "parking",
+   "coordinates": [
+    10,
+    46.9995
+   ]
+  }
+ ]
+}

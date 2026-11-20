@@ -12,7 +12,10 @@
     "build:ski": "node scripts/build.mjs --only=ski",
     "tiles": "tileserver-gl --config build/tileserver/config.json --bind 127.0.0.1 --port 8080",
     "planner": "node planner/server.mjs",
-    "start": "node scripts/start.mjs"
+    "start": "node scripts/start.mjs",
+    "typecheck": "tsc -p packages/core",
+    "test:core": "node --test \"packages/core/test/**/*.test.mjs\"",
+    "test": "npm run typecheck && npm run test:core"
   },
   "dependencies": {
     "@mapbox/vector-tile": "3.0.0",
@@ -27,5 +30,10 @@
   },
   "overrides": {
     "@maplibre/maplibre-gl-native": "6.5.0-pre.1"
+  },
+  "devDependencies": {
+    "@types/concaveman": "^1.1.6",
+    "@types/node": "^24.19.2",
+    "typescript": "^5.9.3"
   }
 }

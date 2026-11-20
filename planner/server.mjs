@@ -2,10 +2,12 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { DEFAULT_OPTIONS, RouteError, SPEED_PRESETS, SkiNetwork, toGpx } from './graph.mjs';
-import { SearchError, buildSearchIndex, geocode, resolveGoogleLink } from './search.mjs';
-import { featureDetails } from './feature-info.mjs';
-import { buildSkiAreas } from './ski-areas.mjs';
+import { DEFAULT_OPTIONS, RouteError, SPEED_PRESETS, SkiNetwork } from '../packages/core/src/routing/index.ts';
+import { toGpx } from '../packages/core/src/gpx.ts';
+import { SearchError, buildSearchIndex, geocode } from '../packages/core/src/search.ts';
+import { featureDetails } from '../packages/core/src/feature-info.ts';
+import { buildSkiAreas } from '../packages/core/src/ski-areas.ts';
+import { NOMINATIM_HEADERS, resolveGoogleLink } from './search.mjs';
 import { DEFAULT_FOLDER, RouteStore, StoreError, slug } from './routes-store.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -146,7 +148,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/geocode') {
-      const hits = await geocode(url.searchParams.get('q'), resortViewbox(url.searchParams.get('resort')));
+      const hits = await geocode(url.searchParams.get('q'), resortViewbox(url.searchParams.get('resort')), { headers: NOMINATIM_HEADERS });
       return send(res, 200, hits);
     }
 

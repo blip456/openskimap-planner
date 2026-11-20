@@ -1,0 +1,7 @@
+{
+  "name": "@openskimap/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared logic (routing, search, info cards, map styles) without DOM or Node APIs. Imported by relative path.",
+  "type": "module"
+}

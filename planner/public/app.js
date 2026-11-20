@@ -2000,7 +2000,7 @@ function statsGrid(rows) {
 }
 
 // Steepness classes used to colour the slices of a run profile (approximate European piste guidelines).
-// keep in sync with scripts/lib/slope.mjs
+// keep in sync with packages/core/src/slope.ts
 const SLOPE_CLASSES = [
   { id: 'green', max: 0.1, color: '#2e9d3a', label: '< 10%', name: 'green' },
   { id: 'blue', max: 0.25, color: '#1f6fd6', label: '10–25%', name: 'blue' },
@@ -2568,7 +2568,7 @@ function haversineM(a, b) {
 }
 
 // Average and steepest gradient of the downhill runs on the route (lifts, paths and walking are left out).
-// The steepest section uses the same 30 m window as the info card (planner/feature-info.mjs).
+// The steepest section uses the same 30 m window as the info card (packages/core/src/feature-info.ts).
 function routeGradient(r) {
   const points = routeProfilePoints(r);
   let horizontal = 0;

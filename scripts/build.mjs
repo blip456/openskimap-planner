@@ -28,11 +28,11 @@ import {
   geometryBbox,
   roundBbox,
   tileRange,
-} from './lib/geo.mjs';
-import { featureLabel, liftClass, liftDirection, orientUphill, runColor, runKind } from './lib/ski.mjs';
-import { buildBasemapStyle, buildOverlayStyle } from './lib/styles.mjs';
-import { slopeSegments } from './lib/slope.mjs';
-import { assignPistes } from './lib/piste.mjs';
+} from '../packages/core/src/geo.ts';
+import { featureLabel, liftClass, liftDirection, orientUphill, runColor, runKind } from '../packages/core/src/ski.ts';
+import { buildBasemapStyle, buildOverlayStyle } from '../packages/core/src/styles/index.ts';
+import { slopeSegments } from '../packages/core/src/slope.ts';
+import { assignPistes } from '../packages/core/src/piste.ts';
 import { openPMTiles } from './lib/pmtiles-file.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');

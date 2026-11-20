@@ -7,8 +7,8 @@
 //
 // The base network is built once per resort; options are applied at query time
 // through the cost function, so changing options never requires a rebuild.
-import { haversine } from '../scripts/lib/geo.mjs';
-import { DRAG_LIFTS, liftClass } from '../scripts/lib/ski.mjs';
+import { haversine } from './geo.mjs';
+import { DRAG_LIFTS, liftClass } from './ski.mjs';
 
 export const DIFFICULTIES = ['novice', 'easy', 'intermediate', 'advanced', 'expert', 'freeride', 'unknown'];
 const DIFFICULTY_LEVEL = { novice: 0, easy: 1, intermediate: 2, advanced: 3, expert: 4, freeride: 5, extreme: 5, unknown: 2 };

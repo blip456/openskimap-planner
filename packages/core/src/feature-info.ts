@@ -1,29 +1,69 @@
 // Details + computed statistics for the info card shown when clicking a run, lift or lift station.
-import { haversine } from '../scripts/lib/geo.mjs';
+import { haversine } from './geo.ts';
+import type { Feature, Geometry, LiftProps, MultiLineString, Position, ResortData, RunProps } from './types.ts';
+
+export interface LineStats {
+  /** m, along the slope / cable when the line has elevation, else horizontal */
+  length: number;
+  horizontalLength: number;
+  eleStart?: number;
+  eleEnd?: number;
+  minEle?: number;
+  maxEle?: number;
+  vertical?: number;
+  descent?: number;
+  ascent?: number;
+  avgSlope?: number;
+  maxSlope?: number;
+  /** [distance m, elevation m] */
+  profile?: [number, number][];
+  duration?: number | null;
+  speed?: number;
+  verticalSpeed?: number;
+}
+
+export interface FeatureDetails {
+  type: 'lift' | 'run' | 'spot';
+  properties: Record<string, any>;
+  geometry: Geometry;
+  stats: LineStats | null;
+  piste?: { name: string; sections: number; length: number; difficulties: string[]; geometry: MultiLineString };
+  lift?: {
+    id: string;
+    label: string;
+    liftType: string | null;
+    occupancy: number | null;
+    capacity: number | null;
+    direction: string | null;
+    status: string | null;
+  };
+}
+
+type AnyFeature = Feature<Geometry, Record<string, any>>;
 
 const SLOPE_WINDOW = 30; // m, minimum horizontal distance used for the steepest-section calculation
 const PROFILE_POINTS = 80;
 
-function lineStats(coords, type, p) {
+function lineStats(coords: Position[], type: string, p: { duration?: number | null }): LineStats {
   let c = coords;
   // lifts are described bottom → top
-  if (type === 'lift' && (c[0][2] ?? 0) > (c.at(-1)[2] ?? 0)) c = [...c].reverse();
+  if (type === 'lift' && (c[0][2] ?? 0) > (c[c.length - 1][2] ?? 0)) c = [...c].reverse();
 
   const dist = [0];
   for (let i = 1; i < c.length; i++) dist.push(dist[i - 1] + haversine(c[i - 1], c[i]));
-  const ele = c.map((x) => x[2] ?? null);
-  const hasEle = ele.every((e) => e != null);
-  const length = dist.at(-1);
+  const hasEle = c.every((x) => x[2] != null);
+  const length = dist[dist.length - 1];
 
-  const stats = { length, horizontalLength: length };
+  const stats: LineStats = { length, horizontalLength: length };
   if (hasEle) {
+    const ele = c.map((x) => x[2] as number);
     // distance along the slope / cable, like OpenSkiMap shows
     let inclined = 0;
     for (let i = 1; i < c.length; i++) inclined += Math.hypot(dist[i] - dist[i - 1], ele[i] - ele[i - 1]);
     stats.length = inclined;
     const minEle = Math.min(...ele);
     const maxEle = Math.max(...ele);
-    Object.assign(stats, { eleStart: ele[0], eleEnd: ele.at(-1), minEle, maxEle, vertical: maxEle - minEle });
+    Object.assign(stats, { eleStart: ele[0], eleEnd: ele[ele.length - 1], minEle, maxEle, vertical: maxEle - minEle });
 
     let descent = 0;
     let ascent = 0;
@@ -35,7 +75,7 @@ function lineStats(coords, type, p) {
     stats.descent = descent;
     stats.ascent = ascent;
 
-    const net = Math.abs(ele.at(-1) - ele[0]);
+    const net = Math.abs(ele[ele.length - 1] - ele[0]);
     stats.avgSlope = length > 0 ? net / length : 0; // rise over horizontal run
 
     let maxSlope = 0;
@@ -48,7 +88,7 @@ function lineStats(coords, type, p) {
     if (length >= SLOPE_WINDOW) stats.maxSlope = maxSlope;
 
     // evenly spaced elevation profile for the sparkline
-    const profile = [];
+    const profile: [number, number][] = [];
     let k = 0;
     for (let s = 0; s <= PROFILE_POINTS; s++) {
       const d = (length * s) / PROFILE_POINTS;
@@ -70,9 +110,12 @@ function lineStats(coords, type, p) {
   return stats;
 }
 
-export function featureDetails(data, id) {
-  const find = (list) => (list ?? []).find((f) => f.properties.id === id);
-  let type = 'lift';
+export function featureDetails(
+  data: Pick<ResortData, 'runs' | 'lifts' | 'runAreas' | 'spots'>,
+  id: string,
+): FeatureDetails | null {
+  const find = (list: readonly AnyFeature[] | undefined): AnyFeature | undefined => (list ?? []).find((f) => f.properties.id === id);
+  let type: FeatureDetails['type'] = 'lift';
   let f = find(data.lifts);
   if (!f) {
     type = 'run';
@@ -84,7 +127,7 @@ export function featureDetails(data, id) {
   }
   if (!f) return null;
 
-  const details = {
+  const details: FeatureDetails = {
     type,
     properties: f.properties,
     geometry: f.geometry,
@@ -92,10 +135,11 @@ export function featureDetails(data, id) {
   };
 
   // OSM often splits one signed piste into several sections: describe the whole piste too
-  // (`piste` / `pistes` are set by the build, see scripts/lib/piste.mjs)
+  // (`piste` / `pistes` are set by the build, see piste.ts)
   if (type === 'run' && f.properties.piste) {
     const primary = String(f.properties.name).split(/,\s*/)[0];
-    const sections = data.runs.filter((r) => r.properties.pistes?.includes(`|${f.properties.piste}|`));
+    const piste = f.properties.piste as string;
+    const sections = data.runs.filter((r) => r.properties.pistes?.includes(`|${piste}|`));
     if (sections.length > 1) {
       let length = 0;
       for (const s of sections) {
@@ -112,8 +156,9 @@ export function featureDetails(data, id) {
     }
   }
 
-  if (type === 'spot' && f.properties.liftId) {
-    const liftFeature = data.lifts.find((l) => l.properties.id === f.properties.liftId);
+  const liftId = f.properties.liftId;
+  if (type === 'spot' && liftId) {
+    const liftFeature = data.lifts.find((l) => l.properties.id === liftId);
     if (liftFeature) {
       const lp = liftFeature.properties;
       details.lift = {

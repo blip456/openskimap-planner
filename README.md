@@ -299,10 +299,10 @@ only needs a higher `terrainMaxZoom` if you want sharper hillshading.
 ```
 resorts.json              resort definitions + build settings
 scripts/build.mjs         build pipeline
-scripts/lib/styles.mjs    map styles (ski colours, hillshade, contours, Protomaps basemap)
 scripts/start.mjs         runs tile server + planner together
-planner/graph.mjs         routing network, Dijkstra, GPX export
-planner/server.mjs        planner HTTP server (no dependencies)
+packages/core/            shared logic in TypeScript (no DOM, no Node APIs): routing network, Dijkstra,
+                          GPX export, search, info cards, ski areas, map styles; tests with `npm test`
+planner/server.mjs        planner HTTP server (uses packages/core)
 planner/public/           planner web UI (MapLibre GL JS)
 saved-routes/             routes saved to the "Project folder"
 build/                    everything `npm run build` creates (not in git)
