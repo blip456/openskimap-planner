@@ -1,8 +1,8 @@
 /* Design tokens: ski route planner (PWA + desktop).
  * Copy this file to app/src/ui/tokens.css. Source of truth: docs/design/spec.md §1.
  * Values follow iOS 26 system colours and metrics. 1 CSS px = 1 iOS pt on iPhone.
- * Piste and route colours are copied from scripts/lib/styles.mjs and planner/public/app.js: do not change them here
- * without changing the map style too (better: generate them from packages/core/src/styles). */
+ * Piste and route colours are copied from packages/core/src/ski.ts, slope.ts and planner/public/app.js: do not change them here
+ * without changing the core too (a unit test should compare both). */
 
 :root {
   color-scheme: light dark;
@@ -125,7 +125,7 @@
   --safe-left: env(safe-area-inset-left, 0px);
   /* tab bar floats into the home-indicator area, like iOS 26 (34 − 12 = 22px from the bottom on Face ID phones) */
   --tabbar-bottom: max(calc(var(--safe-bottom) - 12px), 12px);
-  --controls-bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + 16px); /* Plan + Locate row */
+  --controls-bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + 24px); /* Plan + Locate row; the credit line sits in the 24px gap */
   --controls-top: calc(var(--safe-top) + 6px);
 
   /* ---------- Type (iOS text styles at the default Dynamic Type size, Large) ----------

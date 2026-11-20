@@ -8,8 +8,8 @@ const dir = __dirname;
 const sprite = fs.readFileSync(path.join(dir, 'icons-sprite.html'), 'utf8').trim();
 const pages = {
   'main-iphone.html': [['main', 'main-iphone'], ['search', 'search-iphone']],
-  ...(fs.existsSync(path.join(dir,'sheets-iphone.html'))?{'sheets-iphone.html': [['route-medium', 'route-sheet-medium'], ['route-large', 'route-sheet-large'], ['map-sheet', 'map-sheet'],
-    ['menu', 'menu'], ['menu-data', 'menu-data'], ['onboarding', 'onboarding']]}:{}),
+  'sheets-iphone.html': [['route-medium', 'route-sheet-medium'], ['route-large', 'route-sheet-large'], ['map-sheet', 'map-sheet'],
+    ['menu', 'menu'], ['menu-data', 'menu-data'], ['onboarding', 'onboarding']],
 };
 
 (async () => {

@@ -11,6 +11,7 @@
 | 6 iPhone features | to do |
 | 7 Liquid Glass UI + responsive | to do |
 | 8 Docs | to do |
+| Design | spec done (`docs/design/`) |
 
 ## Handover entries
 
@@ -45,3 +46,17 @@ resort JSON 12 ms; search index 8 ms; ski areas 82 ms. Well under the 1 s goal o
 - Short runs without difficulty between 120 and 150 m do not exist in the real data, so that rule (`SHORT_UNKNOWN_RUN`)
   is only covered by a unit test, not by the golden test.
 - No legacy bugs found that needed listing.
+
+### 2026-11-20 · Design · designer
+- **What:** design spec for phases 3–7: `docs/design/spec.md` (tokens, 27 components, screens with wireframes,
+  interaction rules, glass performance rules, copy, icon map), `docs/design/tokens.css` (copy to
+  `app/src/ui/tokens.css` as is), static mockups `docs/design/mockups/main-iphone.html` and `sheets-iphone.html`
+  with PNGs (light + `-dark`) at 393 × 852 @2x.
+- **Verify:** open the PNGs in `docs/design/mockups/`, or re-render with `node docs/design/mockups/render.cjs`
+  (Node 24, Playwright Chromium). The script also re-inlines the icon sprite.
+- **For engineers:** build components in the order of spec §2; Lucide icons via `@lucide/svelte/icons/<name>`;
+  piste colours in `tokens.css` must match `packages/core/src/ski.ts` (add a test). Decisions are in
+  `docs/agents/decisions.md` (designer entry).
+- **Check on the real iPhone (phase 7):** blur cost while panning with a sheet open, Dynamic Type via
+  `-apple-system-body` in standalone mode, search field position above the keyboard (`visualViewport`).
+- **Questions for the owner:** none blocking.
