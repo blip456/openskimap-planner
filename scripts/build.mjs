@@ -5,6 +5,10 @@
 //   npm run build -- --only=ski       only re-filter ski data, ski tiles, styles and planner data
 //   npm run build -- --refresh        force a new OpenSkiData download (max once per day!)
 //   npm run build -- --refresh-basemap  re-extract basemap, terrain and contours
+//   npm run build z12                 zoom per build: terrain z12, basemap z12 (min(N, 15)); ski unchanged
+//   npm run build -- --terrain-zoom=16 --basemap-zoom=14 --ski-zoom=16   each zoom on its own (overrides z<N>)
+//   npm run build z17 -- --yes        skip the question above zoom 16
+//   Zoom order: long flags > z<N> > resorts.json settings. Extracts are cached per zoom in build/work/.
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -33,7 +37,16 @@ import { featureLabel, liftClass, liftDirection, orientUphill, runColor, runKind
 import { buildBasemapStyle, buildOverlayStyle } from '../packages/core/src/styles/index.ts';
 import { slopeSegments } from '../packages/core/src/slope.ts';
 import { assignPistes } from '../packages/core/src/piste.ts';
+import { PMTiles } from 'pmtiles';
 import { openPMTiles } from './lib/pmtiles-file.mjs';
+import {
+  ArgError,
+  CONFIRM_ABOVE_ZOOM,
+  estimateTerrain,
+  formatBytes,
+  parseBuildArgs,
+  resolveZoom,
+} from './lib/build-args.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 // everything the build creates lives in build/ (safe to delete; `npm run build` recreates it)
@@ -57,13 +70,16 @@ const MAPTERHORN_BASE = 'https://download.mapterhorn.com';
 const ASSETS_BASE = 'https://raw.githubusercontent.com/protomaps/basemaps-assets/main';
 const FONTSTACKS = ['Noto Sans Regular', 'Noto Sans Medium', 'Noto Sans Italic'];
 const DAY_MS = 24 * 60 * 60 * 1000;
+const BUILD_INFO = path.join(BUILD, 'build-info.json');
 
-const args = Object.fromEntries(
-  process.argv.slice(2).map((a) => {
-    const [k, v] = a.replace(/^--/, '').split('=');
-    return [k, v ?? true];
-  }),
-);
+let args;
+try {
+  args = parseBuildArgs(process.argv.slice(2));
+} catch (err) {
+  if (!(err instanceof ArgError)) throw err;
+  console.error(`\nBuild: ${err.message}`);
+  process.exit(2);
+}
 const onlySki = args.only === 'ski';
 
 // ---------------------------------------------------------------------------
@@ -522,7 +538,7 @@ function writeRegion(resorts) {
 async function extractBasemap(region, settings, state) {
   const out = path.join(DIR.tsData, 'basemap.pmtiles');
   const key = hash([region.hash, settings.basemapMaxZoom]);
-  if (fs.existsSync(out) && state.basemap === key && !args['refresh-basemap']) {
+  if (fs.existsSync(out) && state.basemap === key && !args.refreshBasemap) {
     log('Basemap: up to date');
     return false;
   }
@@ -544,7 +560,7 @@ async function extractTerrain(resorts, region, settings, state) {
   const out = path.join(DIR.tsData, 'terrain.pmtiles');
   const maxZoom = settings.terrainMaxZoom ?? 14;
   const key = hash([region.hash, maxZoom]);
-  if (fs.existsSync(out) && state.terrain === key && !args['refresh-basemap']) {
+  if (fs.existsSync(out) && state.terrain === key && !args.refreshBasemap) {
     log('Terrain: up to date');
     return false;
   }
@@ -680,7 +696,7 @@ async function buildContours(resorts, settings, state, terrainChanged) {
   const interval = settings.contourInterval ?? 20;
   const index = settings.contourIndexInterval ?? 100;
   const key = hash([state.terrain, interval, index]);
-  if (fs.existsSync(out) && state.contours === key && !terrainChanged && !args['refresh-basemap']) {
+  if (fs.existsSync(out) && state.contours === key && !terrainChanged && !args.refreshBasemap) {
     log('Contours: up to date');
     return;
   }
