@@ -11,13 +11,22 @@
     "build": "node scripts/build.mjs",
     "build:ski": "node scripts/build.mjs --only=ski",
     "build:pwa-data": "node scripts/build-pwa-data.mjs",
+    "build:pwa": "vite build --config app/vite.config.ts --mode pwa",
+    "build:desktop": "vite build --config app/vite.config.ts --mode desktop",
+    "dev:desktop": "node scripts/dev-desktop.mjs",
+    "dev:pwa": "vite --config app/vite.config.ts --mode pwa",
     "tiles": "tileserver-gl --config build/tileserver/config.json --bind 127.0.0.1 --port 8080",
-    "planner": "node planner/server.mjs",
+    "server": "node server/server.mjs",
     "start": "node scripts/start.mjs",
-    "typecheck": "tsc -p packages/core",
+    "planner": "node planner/server.mjs",
+    "planner:legacy": "node planner/server.mjs",
+    "typecheck": "tsc -p packages/core && tsc -p app/tsconfig.worker.json && tsc -p app/tsconfig.node.json && svelte-check --tsconfig app/tsconfig.json --fail-on-warnings && svelte-check --tsconfig app/tsconfig.test.json --fail-on-warnings",
     "test:core": "node --test \"packages/core/test/**/*.test.mjs\"",
-    "test": "npm run typecheck && npm run test:core && npm run test:scripts",
-    "test:scripts": "node --test \"scripts/test/**/*.test.mjs\""
+    "test:scripts": "node --test \"scripts/test/**/*.test.mjs\"",
+    "test:server": "node --test \"server/test/**/*.test.mjs\"",
+    "test:app": "vitest run --config app/vite.config.ts",
+    "test": "npm run typecheck && npm run test:core && npm run test:scripts && npm run test:server && npm run test:app",
+    "test:e2e": "node scripts/e2e.mjs"
   },
   "dependencies": {
     "@mapbox/vector-tile": "3.0.0",
@@ -34,8 +43,15 @@
     "@maplibre/maplibre-gl-native": "6.5.0-pre.1"
   },
   "devDependencies": {
+    "@lucide/svelte": "^1.77.0",
+    "@playwright/test": "1.63.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/concaveman": "^1.1.6",
     "@types/node": "^24.19.2",
-    "typescript": "^5.9.3"
+    "svelte": "^5.59.1",
+    "svelte-check": "^4.7.8",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   }
 }

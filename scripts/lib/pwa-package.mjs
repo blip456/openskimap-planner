@@ -37,7 +37,7 @@ export function fontStacksOf(styles) {
  * files: [{ name, size, sha256 }] (everything except manifest.json), resorts: planner resort infos
  * with `planner` path, info: build/build-info.json.
  */
-export function buildManifest({ buildDate, files, resorts, info }) {
+export function buildManifest({ buildDate, files, resorts, info, language = 'en' }) {
   const finished = info?.source?.openSkiData?.finishedAt ?? null;
   return {
     formatVersion: MANIFEST_FORMAT_VERSION,
@@ -53,6 +53,8 @@ export function buildManifest({ buildDate, files, resorts, info }) {
     zoom: { terrain: info?.zoom?.terrain ?? null, basemap: info?.zoom?.basemap ?? null, ski: info?.zoom?.ski ?? null },
     // the planner file holds runs, lifts, places and the precomputed search index (`searchIndex`) and ski areas (`skiAreas`)
     plannerFormat: { precomputed: ['searchIndex', 'skiAreas'] },
+    // label language of the basemap style (resorts.json settings.language)
+    language,
     resorts,
     files: files.map((f) => ({ path: f.name, size: f.size, sha256: f.sha256 })),
   };

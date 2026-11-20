@@ -1,6 +1,6 @@
 // Details + computed statistics for the info card shown when clicking a run, lift or lift station.
 import { haversine } from './geo.ts';
-import type { Feature, Geometry, LiftProps, MultiLineString, Position, ResortData, RunProps } from './types.ts';
+import type { Feature, Geometry, MultiLineString, Position, ResortData } from './types.ts';
 
 export interface LineStats {
   /** m, along the slope / cable when the line has elevation, else horizontal */

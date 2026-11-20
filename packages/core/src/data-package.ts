@@ -53,6 +53,8 @@ export interface Manifest {
     [k: string]: unknown;
   };
   zoom: { terrain: number | null; basemap: number | null; ski: number | null };
+  /** label language of the basemap (added after format 1 was introduced; default 'en') */
+  language?: string;
   resorts: ManifestResort[];
   files: ManifestFile[];
 }

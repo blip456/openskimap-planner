@@ -92,3 +92,62 @@ Full spec: `docs/design/spec.md`, tokens: `docs/design/tokens.css`, mockups: `do
 - **ZIP64:** entry sizes and offsets of 4 GB and more, and 65,535 entries or more, use ZIP64 records. Tested with forced
   records and with a virtual 5 GB archive for the reader; a real 4 GB file is not part of the tests.
 - **`npm test`** now also runs `test:scripts` (`scripts/test/*.test.mjs`).
+
+## 2026-11-20 · phase 3 · app skeleton, data sources, workers, desktop server (senior engineer)
+- **Imports of the core:** Vite alias `@core` → `packages/core/src` (+ `paths` in `app/tsconfig.json`), with the `.ts`
+  extension as in the rest of the repo (`import { SkiNetwork } from '@core/routing/index.ts'`). One root package.json.
+- **Build target from the Vite mode:** `vite build --mode pwa|desktop`; the config defines `import.meta.env.VITE_TARGET`.
+  Works on every OS without setting environment variables. **Deviation:** the desktop build goes to
+  `app/dist-desktop`, the PWA build (Vercel) to `app/dist`. Why: one folder for both meant `build:pwa` silently
+  replaced what `npm start` serves. `npm start` now always runs `build:desktop` first (~2 s).
+- **TypeScript projects:** `app/tsconfig.json` (DOM, main thread + Svelte, checked by svelte-check),
+  `tsconfig.worker.json` (WebWorker lib, `src/workers/`), `tsconfig.test.json` (+ Node types, Vitest tests),
+  `tsconfig.node.json` (vite config + Playwright). `npm run typecheck` runs all of them plus the core. The core
+  tsconfig now also has `noUnusedLocals` (the app config found two unused imports in the core).
+- **DataSource** (`app/src/lib/data/types.ts`): as plan §3.1, but `plannerData()` returns `{ kind: 'url', url }` (desktop)
+  or `{ kind: 'blob', blob }` (OPFS File). The routing worker reads it itself, so the main thread never parses the
+  2 MB JSON. `readAsset()` serves fonts/sprites for the local build.
+- **Stable PMTiles names:** a `NamedSource` wrapper gives every archive a fixed key, so the style says
+  `pmtiles://basemap` (`ski`, `terrain`, `contours`) in both builds; desktop uses `FetchSource` (HTTP Range), PWA uses
+  `FileSource(await handle.getFile())`. The core style builders got an optional `urls` parameter; without it they
+  return exactly the old styles (checked byte for byte against `build/tileserver/styles/*.json`, plus a core test).
+- **`localdata://` protocol** for glyphs and sprites from OPFS. Glyph ranges that are not in the ZIP (only the ranges the
+  labels need are packed) get an empty answer instead of an error, so no console errors.
+- **Manifest `language`** (optional field, default `en`): the PWA needs the label language for the basemap style. Added
+  by `build:pwa-data` (format stays 1; older ZIPs show English labels). Desktop reads it from `resorts.json`.
+- **OPFS layout and atomic swap:** `openskimap/pkg-<timestamp>/…` + an empty `.complete` marker written last; the app
+  uses the newest folder with a marker. Creating an empty file is atomic; renaming folders is not available in every
+  browser (`FileSystemHandle.move` for folders). Unfinished folders are removed at the start of the next import, old
+  packages after a successful one. So a failed or cancelled import keeps the old data.
+- **Import worker:** one pass per file: `blob.slice` chunk (4 MB) → SHA-256 (core JS hasher) → write. Writes with
+  `FileSystemSyncAccessHandle` in the dedicated worker (awaits each call, so pre-16.4 Safari's promise-returning
+  methods also work), falls back to `createWritable`. The free space is checked first (`navigator.storage.estimate`).
+  Storage is behind a small `StorageDir` interface with an in-memory version for the unit tests.
+- **RPC helper** (`app/src/lib/rpc/rpc.ts`): `expose(api, endpoint)` / `wrap<Api>(endpoint)`, typed by the API
+  interface; errors keep `name`, `message`, `code`; `transfer(value, [buffers])` in both directions; worker events
+  (`emit`/`on`) for import progress. The routing worker exposes the `RoutingEngine` class directly (testable in Node).
+- **Routing worker start-up is logged** (`[routing] … ready in N ms`, with read/parse/network/search parts) and shown in
+  the dev overlay. It uses the precomputed `searchIndex`/`skiAreas` when present (PWA); desktop builds them (the
+  build's planner JSON has no precomputed parts; ski areas are built on first request).
+- **Desktop server** (`server/server.mjs`, no framework): serves `app/dist-desktop`, `/data/{planner,tiles,fonts,sprites}`
+  (only these four folders of `build/`, file-name patterns + `safeJoin`), Range/HEAD/ETag/If-Range, `/api/capabilities`,
+  `/api/routes*`, `/api/resolve`. It does no routing: `POST /api/routes` takes the summary and GPX from the app.
+  `routes-store.mjs` and the Google link code are **copies** of the `planner/` files until `planner/` is removed in
+  phase 4. Port 8081 (same as the legacy planner; run one at a time).
+- **Launchers:** `scripts/lib/launch.mjs` (process groups; optional children). TileServer GL is optional in `start`
+  and `dev:desktop` (only gpx.studio needs it).
+- **Dev-only code:** the dev overlay is loaded with `if (import.meta.env.DEV) import(...)`, the "Load data from build/"
+  button and the `/__dev/pwa-data` middleware (Vite `apply: 'serve'`) exist only in dev. `npm run test:e2e` fails if
+  any of their strings is found in a production bundle.
+- **Simulated safe areas:** the dev overlay sets `--safe-top/right/bottom/left` on `<html>` (inline style overrides the
+  `env()` defaults of `tokens.css`), as spec §1.10 describes.
+- **Initial camera:** the resort bbox *covers* the screen (`coverZoom`), instead of `fitBounds` (contain), which showed
+  a thin strip of map with empty areas around it on a portrait phone.
+- **New route hidden by the sheet → `fitBounds`** into the free area (spec §2.9), only when it is not fully visible.
+- **Phase-3 UI shortcuts:** the sheet has only the medium detent (no drag yet); on screens ≥ 900 px it is a centred
+  560 px sheet (the desktop side panel is phase 7) and the Plan/Locate buttons stay at the bottom. Menu, search and
+  locate buttons show a "comes in phase N" toast. Route point titles are coordinates (nearest names in phase 4).
+- **Test hook:** `?e2e` in the URL sets `window.__map`, so the smoke tests can turn coordinates into screen points.
+- **Smoke tests:** `@playwright/test` 1.63.0 pinned (see lessons). Four projects: desktop build at 1280×800 and at iPhone
+  size (390×844, touch), PWA build at both sizes. The PWA build is served by `app/e2e/static-server.mjs` (static, like
+  Vercel), the desktop build by the real desktop server with project-folder routes off.

@@ -59,8 +59,9 @@ test('zip name and manifest', () => {
     source: { openSkiData: { finishedAt: '2026-11-20T01:41:30.992Z' }, protomaps: { build: '20261118.pmtiles' }, mapterhorn: true },
   };
   const resorts = [{ id: 'r', name: 'R', bbox: [1, 2, 3, 4], center: [2, 3], planner: 'planner/r.json' }];
-  const m = buildManifest({ buildDate: '2026-11-20', files, resorts, info });
+  const m = buildManifest({ buildDate: '2026-11-20', files, resorts, info, language: 'de' });
   assert.equal(m.formatVersion, 1);
+  assert.equal(m.language, 'de');
   assert.deepEqual(m.zoom, { terrain: 12, basemap: 12, ski: 16 });
   assert.equal(m.source.openSkiData.date, '2026-11-20');
   assert.equal(m.source.protomaps.build, '20261118.pmtiles');

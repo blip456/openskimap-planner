@@ -183,7 +183,7 @@ async function main() {
   log(`Reading ${sources.length} files for checksums…`);
   const described = await describeSources(sources);
   const buildDate = new Date().toISOString().slice(0, 10);
-  const manifest = buildManifest({ buildDate, files: described, resorts, info });
+  const manifest = buildManifest({ buildDate, files: described, resorts, info, language: settings.language ?? 'en' });
   const [manifestEntry] = await describeSources([{ name: 'manifest.json', data: Buffer.from(JSON.stringify(manifest, null, 2)) }]);
   const entries = [manifestEntry, ...described];
 

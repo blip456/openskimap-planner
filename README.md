@@ -32,11 +32,20 @@ online base map in the planner.
 ```sh
 npm install
 npm run build     # ~1 minute: filter ski data, download extracts, build tiles + planner data
-npm start         # tile server on :8080 and planner on :8081
+npm start         # tile server on :8080 and planner on :8081 (builds the app the first time)
 ```
 
 - Planner: <http://localhost:8081>
 - Tile server overview: <http://localhost:8080>
+
+The planner is being rebuilt as one app for the desktop and the iPhone (see `docs/pwa-plan.md`). Until that work
+is finished, the old planner still runs with `npm run planner:legacy` (also on :8081). For development:
+
+- `npm run dev:desktop`: desktop version with hot reload on <http://localhost:5173> (also starts the desktop server
+  and the tile server).
+- `npm run dev:pwa`: iPhone (PWA) version on <http://localhost:5174>, data from the browser storage. Import the ZIP
+  from `npm run build:pwa-data`, or press *Load data from build/*.
+- `npm run build:desktop` / `npm run build:pwa`: production builds (`app/dist-desktop`, `app/dist`).
 
 ## Using the tiles in gpx.studio
 
@@ -293,7 +302,8 @@ only needs a higher `terrainMaxZoom` if you want sharper hillshading.
 - `npm run build -- --only=ski`: rebuild only ski tiles, styles and planner data from the local download (seconds).
 - `npm run build -- --refresh-basemap`: re-extract the latest Protomaps basemap, terrain and contours.
 - `npm run build -- --refresh`: force a new OpenSkiData download (respect the once-per-day rule).
-- `npm test`: type check and tests of the shared code and the build scripts.
+- `npm test`: type check and tests of the shared code, the build scripts, the desktop server and the app.
+- `npm run test:e2e`: smoke tests of both app builds in Chromium (needs `npm run build` and `npm run build:pwa-data`).
 
 ### Zoom level per build
 

@@ -1,4 +1,4 @@
-// Map style builders. Used by the data build (TileServer GL styles) and later by the app.
+// Map style builders. Used by the data build (TileServer GL styles) and by the app (with its own URLs).
 import { layers as protomapsLayers, namedFlavor } from '@protomaps/basemaps';
 import { CONNECTION_COLOR, LIFT_COLOR, NORDIC_COLOR } from '../ski.ts';
 import { SLOPE_CLASSES } from '../slope.ts';
@@ -22,7 +22,6 @@ export interface Style {
 
 const FONT_REGULAR = ['Noto Sans Regular'];
 const FONT_MEDIUM = ['Noto Sans Medium'];
-const FONT_ITALIC = ['Noto Sans Italic'];
 
 const runWidth = (base: number): unknown[] => ['interpolate', ['exponential', 1.5], ['zoom'], 11, base * 0.8, 14, base * 2, 17, base * 5];
 const lineName = ['coalesce', ['get', 'label'], ''];
@@ -322,15 +321,31 @@ function contourLabels(): StyleLayer[] {
 const ATTRIBUTION =
   'Data: OpenSkiData / OpenSkiMap.org, © OpenStreetMap contributors (ODbL), Skimap.org, Who\'s On First, © Mapterhorn, Protomaps';
 
+export type TileArchive = 'basemap' | 'ski' | 'terrain' | 'contours';
+
+/**
+ * Where the style points. The defaults are the TileServer GL placeholders of the data build
+ * (`pmtiles://{basemap}`, `{fontstack}/{range}.pbf`, `light`); the app passes its own URLs.
+ */
+export interface StyleUrls {
+  tiles?: Partial<Record<TileArchive, string>>;
+  glyphs?: string;
+  sprite?: string;
+}
+
+const tileUrl = (urls: StyleUrls | undefined, name: TileArchive): string => urls?.tiles?.[name] ?? `pmtiles://{${name}}`;
+const DEFAULT_GLYPHS = '{fontstack}/{range}.pbf';
+
 export interface BasemapStyleOptions {
   language: string;
   bounds: Bbox;
   hasTerrain: boolean;
   hasContours: boolean;
   colorBy?: ColorBy;
+  urls?: StyleUrls;
 }
 
-export function buildBasemapStyle({ language, bounds, hasTerrain, hasContours, colorBy = 'difficulty' }: BasemapStyleOptions): Style {
+export function buildBasemapStyle({ language, bounds, hasTerrain, hasContours, colorBy = 'difficulty', urls }: BasemapStyleOptions): Style {
   const base = protomapsLayers('protomaps', namedFlavor('light'), { lang: language }) as unknown as StyleLayer[];
   const insertTerrainAfter = base.findIndex((l) => l.id === 'landuse_pier');
   const insertSkiBefore = base.findIndex((l) => l.id === 'address_label');
@@ -350,34 +365,34 @@ export function buildBasemapStyle({ language, bounds, hasTerrain, hasContours, c
   ];
 
   const sources: Style['sources'] = {
-    protomaps: { type: 'vector', url: 'pmtiles://{basemap}', attribution: ATTRIBUTION },
-    ski: { type: 'vector', url: 'pmtiles://{ski}' },
+    protomaps: { type: 'vector', url: tileUrl(urls, 'basemap'), attribution: ATTRIBUTION },
+    ski: { type: 'vector', url: tileUrl(urls, 'ski') },
   };
   if (hasTerrain) {
-    sources.terrain = { type: 'raster-dem', url: 'pmtiles://{terrain}', encoding: 'terrarium', tileSize: 512 };
+    sources.terrain = { type: 'raster-dem', url: tileUrl(urls, 'terrain'), encoding: 'terrarium', tileSize: 512 };
   }
-  if (hasContours) sources.contours = { type: 'vector', url: 'pmtiles://{contours}' };
+  if (hasContours) sources.contours = { type: 'vector', url: tileUrl(urls, 'contours') };
 
   return {
     version: 8,
     name: colorBy === 'slope' ? 'Ski basemap (runs by steepness)' : 'Ski basemap',
     center: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
     zoom: 12,
-    glyphs: '{fontstack}/{range}.pbf',
-    sprite: 'light',
+    glyphs: urls?.glyphs ?? DEFAULT_GLYPHS,
+    sprite: urls?.sprite ?? 'light',
     sources,
     layers,
   };
 }
 
-export function buildOverlayStyle({ bounds, colorBy = 'difficulty' }: { bounds: Bbox; colorBy?: ColorBy }): Style {
+export function buildOverlayStyle({ bounds, colorBy = 'difficulty', urls }: { bounds: Bbox; colorBy?: ColorBy; urls?: StyleUrls }): Style {
   return {
     version: 8,
     name: colorBy === 'slope' ? 'Ski overlay (runs by steepness)' : 'Ski overlay',
     center: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
     zoom: 12,
-    glyphs: '{fontstack}/{range}.pbf',
-    sources: { ski: { type: 'vector', url: 'pmtiles://{ski}', attribution: ATTRIBUTION } },
+    glyphs: urls?.glyphs ?? DEFAULT_GLYPHS,
+    sources: { ski: { type: 'vector', url: tileUrl(urls, 'ski'), attribution: ATTRIBUTION } },
     layers: skiLayers({ labels: true, colorBy }),
   };
 }

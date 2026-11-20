@@ -9,7 +9,7 @@ The plan is `docs/pwa-plan.md`. Follow it; record any deviation in `docs/agents/
 ## Environment
 - Use Node 24: `export PATH=/opt/node24/bin:$PATH` before any `node`/`npm` command (Node 22 is the default in the shell).
 - tippecanoe, GDAL (`gdal_contour`) and the `pmtiles` CLI are installed. Real data for the Oberstdorf resort is in `build/` after `npm run build` (not in git).
-- Chromium + Playwright are preinstalled globally; under Node 24 set `NODE_PATH=/opt/node22/lib/node_modules` so `require('playwright')` finds it. Do not run `playwright install`. Pass `--trace off` to Playwright test runs.
+- Chromium is preinstalled. E2E tests use the pinned `@playwright/test` devDependency (`npm run test:e2e`). Only for plain `.cjs` scripts using the global Playwright under Node 24, set `NODE_PATH=/opt/node22/lib/node_modules`. Do not run `playwright install`. Pass `--trace off` to Playwright test runs.
 - No `gh` CLI. Do not push; the orchestrator commits and pushes.
 
 ## Rules

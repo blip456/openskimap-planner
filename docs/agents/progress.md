@@ -5,7 +5,7 @@
 | 0 Plan | done (merged to main) |
 | 1 Shared core | done (waiting for commit) |
 | 2 Data ZIP + zoom levels | done (waiting for commit) |
-| 3 App skeleton + dev commands | to do |
+| 3 App skeleton + dev commands | done (waiting for commit) |
 | 4 Feature parity | to do |
 | 5 PWA + import | to do |
 | 6 iPhone features | to do |
@@ -89,3 +89,64 @@ resort JSON 12 ms; search index 8 ms; ski areas 82 ms. Well under the 1 s goal o
 - A real archive above 4 GB was not built (disk/time); ZIP64 is covered by unit tests only. z17 estimate for Oberstdorf: 11,335
   tiles, about 1.6 GB.
 - The shell had stale `build/work/contours/` scratch files (about 290 MB); they are only temporary and safe to delete.
+
+### 2026-11-20 · phase 3 · senior engineer · app skeleton + dev commands
+**Done**
+- `app/`: Vite 8 + Svelte 5 (runes) + TypeScript, `@core` alias. Build target from the Vite mode (`pwa` | `desktop`),
+  `platform` module with capabilities; desktop reads `/api/capabilities`.
+- DataSource (`app/src/lib/data/`): `ServerDataSource` (PMTiles over HTTP Range, planner JSON, fonts, sprites from the
+  desktop server) and `LocalDataSource` (OPFS). Import pipeline in a worker: ZIP read with `blob.slice`, copy in 4 MB
+  chunks with SHA-256 on the same chunks, sync access handles (fallback `createWritable`), new folder + `.complete`
+  marker, so a failed/cancelled import keeps the old data; progress events; free-space check. Minimal no-data screen
+  with *Import data file*, progress, cancel and errors.
+- Map: style built in the browser by the core style builder (new optional `urls` parameter; TileServer GL styles are
+  byte-identical), `pmtiles://basemap|ski|terrain|contours` in both builds, `localdata://` for glyphs/sprites, hillshade
+  + contours in the style. Route line layers, markers A/B/C (drag; tap removes with a mouse, opens the Route sheet on
+  touch).
+- Routing worker with a typed RPC helper (errors, transferables, events): `load`, `route` (+GPX), `search`, `feature`,
+  `skiAreas`, `nearest`. Start-up time is logged.
+- UI shell with the design tokens (`app/src/ui/tokens.css` = `docs/design/tokens.css`, checked by a test): glass tab bar
+  (Route · Saved · Map) + search button, menu button, Plan route button + mode pill, locate button, credit line, medium
+  Route sheet with summary (Time · Distance · Descent + chips), warnings, points (remove, reverse, clear), errors,
+  toast. Keyboard: P, Esc.
+- `server/server.mjs` (desktop server, see decisions), `scripts/dev-desktop.mjs`, new `scripts/start.mjs`,
+  `scripts/lib/launch.mjs`, `scripts/e2e.mjs`. Old planner untouched: `npm run planner` / `npm run planner:legacy`.
+- Dev only: *Load data from build/* (Vite middleware `/__dev/pwa-data`, newest ZIP in `build/pwa/`), dev overlay (wrench
+  button at the left edge): simulated iPhone safe areas, online/offline setting, fake GPS position + heading (stored
+  only, used in phase 6), routing start-up time.
+
+**Tests:** `npm test` = typecheck (core, workers, node, 2× svelte-check) + 73 core + 14 script + 19 server
+(Range, path traversal, routes) + 43 app (Vitest: RPC, stores, import pipeline incl. failure cases, local data source,
+`localdata://`, styles, routing engine, tokens vs core colours, icons, camera, real-ZIP import). `npm run test:e2e`:
+4 Playwright smoke tests (desktop build + PWA build, each at 1280×800 and iPhone 390×844 touch): map renders
+(canvas not blank), plan mode, two taps → route summary; PWA: no-data screen → import of the real
+`build/pwa/*-z14.zip` → map from OPFS → route → reload still has the data; no console errors.
+Screenshots: `docs/agents/screenshots/phase3/`.
+
+**Measured (Chromium headless, software WebGL, real Oberstdorf data)**
+- Routing worker: ready in 230–360 ms after start, of which read 15–37 ms, JSON parse 6–47 ms, network build
+  42–75 ms, search index 2 ms (precomputed, PWA) / 8–17 ms (built, desktop); 6211 nodes, 9167 edges. The rest is
+  starting the worker itself. Node: 59 ms for read + parse + network + index. Far below the 1 s goal (§3.2).
+- Import of the 45.6 MB z14 ZIP into OPFS incl. SHA-256 of every file: 0.63–0.79 s (sync access handles).
+- `build:pwa` output (`app/dist`, 1.9 MB): main JS 1236 KB (343 KB gzip, almost all MapLibre), MapLibre worker 551 KB
+  (157 KB gzip), routing worker 39 KB (15 KB gzip), import worker 13 KB, CSS 93 KB (15 KB gzip, mostly maplibre-gl.css).
+
+**How to verify (owner)**
+- `npm install`, then (with data from `npm run build` and `npm run build:pwa-data`):
+- `npm run dev:desktop` → <http://localhost:5173>: map, press **Plan route** (or P), click two points on runs → route
+  and the Route sheet. Ctrl+C stops Vite, the desktop server and TileServer GL together.
+- `npm run dev:pwa` → <http://localhost:5174>: no-data screen → **Load data from build/** (or **Import data file** and
+  pick `build/pwa/…-z14.zip`) → map from the browser storage. The orange wrench at the left edge opens the dev overlay
+  (try *iPhone safe areas*). Use Chrome DevTools device mode (iPhone) for touch.
+- `npm start` → <http://localhost:8081> (desktop build). `npm test`, `npm run test:e2e`.
+
+**Open issues / notes**
+- TODO phase 5: `npm run dev:pwa -- --phone` (mkcert HTTPS on the LAN) and `npm run preview:pwa` (with service worker);
+  `persist()` and the storage screen.
+- TileServer GL cannot start in the cloud environment (`libOpenGL.so.0` missing); the launchers keep going without it.
+  Not a code problem; check `npm start` once on the Mac.
+- OPFS + sync access handles were tested in Chromium only. Check on the iPhone in phase 5 (Safari ≥ 16.4).
+- The ZIP must be rebuilt with `npm run build:pwa-data` to get German labels in the PWA (new manifest field `language`);
+  older ZIPs work with English labels.
+- Not yet in the UI (later phases): 3D toggle, search, info cards (explore taps are logged to the console), saved
+  routes, settings menu, sheet drag/large detent, desktop side panel, nearest names for route points.

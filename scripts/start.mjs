@@ -1,47 +1,24 @@
 #!/usr/bin/env node
-// Starts the tile server and the route planner together. Ctrl+C stops both.
-import { spawn } from 'node:child_process';
+// Desktop: TileServer GL (for gpx.studio) + the desktop server with the desktop build of the app. Ctrl+C stops both.
+// Builds the desktop app first (about 2 s), so it always matches the code.
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { launch, npmRun } from './lib/launch.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 if (!fs.existsSync(path.join(ROOT, 'build/tileserver/config.json'))) {
   console.error('build/tileserver/config.json not found. Run "npm run build" first.');
   process.exit(1);
 }
+console.log('Building the desktop app (npm run build:desktop)…');
+const r = spawnSync('npm', ['run', '--silent', 'build:desktop', '--', '--logLevel', 'warn'], { cwd: ROOT, stdio: 'inherit' });
+if (r.status !== 0) process.exit(r.status ?? 1);
 
-const children = [];
-function start(name, script, color) {
-  const child = spawn('npm', ['run', '--silent', script], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
-  const prefix = `\x1b[${color}m[${name}]\x1b[0m `;
-  const forward = (stream, out) => {
-    let buf = '';
-    stream.on('data', (d) => {
-      buf += d;
-      const lines = buf.split('\n');
-      buf = lines.pop();
-      // tileserver-gl's native deps print a harmless duplicate-class warning on macOS
-      for (const line of lines) if (!line.startsWith('objc[')) out.write(prefix + line + '\n');
-    });
-  };
-  forward(child.stdout, process.stdout);
-  forward(child.stderr, process.stderr);
-  child.on('exit', (code) => {
-    console.log(`${prefix}exited with code ${code}`);
-    shutdown(code ?? 0);
-  });
-  children.push(child);
-}
-
-let stopping = false;
-function shutdown(code) {
-  if (stopping) return;
-  stopping = true;
-  for (const c of children) c.kill('SIGTERM');
-  setTimeout(() => process.exit(code), 500);
-}
-process.on('SIGINT', () => shutdown(0));
-process.on('SIGTERM', () => shutdown(0));
-
-start('tiles', 'tiles', 36);
-start('planner', 'planner', 35);
+launch(
+  [
+    { name: 'tiles', color: 36, ...npmRun('tiles'), optional: true, hint: 'TileServer GL stopped: the app works, only the gpx.studio links need it.' },
+    { name: 'server', color: 35, ...npmRun('server') },
+  ],
+  { cwd: ROOT },
+);
