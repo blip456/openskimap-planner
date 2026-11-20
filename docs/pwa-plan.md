@@ -87,7 +87,7 @@ The current `planner/` folder stays working until the new app reaches feature pa
 | --- | --- |
 | `npm run build` | Data build, as today (needs tippecanoe, pmtiles, GDAL). Accepts a zoom level, e.g. `npm run build z12` (see §5.1). |
 | `npm run build:pwa-data` | Packs `build/` into `build/pwa/openskimap-data-<date>-z<zoom>.zip` for import on the phone. Also accepts a zoom level: `npm run build:pwa-data z13` builds the data first if needed. |
-| `npm run build:app` | Builds the PWA into `app/dist` (this is what Vercel runs). |
+| `npm run build:pwa` | Builds the PWA into `app/dist` (this is what Vercel runs). |
 | `npm run build:desktop` | Builds the app for the desktop target. |
 | `npm start` | Desktop: TileServer GL + desktop server with the desktop app. |
 | `npm run dev:desktop` | Development of the desktop version: Vite dev server (hot reload) + desktop server + TileServer GL. See §2.1. |
