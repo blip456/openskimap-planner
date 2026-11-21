@@ -284,3 +284,13 @@ wrong assumption. Format:
   find it too. After trying a region build by hand, delete its ZIP (and `build/regions/<id>/`) when done. Before
   trusting `real-data.test.ts`'s failure as a code bug, check `ls -la build/pwa/` for anything that isn't the
   expected build's ZIP — the test always picks the newest one.
+
+## 2026-11-21 · after phase 8 · Build region leaked into the PWA bundle
+- **What happened:** `npm run test:e2e` failed at the bundle check: `app/dist/assets/RegionBuilder-*.js contains dev-only code ("Load data from build/")`. The desktop-only "Build region" page was added after the check was written.
+- **Root cause:** `App.svelte` imported `RegionBuilder.svelte` with a plain `import()` guarded only by `ui.regionBuilderOpen`. Vite kept the lazy chunk in the PWA build too. Its help text contained the dev-only button label, so the leak check caught it.
+- **Prevention:** guard target-only lazy imports with the literal `import.meta.env.VITE_TARGET !== 'pwa'` (the same pattern as `import.meta.env.DEV` for the dev overlay), so Vite drops the chunk. Keep dev-only labels out of shared UI text. Run `npm run test:e2e` after adding any desktop-only page.
+
+## 2026-11-21 · after phase 8 · Playwright browser version does not match the installed Chromium
+- **What happened:** the new Build region spec failed with `browserType.launch: Executable doesn't exist at .../chromium_headless_shell-1243/...`. The pinned `@playwright/test` 1.63.0 wants headless shell build 1243. The preinstalled cache in `~/Library/Caches/ms-playwright/` has `chromium_headless_shell-1228`.
+- **Root cause:** the environment's browser cache is older than the pinned Playwright. `playwright install` is not allowed here (CLAUDE.md).
+- **Prevention:** do not change the pinned version. To run the browser tests here, use a scratch config outside the repo that sets `use.launchOptions.executablePath` to the installed `chrome-headless-shell` (see the handover in `docs/agents/progress.md`). Open question for the owner: should the browser cache be updated on this machine?

@@ -11,15 +11,15 @@ const run = (cmd, args) => {
   if (r.status !== 0) process.exit(r.status ?? 1);
 };
 
-if (!fs.existsSync(path.join(ROOT, 'build/planner/resorts.json')) || !fs.readdirSync(path.join(ROOT, 'build/pwa')).some((n) => n.endsWith('.zip'))) {
-  console.error('The smoke tests need real data: run npm run build and npm run build:pwa-data first.');
+if (!fs.existsSync(path.join(ROOT, 'build/regions/default/planner/resorts.json')) || !fs.readdirSync(path.join(ROOT, 'build/pwa-map-data')).some((n) => n.endsWith('.zip'))) {
+  console.error('The smoke tests need real data: run npm run build and npm run build:pwa-map-data first.');
   process.exit(1);
 }
 run('npm', ['run', '--silent', 'build:desktop']);
 run('npm', ['run', '--silent', 'build:pwa']);
 
 // dev-only helpers (dev overlay, "Load data from build/") must be tree-shaken out of production bundles
-for (const dist of ['app/dist', 'app/dist-desktop']) {
+for (const dist of ['app/dist-pwa', 'app/dist-desktop']) {
   const assets = path.join(ROOT, dist, 'assets');
   for (const f of fs.readdirSync(assets).filter((n) => n.endsWith('.js'))) {
     const text = fs.readFileSync(path.join(assets, f), 'utf8');
@@ -39,8 +39,8 @@ for (const f of ['sw.js', 'manifest.webmanifest']) {
     console.error(`app/dist-desktop/${f} exists: the desktop build must not have a service worker`);
     process.exit(1);
   }
-  if (!fs.existsSync(path.join(ROOT, 'app/dist', f))) {
-    console.error(`app/dist/${f} is missing: the PWA build needs it`);
+  if (!fs.existsSync(path.join(ROOT, 'app/dist-pwa', f))) {
+    console.error(`app/dist-pwa/${f} is missing: the PWA build needs it`);
     process.exit(1);
   }
 }

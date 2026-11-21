@@ -1,4 +1,4 @@
-// Reader for the data ZIP that `npm run build:pwa-data` writes (see docs/pwa-plan.md §5).
+// Reader for the data ZIP that `npm run build:pwa-map-data` writes (see docs/pwa-plan.md §5).
 // Pure functions: the caller gives a random-access reader (File.slice in the browser, a file handle in Node),
 // so nothing big is loaded into memory. Only "stored" (uncompressed) entries are supported.
 import {

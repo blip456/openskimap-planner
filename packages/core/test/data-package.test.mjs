@@ -221,10 +221,10 @@ test('openDataPackage: reads the manifest and checks the files', async () => {
   assert.throws(() => checkManifestFiles(parseManifest(noBase), entries), /basemap/);
 });
 
-// The real archive from `npm run build:pwa-data` (not in git).
-const PWA_DIR = path.resolve(import.meta.dirname, '../../../build/pwa');
+// The real archive from `npm run build:pwa-map-data` (not in git).
+const PWA_DIR = path.resolve(import.meta.dirname, '../../../build/pwa-map-data');
 const realZip = fs.existsSync(PWA_DIR) ? fs.readdirSync(PWA_DIR).filter((n) => n.endsWith('.zip')).sort().at(-1) : null;
-test('real data ZIP: opens, every file matches its SHA-256', { skip: realZip ? false : 'no build/pwa/*.zip; run npm run build:pwa-data' }, async () => {
+test('real data ZIP: opens, every file matches its SHA-256', { skip: realZip ? false : 'no build/pwa-map-data/*.zip; run npm run build:pwa-map-data' }, async () => {
   const file = path.join(PWA_DIR, realZip);
   const fh = await fs.promises.open(file, 'r');
   try {

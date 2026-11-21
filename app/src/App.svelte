@@ -48,10 +48,13 @@
   $effect(() => {
     if (ui.menuOpen && !Menu) void import('./ui/menu/Menu.svelte').then((m) => (Menu = m.default));
   });
-  // desktop "Build region" page: loaded on first use
+  // desktop "Build region" page: loaded on first use. The literal VITE_TARGET check lets the PWA build drop the
+  // chunk (scripts/e2e.mjs fails if its dev-only text ends up in the phone bundle; see lessons.md).
   let RegionBuilder = $state<Component<{ app: AppState; onclose: () => void }> | null>(null);
   $effect(() => {
-    if (ui.regionBuilderOpen && !RegionBuilder) void import('./ui/regions/RegionBuilder.svelte').then((m) => (RegionBuilder = m.default));
+    if (import.meta.env.VITE_TARGET !== 'pwa' && ui.regionBuilderOpen && !RegionBuilder) {
+      void import('./ui/regions/RegionBuilder.svelte').then((m) => (RegionBuilder = m.default));
+    }
   });
   /** app height (not window.innerHeight: short in the iOS Home Screen app, see lib/viewport.ts) */
   let innerHeight = $state(viewportHeight());

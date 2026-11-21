@@ -27,7 +27,7 @@ function bundleSizes(dir) {
   return rows;
 }
 
-for (const dir of ['app/dist', 'app/dist-desktop']) {
+for (const dir of ['app/dist-pwa', 'app/dist-desktop']) {
   const rows = bundleSizes(dir);
   if (!rows) continue;
   console.log(`\n${dir}/assets (KB, gzip KB):`);

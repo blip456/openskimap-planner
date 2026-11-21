@@ -467,3 +467,86 @@ support on the phone — out of scope, as agreed).
   use a fake build script (prints the same log shape, no tippecanoe/GDAL/network). The desktop page itself
   (`app/src/ui/regions/RegionBuilder.svelte`) has `data-testid` hooks but no Playwright spec yet — see progress.md
   open issues.
+
+## 2026-11-21 · after phase 8 · Build region: e2e test and PWA bundle
+
+- **Build region e2e test added** (`app/e2e/region-builder.spec.ts`, desktop-wide project only, since the page is
+  desktop-only). It searches "Nebelhorn", checks the size estimate, opens the "Save this region?" dialog and cancels.
+  It never starts a real build (minutes of download). This closes the open issue in progress.md; the stub-build
+  harness idea was not needed for this.
+- **The desktop-only page is removed from the PWA bundle at build time.** `App.svelte` loads `RegionBuilder.svelte`
+  only when `import.meta.env.VITE_TARGET !== 'pwa'`. The PWA build drops that chunk. The help text was reworded so
+  the dev-only label "Load data from build/" is not in shared UI text.
+- **The menu row is still in the PWA bundle, hidden at run time.** The "Build region" row in `menu/RootPage.svelte` is
+  gated by `caps.target === 'desktop' && caps.regionBuilds` (the PWA has no server, so `regionBuilds` is false).
+  This is a deliberate trade-off to keep one shared menu file. A few strings from that section ship in the PWA
+  but never show.
+- **Browser versions:** the pinned Playwright (1.63.0) expects Chromium 1243, the installed cache has 1228. Tests
+  were run here with a scratch config (outside the repo) that points at the installed headless shell. The pinned
+  version was not changed.
+- **npm scripts** are grouped by topic in README.md ("npm scripts") and `package.json` (same order). No command was
+  renamed or changed.
+
+## 2026-11-21 · after phase 8 · Build region: "Clean up files"
+
+- **Only fixed groups can be deleted.** The page sends group keys (`region-folders`, `region-zips`, `work`,
+  `downloads`), never paths. `server/region-builds.mjs` computes the paths from a fixed list, and rejects unknown or
+  empty keys (400). Test: `server/test/region-cleanup.test.mjs`.
+- **Never deleted:** `build/planner` and `build/tileserver` (the desktop map), the main data ZIP
+  (`openskimap-data-…`) and `regions.json` (saved region definitions, at the project root). A region's ZIP is matched by
+  `<region id>-YYYY-MM-DD-zN.zip`, so the main ZIP never counts as a region ZIP.
+- **Required items start ticked** (region folders, region ZIPs). **Shared caches start unticked** (`build/work`,
+  `build/downloads`), because the next build gets slower, or the ski area search stops working until a new download.
+- **Refused while a build runs** (409), because the build writes into these folders.
+- **Confirm before deleting.** The page shows a `ConfirmDialog` with the chosen items, the size, and "cannot be undone".
+  The browser test only ticks the optional downloads item and cancels; it never deletes real files.
+- **Clearing all of `build/` by hand** is safe for the code, but: the desktop map and route planner stop until
+  `npm run build` runs again (`server/server.mjs` reports `dataError`). Saved regions in `regions.json` survive. The
+  phone keeps its own imported copy. The next full build needs internet and downloads everything again.
+
+## 2026-11-21 · after phase 8 · PWA output folder renamed to app/dist-pwa
+
+- The PWA build now writes to `app/dist-pwa` (was `app/dist`), so the two build folders are named the same way:
+  `app/dist-pwa` and `app/dist-desktop`. The choice is in `app/vite.config.ts` (`outDir`).
+- Updated with it: `vercel.json` (`outputDirectory`), `.gitignore`, the static server and Playwright config in
+  `app/e2e/`, `app/e2e/pwa-data.spec.ts`, `scripts/e2e.mjs`, `scripts/measure-perf.mjs`, `scripts/dev-pwa.mjs` (comment),
+  `scripts/test/pwa-tools.test.mjs`, and the README and docs (`docs/vercel.md`, `docs/pwa-plan.md`).
+- Vercel: the project's output directory must be changed to `app/dist-pwa` in the Vercel dashboard too, if it was set
+  there by hand (the `vercel.json` setting is what the repo sets). Not verified on Vercel.
+
+## 2026-11-21 · after phase 8 · Build region: delete one region from the list
+
+- **Delete per region ZIP.** Each region ZIP in "ZIP files in build/pwa" has a trash button. `DELETE /api/zips/<name>`
+  removes that ZIP and the folder `build/regions/<id>` that belongs to it. The folder is kept while another ZIP of the
+  same region is left, because it is shared by all of that region's ZIPs.
+- **The main data ZIP (`openskimap-data-…`) has no delete button** and the server refuses it (400). It is the desktop's
+  main output: delete it with a new `npm run build:pwa-data` or by hand.
+- **The saved region (regions.json) stays**, so Rebuild works again later. Refused while a build runs (409).
+- Server: `RegionBuilds.deleteRegionZip` in `server/region-builds.mjs`; tests in `server/test/region-cleanup.test.mjs`.
+  Browser test: `app/e2e/region-builder.spec.ts` uses its own fixture (unique name) and removes it again.
+
+## 2026-11-21 · after phase 8 · The default build lives in build/regions/default
+
+- **Why:** the resorts.json build sat in the root of `build/` (`planner/`, `tileserver/`, `build-info.json`), while every
+  "Build region" build was in `build/regions/<id>/`. Now both are in `build/regions/`. The default build is
+  `build/regions/default/`, with the same layout as a region build.
+- **What moved:** `planner/`, `build-info.json`, `tileserver/config.json`, `tileserver/data/`, `tileserver/styles/`.
+- **What stays shared in `build/`:** `downloads/`, `work/` (extract caches), `tileserver/fonts/` and
+  `tileserver/sprites/` (used by every map build), `pwa/` (all data ZIPs, the main one and the region ones).
+- **Config:** the tileserver config finds the shared fonts and sprites with a relative path
+  (`../../../tileserver/fonts`), written by `scripts/build.mjs`. Checked: TileServer GL serves styles and a font from it.
+- **Server:** `createServer({ buildDir, mapDir })`. `mapDir` defaults to `build/regions/default`. `dataFile` reads planner
+  and tiles from `mapDir`, fonts and sprites from `buildDir`.
+- **Reserved id:** `default` is not a valid region id (`scripts/lib/region.mjs`), and the region cleanup and the ZIP
+  delete never treat `build/regions/default` as a region.
+- **Not changed:** the phone ZIP stays in `build/pwa/` (`openskimap-data-…`), next to the region ZIPs.
+
+## 2026-11-21 · after phase 8 · Names: build/pwa-map-data and npm run build:pwa-map-data
+
+- The folder with the phone data ZIPs is `build/pwa-map-data/` (was `build/pwa/`). The name says what is in it.
+- The npm script is `build:pwa-map-data` (was `build:pwa-data`). The script file is `scripts/build-pwa-map-data.mjs`
+  (was `build-pwa-data.mjs`). Its behaviour is unchanged.
+- The app and its messages use the new names: the "no data" screen, the import error text, the dev "Load data from
+  build/" button, and the Build region page. The e2e text checks follow.
+- Historical entries in `docs/agents/` keep the old names on purpose.
+- The default map folder stays `build/regions/default/` for now. Naming it after the resort is an open question.

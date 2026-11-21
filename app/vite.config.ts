@@ -19,8 +19,8 @@ function targetOf(mode: string): Target {
   return process.env.VITE_TARGET === 'pwa' ? 'pwa' : 'desktop';
 }
 
-/** Newest data ZIP in build/pwa/ (by modification time), or null. */
-export function newestDataZip(dir = path.join(ROOT, 'build/pwa')): { file: string; size: number } | null {
+/** Newest data ZIP in build/pwa-map-data/ (by modification time), or null. */
+export function newestDataZip(dir = path.join(ROOT, 'build/pwa-map-data')): { file: string; size: number } | null {
   if (!fs.existsSync(dir)) return null;
   const zips = fs
     .readdirSync(dir)
@@ -30,7 +30,7 @@ export function newestDataZip(dir = path.join(ROOT, 'build/pwa')): { file: strin
   return zips[0] ? { file: zips[0].file, size: zips[0].stat.size } : null;
 }
 
-/** Dev server only: GET /__dev/pwa-data serves the newest ZIP from build/pwa/ ("Load data from build/"). */
+/** Dev server only: GET /__dev/pwa-data serves the newest ZIP from build/pwa-map-data/ ("Load data from build/"). */
 function devDataZip(): Plugin {
   return {
     name: 'dev-data-zip',
@@ -41,7 +41,7 @@ function devDataZip(): Plugin {
         if (!zip) {
           res.statusCode = 404;
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'No data ZIP in build/pwa/. Run npm run build:pwa-data first.' }));
+          res.end(JSON.stringify({ error: 'No data ZIP in build/pwa-map-data/. Run npm run build:pwa-map-data first.' }));
           return;
         }
         res.setHeader('Content-Type', 'application/zip');
@@ -144,7 +144,7 @@ export default defineConfig(({ mode }) => {
     define: { 'import.meta.env.VITE_TARGET': JSON.stringify(target), 'import.meta.env.VITE_APP_VERSION': JSON.stringify(VERSION) },
     worker: { format: 'es' },
     build: {
-      outDir: path.join(APP, target === 'pwa' ? 'dist' : 'dist-desktop'),
+      outDir: path.join(APP, target === 'pwa' ? 'dist-pwa' : 'dist-desktop'),
       emptyOutDir: true,
       target: 'es2022',
       sourcemap: target === 'desktop',

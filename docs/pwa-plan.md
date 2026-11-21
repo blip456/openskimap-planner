@@ -67,12 +67,12 @@ app/                         Vite + Svelte 5 frontend (both builds)
       share/                   GPX share / download
     ui/                        Svelte components (glass bar, sheets, cards, charts, settings)
 server/                      desktop backend (Node, no framework)
-  server.mjs                   serves app/dist, build/ data files (with Range support),
+  server.mjs                   serves app/dist-pwa, build/ data files (with Range support),
                                /api/capabilities, /api/routes* (project folder), /api/resolve
   routes-store.mjs             (from planner/routes-store.mjs)
 scripts/
   build.mjs                    data build (unchanged role: downloads + tiles + planner data)
-  build-pwa-data.mjs           packs the data ZIP for the phone (§5)
+  build-pwa-map-data.mjs           packs the data ZIP for the phone (§5)
   start.mjs                    desktop: tile server + desktop server
 docs/
   pwa-plan.md                  this file
@@ -86,8 +86,8 @@ The current `planner/` folder stays working until the new app reaches feature pa
 | Script | What it does |
 | --- | --- |
 | `npm run build` | Data build, as today (needs tippecanoe, pmtiles, GDAL). Accepts a zoom level, e.g. `npm run build z12` (see §5.1). |
-| `npm run build:pwa-data` | Packs `build/` into `build/pwa/openskimap-data-<date>-z<zoom>.zip` for import on the phone. Also accepts a zoom level: `npm run build:pwa-data z13` builds the data first if needed. |
-| `npm run build:pwa` | Builds the PWA into `app/dist` (this is what Vercel runs). |
+| `npm run build:pwa-map-data` | Packs `build/` into `build/pwa-map-data/openskimap-data-<date>-z<zoom>.zip` for import on the phone. Also accepts a zoom level: `npm run build:pwa-map-data z13` builds the data first if needed. |
+| `npm run build:pwa` | Builds the PWA into `app/dist-pwa` (this is what Vercel runs). |
 | `npm run build:desktop` | Builds the app for the desktop target. |
 | `npm start` | Desktop: TileServer GL + desktop server with the desktop app. |
 | `npm run dev:desktop` | Development of the desktop version: Vite dev server (hot reload) + desktop server + TileServer GL. See §2.1. |
@@ -109,8 +109,8 @@ It behaves like `npm start`, but with hot reload and source maps for debugging.
 
 **`npm run dev:pwa`** opens the PWA version on <http://localhost:5174>. It runs the Vite dev server with `VITE_TARGET=pwa`, with no desktop server and no tile server, exactly like on Vercel. The data comes from the browser's storage, just like on the iPhone.
 
-- **Getting data in:** use the real import flow with the ZIP from `npm run build:pwa-data`. Chrome and Safari on the Mac support the same storage (OPFS).
-- **Quick option for development only:** a button *Load data from build/*. The dev server offers the latest ZIP from `build/pwa/`, and the app imports it through the same import code as on the phone. So you don't need to pick a file each time, and the import itself still gets tested.
+- **Getting data in:** use the real import flow with the ZIP from `npm run build:pwa-map-data`. Chrome and Safari on the Mac support the same storage (OPFS).
+- **Quick option for development only:** a button *Load data from build/*. The dev server offers the latest ZIP from `build/pwa-map-data/`, and the app imports it through the same import code as on the phone. So you don't need to pick a file each time, and the import itself still gets tested.
 - **Service worker:** it is off in `dev:pwa`, because it gets in the way of hot reload. Install and offline behaviour are tested with `npm run preview:pwa`.
 - **Development overlay:** a small panel, only in dev builds, that can:
   - show simulated iPhone safe areas (notch, home indicator), because desktop browsers don't have them,
@@ -188,9 +188,9 @@ Communication uses a small typed request/response wrapper over `postMessage`. Re
 | `planner/server.mjs` | `server/server.mjs` | Only file serving, capabilities, project-folder routes, short links. |
 | `scripts/lib/styles.mjs` | `packages/core/styles` | Used by the data build (TileServer GL styles) and by the app. |
 
-## 5. Data ZIP for the phone (`npm run build:pwa-data`)
+## 5. Data ZIP for the phone (`npm run build:pwa-map-data`)
 
-Input: the output of `npm run build`. Output: `build/pwa/openskimap-data-YYYY-MM-DD.zip`.
+Input: the output of `npm run build`. Output: `build/pwa-map-data/openskimap-data-YYYY-MM-DD.zip`.
 
 ```
 manifest.json            format version, build date, OpenSkiData date, resorts, file list with size + SHA-256
@@ -218,12 +218,12 @@ sprites/light*.json|png
 
 Today the zoom levels are fixed in `resorts.json` (`terrainMaxZoom`, `basemapMaxZoom`, `skiMaxZoom`). You can now also set them per build on the command line, to try out sharpness against file size. `resorts.json` stays the default.
 
-**Short form:** `npm run build z<N>` or `npm run build:pwa-data z<N>`, for example:
+**Short form:** `npm run build z<N>` or `npm run build:pwa-map-data z<N>`, for example:
 
 ```sh
 npm run build z12          # small: terrain and basemap up to zoom 12
 npm run build z15          # sharper hillshading and basemap detail
-npm run build:pwa-data z13 # build the data at zoom 13 and pack the ZIP
+npm run build:pwa-map-data z13 # build the data at zoom 13 and pack the ZIP
 ```
 
 `z<N>` sets the **maximum level of detail of the map pictures**:
@@ -390,7 +390,7 @@ Each phase ends with a check (tests, build, screenshots in iPhone and desktop si
 | # | Phase | Result |
 | --- | --- | --- |
 | 1 | **Shared core** | `packages/core` in TypeScript, unit tests, golden route tests against the old `graph.mjs`. Old planner still works, using the core. |
-| 2 | **Data ZIP + zoom levels** | `npm run build:pwa-data`, manifest, limited font ranges, precomputed search index/ski areas. Zoom per build (`z<N>` and long flags), size estimate, cache per zoom. Size report. |
+| 2 | **Data ZIP + zoom levels** | `npm run build:pwa-map-data`, manifest, limited font ranges, precomputed search index/ski areas. Zoom per build (`z<N>` and long flags), size estimate, cache per zoom. Size report. |
 | 3 | **App skeleton** | Vite + Svelte + TS, map from PMTiles via `DataSource` (desktop server + local), routing worker, a basic route on screen. Desktop server replaces `planner/server.mjs`. `dev:desktop` and `dev:pwa` work (incl. *Load data from build/* and the dev overlay). Worker start time measured. |
 | 4 | **Feature parity** | Route points, directions per leg, gradient profile, info cards, search, saved routes, settings (runs, lifts, speed, map), undo/redo, ski areas, 3D, online maps, gpx.studio (desktop). Old `planner/` removed. |
 | 5 | **PWA + import** | Manifest, icons, service worker (vite-plugin-pwa), import flow, storage screen, `persist()`, offline/online switch. Vercel config. `preview:pwa` and `dev:pwa -- --phone` (mkcert). |
@@ -421,6 +421,6 @@ Phases 6 and 7 can partly overlap with 4: components are built in the new design
 
 ## 12. Backlog (not in this project)
 
-- **GitHub Action that builds the data ZIP:** installs tippecanoe, pmtiles and GDAL, runs `npm run build` + `npm run build:pwa-data`, and attaches the ZIP to a GitHub Release (or as a workflow artifact). Runs on demand and on a schedule. Respect the OpenSkiData rule of at most one download per day. You then download the ZIP on the phone and import it. A hosted download inside the app is **not** planned.
+- **GitHub Action that builds the data ZIP:** installs tippecanoe, pmtiles and GDAL, runs `npm run build` + `npm run build:pwa-map-data`, and attaches the ZIP to a GitHub Release (or as a workflow artifact). Runs on demand and on a schedule. Respect the OpenSkiData rule of at most one download per day. You then download the ZIP on the phone and import it. A hosted download inside the app is **not** planned.
 - Turn-by-turn "next step" while skiing along a planned route.
 - More resorts in the ZIP / one ZIP per resort.

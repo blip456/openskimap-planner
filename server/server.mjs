@@ -3,7 +3,7 @@
 //   - the desktop build of the app (app/dist-desktop),
 //   - the data files of `npm run build` under /data (PMTiles with HTTP Range, planner JSON, fonts, sprites),
 //   - /api/capabilities, /api/routes* (routes in the project folder), /api/resolve (Google Maps short links),
-//   - /api/regions*, /api/skiareas, /api/builds*, /api/zips* ("Build region": one data ZIP per region, region-builds.mjs).
+//   - /api/regions*, /api/skiareas, /api/builds*, /api/zips*, /api/cleanup ("Build region": one data ZIP per region, clean-up of region files; region-builds.mjs).
 // Routing, search and info cards run in the browser (routing worker); this server does no routing.
 import fs from 'node:fs';
 import http from 'node:http';
@@ -33,12 +33,12 @@ const readJson = (file) => {
 };
 
 /** What the app gets at /api/capabilities (see app/src/lib/platform/index.ts). */
-export function capabilities({ buildDir, tileServerUrl, serverRoutes, regionBuilds = false, projectRoot = ROOT }) {
-  const resorts = readJson(path.join(buildDir, 'planner/resorts.json'));
-  const tilesDir = path.join(buildDir, 'tileserver/data');
+export function capabilities({ mapDir, tileServerUrl, serverRoutes, regionBuilds = false, projectRoot = ROOT }) {
+  const resorts = readJson(path.join(mapDir, 'planner/resorts.json'));
+  const tilesDir = path.join(mapDir, 'tileserver/data');
   const tiles = ['ski', 'basemap', 'terrain', 'contours'].filter((t) => fs.existsSync(path.join(tilesDir, `${t}.pmtiles`)));
   const settings = readJson(path.join(projectRoot, 'resorts.json'))?.settings ?? {};
-  const info = readJson(path.join(buildDir, 'build-info.json'));
+  const info = readJson(path.join(mapDir, 'build-info.json'));
   const ok = Array.isArray(resorts) && resorts.length > 0 && tiles.includes('ski') && tiles.includes('basemap');
   return {
     tileServerUrl,
@@ -54,7 +54,7 @@ export function capabilities({ buildDir, tileServerUrl, serverRoutes, regionBuil
           builtAt: info?.builtAt ?? null,
         }
       : null,
-    ...(ok ? {} : { dataError: 'No map data found in build/. Run npm run build first.' }),
+    ...(ok ? {} : { dataError: 'No map data found in build/regions/default. Run npm run build first.' }),
   };
 }
 
@@ -101,14 +101,14 @@ export function validateRoute(body) {
   };
 }
 
-/** Data files under /data/… → a file in build/, or null. Only the four kinds of files the app needs. */
-export function dataFile(buildDir, pathname) {
+/** Data files under /data/… → a file in build/ (planner and tiles from the default map folder), or null. Only the four kinds of files the app needs. */
+export function dataFile({ buildDir, mapDir }, pathname) {
   const m = /^\/data\/(planner|tiles|fonts|sprites)\/(.+)$/.exec(pathname);
   if (!m) return null;
   const [, kind, rest] = m;
   const dirs = {
-    planner: [path.join(buildDir, 'planner'), /^[\w.-]+\.json$/],
-    tiles: [path.join(buildDir, 'tileserver/data'), /^[\w-]+\.pmtiles$/],
+    planner: [path.join(mapDir, 'planner'), /^[\w.-]+\.json$/],
+    tiles: [path.join(mapDir, 'tileserver/data'), /^[\w-]+\.pmtiles$/],
     fonts: [path.join(buildDir, 'tileserver/fonts'), /^[^/]+\/\d+-\d+\.pbf$/],
     sprites: [path.join(buildDir, 'tileserver/sprites'), /^[\w@.-]+\.(?:json|png)$/],
   };
@@ -126,6 +126,8 @@ export function dataFile(buildDir, pathname) {
 export function createServer({
   appDir = path.join(ROOT, 'app/dist-desktop'),
   buildDir = path.join(ROOT, 'build'),
+  /** the default map (planner data, tiles, build-info.json): build/regions/default; fonts and sprites stay in buildDir */
+  mapDir = path.join(buildDir, 'regions', 'default'),
   tileServerUrl = 'http://localhost:8080',
   serverRoutes = true,
   routesDir = path.join(ROOT, 'saved-routes'),
@@ -149,23 +151,23 @@ export function createServer({
     try {
       if (pathname.startsWith('/data/')) {
         if (!isGet) throw new HttpError(405, 'Method not allowed');
-        const file = dataFile(buildDir, pathname);
+        const file = dataFile({ buildDir, mapDir }, pathname);
         if (file && sendFile(req, res, file)) return;
         throw new HttpError(404, 'Not found');
       }
 
       if (pathname === '/api/capabilities' && isGet) {
-        return send(res, 200, capabilities({ buildDir, tileServerUrl, serverRoutes, regionBuilds: regions !== null }));
+        return send(res, 200, capabilities({ mapDir, tileServerUrl, serverRoutes, regionBuilds: regions !== null }));
       }
 
-      if (pathname.startsWith('/api/regions') || pathname.startsWith('/api/skiareas') || pathname.startsWith('/api/builds') || pathname.startsWith('/api/zips')) {
+      if (pathname.startsWith('/api/regions') || pathname.startsWith('/api/skiareas') || pathname.startsWith('/api/builds') || pathname.startsWith('/api/zips') || pathname.startsWith('/api/cleanup')) {
         if (!regions) throw new HttpError(403, 'Region builds are turned off.');
         return await handleRegions(req, res, url, regions);
       }
 
       if (pathname === '/api/resolve' && isGet) {
         const resort = url.searchParams.get('resort');
-        const resorts = readJson(path.join(buildDir, 'planner/resorts.json')) ?? [];
+        const resorts = readJson(path.join(mapDir, 'planner/resorts.json')) ?? [];
         const viewbox = resorts.find((r) => r.id === resort)?.bbox;
         return send(res, 200, await resolveLink(url.searchParams.get('url'), viewbox));
       }
@@ -263,6 +265,8 @@ async function handleRegions(req, res, url, regions) {
     return;
   }
 
+  if (pathname === '/api/cleanup' && method === 'GET') return send(res, 200, { items: regions.cleanupItems() });
+  if (pathname === '/api/cleanup' && method === 'POST') return send(res, 200, regions.cleanup((await readBody(req)).keys));
   if (pathname === '/api/zips' && method === 'GET') return send(res, 200, { zips: regions.zips() });
   const zm = /^\/api\/zips\/([^/]+)$/.exec(pathname);
   if (zm && method === 'GET') {
@@ -277,6 +281,15 @@ async function handleRegions(req, res, url, regions) {
       throw new HttpError(404, 'Not found');
     }
     return;
+  }
+  if (zm && method === 'DELETE') {
+    let name;
+    try {
+      name = decodeURIComponent(zm[1]);
+    } catch {
+      throw new HttpError(400, 'Bad file name');
+    }
+    return send(res, 200, regions.deleteRegionZip(name));
   }
   throw new HttpError(404, 'Not found');
 }
@@ -303,6 +316,6 @@ if (import.meta.main) {
   }
   server.listen(port, host, () => {
     console.log(`Desktop server: http://localhost:${port}`);
-    if (!fs.existsSync(path.join(ROOT, 'build/planner/resorts.json'))) console.log('No map data yet: run npm run build first.');
+    if (!fs.existsSync(path.join(ROOT, 'build/regions/default/planner/resorts.json'))) console.log('No map data yet: run npm run build first.');
   });
 }

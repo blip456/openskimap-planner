@@ -3,7 +3,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { safeJoin, sendFile } from '../../server/files.mjs';
 
-const [dir, port] = [path.resolve(process.argv[2] ?? 'app/dist'), Number(process.argv[3] ?? 4175)];
+const [dir, port] = [path.resolve(process.argv[2] ?? 'app/dist-pwa'), Number(process.argv[3] ?? 4175)];
 http
   .createServer((req, res) => {
     const pathname = new URL(req.url ?? '/', 'http://x').pathname;

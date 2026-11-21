@@ -19,7 +19,7 @@ to the iPhone yourself (see `docs/iphone-guide.md`).
    | Framework | none |
    | Install command | `npm ci --ignore-scripts` |
    | Build command | `npm run build:pwa` |
-   | Output directory | `app/dist` |
+   | Output directory | `app/dist-pwa` |
 
    Vercel may show other values in the form. The values in `vercel.json` win. Do not change them in the dashboard.
 5. **Environment variables:** none. Leave the list empty.

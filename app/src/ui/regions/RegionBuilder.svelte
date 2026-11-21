@@ -1,7 +1,7 @@
 <script lang="ts">
   // Desktop › Build region: build a data ZIP for another region. Draw a box (built exactly as drawn) or search ski
   // areas (their area plus a margin). The desktop server runs the build and streams its output; the ZIP lands in
-  // build/pwa/. Opened from the settings menu; full screen over the planner.
+  // build/pwa-map-data/. Opened from the settings menu; full screen over the planner.
   import { onMount, tick } from 'svelte';
   import { Map as MlMap, Marker, setWorkerUrl } from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
@@ -19,6 +19,7 @@
     regionsApi,
     watchBuild,
     type BuildStatus,
+    type CleanupItem,
     type Estimate,
     type Region,
     type RegionDefaults,
@@ -67,6 +68,12 @@
   let zips = $state.raw<ZipInfo[]>([]);
   let askSave = $state(false);
   let deleting = $state<Region | null>(null);
+  let cleanupItems = $state.raw<CleanupItem[]>([]);
+  let cleanupPick = $state<string[]>([]);
+  let confirmCleanup = $state(false);
+  let cleanupMessage = $state<string | null>(null);
+  let zipToDelete = $state<ZipInfo | null>(null);
+  const cleanupChosen = $derived(cleanupItems.filter((i) => cleanupPick.includes(i.key)));
 
   const running = $derived(build?.state === 'running');
   const geometry = $derived.by<Pick<Region, 'bbox' | 'skiAreas' | 'marginKm'> | null>(() => {
@@ -224,7 +231,46 @@
 
   async function refreshLists() {
     try {
-      [saved, zips] = await Promise.all([regionsApi.list(), regionsApi.zips()]);
+      [saved, zips, cleanupItems] = await Promise.all([regionsApi.list(), regionsApi.zips(), regionsApi.cleanupItems()]);
+      // the required items start ticked; the optional ones (shared caches) start unticked
+      cleanupPick = cleanupItems.filter((i) => !i.optional && i.count > 0).map((i) => i.key);
+    } catch (err) {
+      actionError = (err as Error).message;
+    }
+  }
+
+  function toggleCleanup(key: string) {
+    cleanupPick = cleanupPick.includes(key) ? cleanupPick.filter((k) => k !== key) : [...cleanupPick, key];
+  }
+
+  /** Region id of a region ZIP (`<id>-YYYY-MM-DD-zN.zip`); null for the main data ZIP and other files. */
+  function regionOfZip(name: string): string | null {
+    if (name.startsWith('openskimap-data-')) return null;
+    const m = /^(.+)-\d{4}-\d{2}-\d{2}-z\d+\.zip$/.exec(name);
+    return m ? m[1] : null;
+  }
+
+  async function deleteZip() {
+    const z = zipToDelete;
+    zipToDelete = null;
+    if (!z) return;
+    try {
+      const r = await regionsApi.deleteZip(z.name);
+      cleanupMessage = `Deleted ${z.name}${r.folderRemoved ? ' and its build folder' : ''} (${formatBytes(r.bytes)}).`;
+      await refreshLists();
+    } catch (err) {
+      actionError = (err as Error).message;
+    }
+  }
+
+  async function runCleanup() {
+    confirmCleanup = false;
+    cleanupMessage = null;
+    try {
+      const { removed } = await regionsApi.cleanup(cleanupPick);
+      const bytes = removed.reduce((sum, r) => sum + r.bytes, 0);
+      cleanupMessage = `Deleted ${formatBytes(bytes)}. Saved regions (regions.json) are kept.`;
+      await refreshLists();
     } catch (err) {
       actionError = (err as Error).message;
     }
@@ -390,7 +436,7 @@
   });
 
   function onkeydown(e: KeyboardEvent) {
-    if (e.key !== 'Escape' || askSave || deleting) return;
+    if (e.key !== 'Escape' || askSave || deleting || confirmCleanup || zipToDelete) return;
     e.preventDefault();
     if (drawing) drawing = false;
     else onclose();
@@ -555,10 +601,10 @@
       {#if build.state === 'failed' && build.error}<p class="error">{build.error}</p>{/if}
       {#if build.state === 'done' && build.zip}
         <p class="done">
-          Saved as <code>build/pwa/{build.zip}</code>.
+          Saved as <code>build/pwa-map-data/{build.zip}</code>.
           <a class="cap-btn" href={regionsApi.zipUrl(build.zip)} download data-testid="region-download"><Icon name="fileDown" size={16} />Download</a>
         </p>
-        <p class="grp-f">On the phone: Settings › Data › Import new file. With <code>npm run dev:pwa</code>, “Load data from build/” loads the newest ZIP.</p>
+        <p class="grp-f">On the phone: Settings › Data › Import new file. Developers using <code>npm run dev:pwa</code> can also load the newest ZIP from the dev tools.</p>
       {/if}
       <pre class="log" bind:this={log} data-testid="region-log">{lines.slice(-400).join('\n')}{progress ? `\n${progress}` : ''}</pre>
     {/if}
@@ -583,16 +629,55 @@
 
     {#if zips.length}
       <div class="grp-gap"></div>
-      <h3 class="grp-h">ZIP files in build/pwa</h3>
+      <h3 class="grp-h">ZIP files in build/pwa-map-data</h3>
       <div class="grp" data-testid="region-zips">
         {#each zips as z (z.name)}
-          <a class="row link-row" href={regionsApi.zipUrl(z.name)} download>
-            <span class="txt"><span class="t">{z.name}</span><span class="s">{formatBytes(z.size)} · {time(z.modifiedAt)}</span></span>
-            <span class="dl"><Icon name="fileDown" size={18} /></span>
-          </a>
+          <div class="zip-line">
+            <a class="row link-row" href={regionsApi.zipUrl(z.name)} download>
+              <span class="txt"><span class="t">{z.name}</span><span class="s">{formatBytes(z.size)} · {time(z.modifiedAt)}</span></span>
+              <span class="dl"><Icon name="fileDown" size={18} /></span>
+            </a>
+            {#if regionOfZip(z.name)}
+              <button
+                type="button"
+                class="round-btn"
+                aria-label={`Delete region ${regionOfZip(z.name)}`}
+                title="Delete this region's ZIP and files"
+                onclick={() => (zipToDelete = z)}
+                data-testid={`zip-delete-${z.name}`}><Icon name="trash" size={16} /></button
+              >
+            {/if}
+          </div>
         {/each}
       </div>
     {/if}
+
+    <div class="grp-gap"></div>
+    <h3 class="grp-h">Clean up files</h3>
+    <div class="grp" data-testid="region-cleanup">
+      {#each cleanupItems as it (it.key)}
+        <label class="row check-row">
+          <input
+            type="checkbox"
+            checked={cleanupPick.includes(it.key)}
+            disabled={it.count === 0 || running}
+            onchange={() => toggleCleanup(it.key)}
+            data-testid={`cleanup-${it.key}`}
+          />
+          <span class="txt">
+            <span class="t">{it.label}</span>
+            <span class="s">{it.count ? `${it.count} · ${formatBytes(it.bytes)}` : 'Nothing to delete'}{it.optional ? ' · optional' : ''}</span>
+            <span class="s">{it.note}</span>
+          </span>
+        </label>
+      {/each}
+    </div>
+    <div class="btn-row">
+      <button type="button" class="cap-btn destructive" disabled={!cleanupChosen.length || running} onclick={() => (confirmCleanup = true)} data-testid="cleanup-run">
+        <Icon name="trash" size={16} />Clean up…
+      </button>
+    </div>
+    {#if cleanupMessage}<p class="grp-f" data-testid="cleanup-result">{cleanupMessage}</p>{/if}
   </aside>
   <div class="map" class:drawing bind:this={container} data-testid="region-map"></div>
 </div>
@@ -622,6 +707,29 @@
 {#if deleting}
   {@const r = deleting}
   <ConfirmDialog title={`Delete “${r.name}”?`} message="It is removed from regions.json. ZIP files stay." action="Delete" destructive onconfirm={() => void removeSaved(r)} oncancel={() => (deleting = null)} />
+{/if}
+
+{#if zipToDelete}
+  {@const id = regionOfZip(zipToDelete.name)}
+  <ConfirmDialog
+    title={`Delete region “${id}”?`}
+    message="Deletes this ZIP and the built files of the region in build/regions. The folder is kept while another ZIP of this region is left. The saved region in regions.json stays. This cannot be undone."
+    action="Delete"
+    destructive
+    onconfirm={() => void deleteZip()}
+    oncancel={() => (zipToDelete = null)}
+  />
+{/if}
+
+{#if confirmCleanup}
+  <ConfirmDialog
+    title="Delete these files?"
+    message={`${cleanupChosen.map((i) => i.label).join(', ')}: about ${formatBytes(cleanupChosen.reduce((sum, i) => sum + i.bytes, 0))}. This cannot be undone. Saved regions (regions.json) are kept.`}
+    action="Delete"
+    destructive
+    onconfirm={() => void runCleanup()}
+    oncancel={() => (confirmCleanup = false)}
+  />
 {/if}
 
 <style>
@@ -800,6 +908,25 @@
   .row .cap-btn {
     height: 30px;
     padding: 0 10px;
+  }
+  .zip-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .zip-line > .link-row {
+    flex: 1;
+    min-width: 0;
+  }
+  .check-row {
+    align-items: flex-start;
+    cursor: pointer;
+  }
+  .check-row input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
   }
   .link-row {
     text-decoration: none;

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // Packs the output of `npm run build` into the data ZIP for the phone (docs/pwa-plan.md §5).
 //
-//   npm run build:pwa-data            pack the current build/
-//   npm run build:pwa-data z12        build the data at zoom 12 first (if build/ has another zoom), then pack
-//   npm run build:pwa-data -- --terrain-zoom=15 --basemap-zoom=14 --yes
+//   npm run build:pwa-map-data            pack the current build/
+//   npm run build:pwa-map-data z12        build the data at zoom 12 first (if build/ has another zoom), then pack
+//   npm run build:pwa-map-data -- --terrain-zoom=15 --basemap-zoom=14 --yes
 //
-//   npm run build:pwa-data -- --region=region.json --out=build/regions/x   build one region (always a fresh build
+//   npm run build:pwa-map-data -- --region=region.json --out=build/regions/x   build one region (always a fresh build
 //                                     into its own folder; see scripts/lib/region.mjs), then pack it
 //
-// Output: build/pwa/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip, or build/pwa/<region id>-YYYY-MM-DD-z<N>.zip for a
+// Output: build/pwa-map-data/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip, or build/pwa-map-data/<region id>-YYYY-MM-DD-z<N>.zip for a
 // region (no compression, ZIP64 when needed). The last line is "Done: <path of the ZIP>".
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,11 +29,12 @@ import { RegionError, regionZipPrefix, validateRegion } from './lib/region.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const BUILD = path.join(ROOT, 'build');
-// set in main() from --out (region builds have their own folder); fonts and sprites are always shared in build/
-let OUT = BUILD;
-let PLANNER = path.join(BUILD, 'planner');
-let TILES = path.join(BUILD, 'tileserver/data');
-let INFO = path.join(BUILD, 'build-info.json');
+// the default build is in build/regions/default (like a region); --out replaces it in main(). Fonts and sprites are
+// always shared in build/.
+let OUT = path.join(BUILD, 'regions', 'default');
+let PLANNER = path.join(OUT, 'planner');
+let TILES = path.join(OUT, 'tileserver/data');
+let INFO = path.join(OUT, 'build-info.json');
 const FONTS = path.join(BUILD, 'tileserver/fonts');
 const SPRITES = path.join(BUILD, 'tileserver/sprites');
 const SPRITE_FILES = ['light.json', 'light.png', 'light@2x.json', 'light@2x.png'];
@@ -60,7 +61,7 @@ function runBuild(argv) {
 function buildNeeded(args, settings) {
   const info = readJson(INFO);
   if (!info || !fs.existsSync(path.join(PLANNER, 'resorts.json')) || !fs.existsSync(path.join(TILES, 'ski.pmtiles'))) {
-    return 'build/ is missing or incomplete';
+    return 'build/regions/default is missing or incomplete';
   }
   const given = Object.values(args.zoom).some((v) => v !== null);
   if (!given && !args.refresh && !args.refreshBasemap) return null;
@@ -113,7 +114,7 @@ async function main() {
     args = parseBuildArgs(process.argv.slice(2));
   } catch (err) {
     if (!(err instanceof ArgError)) throw err;
-    console.error(`\nbuild:pwa-data: ${err.message}`);
+    console.error(`\nbuild:pwa-map-data: ${err.message}`);
     process.exit(2);
   }
   if (args.only) throw new Error('--only is not supported here');
@@ -147,11 +148,11 @@ async function main() {
   }
 
   const info = readJson(INFO);
-  if (!info) throw new Error('build/build-info.json is missing. Run `npm run build` first.');
+  if (!info) throw new Error('build/regions/default/build-info.json is missing. Run `npm run build` first.');
   const resortInfos = readJson(path.join(PLANNER, 'resorts.json'));
-  if (!resortInfos?.length) throw new Error('build/planner/resorts.json is missing. Run `npm run build` first.');
+  if (!resortInfos?.length) throw new Error('build/regions/default/planner/resorts.json is missing. Run `npm run build` first.');
   for (const name of ['ski', 'basemap', 'terrain', 'contours']) {
-    if (!fs.existsSync(path.join(TILES, `${name}.pmtiles`))) throw new Error(`build/tileserver/data/${name}.pmtiles is missing. Run \`npm run build\` first.`);
+    if (!fs.existsSync(path.join(TILES, `${name}.pmtiles`))) throw new Error(`build/regions/default/tileserver/data/${name}.pmtiles is missing. Run \`npm run build\` first.`);
   }
 
   // planner data + precomputed search index and ski areas
@@ -161,7 +162,7 @@ async function main() {
   sources.push({ name: 'planner/resorts.json', file: path.join(PLANNER, 'resorts.json') });
   for (const r of resortInfos) {
     const data = readJson(path.join(PLANNER, `${r.id}.json`));
-    if (!data) throw new Error(`build/planner/${r.id}.json is missing. Run \`npm run build\` first.`);
+    if (!data) throw new Error(`build/regions/default/planner/${r.id}.json is missing. Run \`npm run build\` first.`);
     plannerData.push(data);
     log(`Precomputing search index and ski areas for ${r.id}…`);
     const full = { ...data, searchIndex: buildSearchIndex(data), skiAreas: buildSkiAreas(data) };
@@ -212,7 +213,7 @@ async function main() {
   const [manifestEntry] = await describeSources([{ name: 'manifest.json', data: Buffer.from(JSON.stringify(manifest, null, 2)) }]);
   const entries = [manifestEntry, ...described];
 
-  const outDir = path.join(BUILD, 'pwa');
+  const outDir = path.join(BUILD, 'pwa-map-data');
   fs.mkdirSync(outDir, { recursive: true });
   const outFile = path.join(outDir, zipFileName(buildDate, info.zoom.terrain, region ? regionZipPrefix(region) : undefined));
   log(`Writing ${path.relative(ROOT, outFile)}…`);
@@ -229,6 +230,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(`\nbuild:pwa-data failed: ${err.message}`);
+  console.error(`\nbuild:pwa-map-data failed: ${err.message}`);
   process.exit(1);
 });

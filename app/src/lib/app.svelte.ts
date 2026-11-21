@@ -586,7 +586,7 @@ export class AppState {
     this.cancelImport?.();
   }
 
-  /** Dev builds only: fetch the newest ZIP from build/pwa/ through the Vite dev server. */
+  /** Dev builds only: fetch the newest ZIP from build/pwa-map-data/ through the Vite dev server. */
   async importFromBuild(): Promise<void> {
     if (!import.meta.env.DEV) return;
     this.importError = null;

@@ -21,11 +21,11 @@ Safari is not in the Home Screen app.
 ## 2. Make the data file (on your computer)
 
 ```sh
-npm run build:pwa-data         # normal size (about 46 MB for Oberstdorf)
-npm run build:pwa-data z12     # smaller (about 12.5 MB), less sharp terrain
+npm run build:pwa-map-data         # normal size (about 46 MB for Oberstdorf)
+npm run build:pwa-map-data z12     # smaller (about 12.5 MB), less sharp terrain
 ```
 
-You get `build/pwa/openskimap-data-YYYY-MM-DD-z14.zip`. Do not unzip it.
+You get `build/pwa-map-data/openskimap-data-YYYY-MM-DD-z14.zip`. Do not unzip it.
 
 ## 3. Move the ZIP to the iPhone
 
@@ -108,7 +108,7 @@ Updating the app does not change your map data or saved routes.
 
 ## 10. Update the data
 
-1. On your computer run `npm run build` (gets new OpenSkiData) and `npm run build:pwa-data`.
+1. On your computer run `npm run build` (gets new OpenSkiData) and `npm run build:pwa-map-data`.
 2. Move the new ZIP to the iPhone (step 3).
 3. In the app: **Menu › Data › Import new data file…**, and pick the new ZIP.
 
@@ -126,7 +126,7 @@ The new data replaces the old one only when the whole import worked.
 - *The file is damaged:* the copy to the iPhone was not complete. Move the file again. For iCloud Drive wait until it
   is fully downloaded.
 - *Not enough space:* free some space on the iPhone (Settings › General › iPhone Storage), or make a smaller ZIP
-  with `npm run build:pwa-data z12`.
+  with `npm run build:pwa-map-data z12`.
 - Try again. Your old data is still there.
 
 **The map is blank.**

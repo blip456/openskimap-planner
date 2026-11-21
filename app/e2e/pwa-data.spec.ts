@@ -39,8 +39,8 @@ async function openData(page: Page, touch: boolean): Promise<void> {
 
 /** A copy of the small data ZIP with one byte changed inside a tile file: the checksum check must catch it. */
 function damagedZip(): string {
-  const src = fs.readdirSync(path.join(ROOT, 'build/pwa')).filter((n) => /-z12\.zip$/.test(n)).sort().pop();
-  const bytes = fs.readFileSync(src ? path.join(ROOT, 'build/pwa', src) : newestZip());
+  const src = fs.readdirSync(path.join(ROOT, 'build/pwa-map-data')).filter((n) => /-z12\.zip$/.test(n)).sort().pop();
+  const bytes = fs.readFileSync(src ? path.join(ROOT, 'build/pwa-map-data', src) : newestZip());
   bytes[Math.floor(bytes.length / 2)] ^= 0xff;
   const out = path.join(os.tmpdir(), 'openskimap-damaged.zip');
   fs.writeFileSync(out, bytes);
@@ -98,7 +98,7 @@ test('import errors: wrong file and damaged file get a clear message; the first-
   await page.goto('/?e2e');
   await expect(page.getByTestId('no-data')).toBeVisible();
   await expect(page.getByTestId('first-run-steps')).toContainText('AirDrop');
-  await expect(page.getByTestId('first-run-steps')).toContainText('npm run build:pwa-data');
+  await expect(page.getByTestId('first-run-steps')).toContainText('npm run build:pwa-map-data');
   await shot(page, info, 'first-run', SHOTS);
 
   await page.getByTestId('import-input').setInputFiles(notAZip());
@@ -176,7 +176,7 @@ test('data screen: parts, storage, protection; delete data and import again', as
 test('update prompt: a new version waits until the user taps Reload', async ({ page }, info) => {
   // a private copy of the build, so this test can publish a "new version" of sw.js
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pwa-update-'));
-  fs.cpSync(path.join(ROOT, 'app/dist'), dir, { recursive: true });
+  fs.cpSync(path.join(ROOT, 'app/dist-pwa'), dir, { recursive: true });
   const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
   const server = http.createServer((req, res) => {
     const pathname = new URL(req.url ?? '/', 'http://x').pathname;

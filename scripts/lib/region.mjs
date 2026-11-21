@@ -57,6 +57,7 @@ export function validateRegion(input) {
   if (name.length > 100) throw new RegionError('The name is too long (at most 100 characters).');
   const id = String(input.id ?? '').trim() || slugify(name);
   if (!ID_RE.test(id)) throw new RegionError('The id may only have lowercase letters, digits and dashes (for example "lech-zurs").');
+  if (id === 'default') throw new RegionError('The id "default" is reserved for the resorts.json build (build/regions/default).');
 
   const hasBbox = input.bbox !== undefined && input.bbox !== null;
   const hasAreas = Array.isArray(input.skiAreas) && input.skiAreas.length > 0;
@@ -98,7 +99,7 @@ export function regionToResort(region) {
   return resort;
 }
 
-/** Command line for scripts/build-pwa-data.mjs. */
+/** Command line for scripts/build-pwa-map-data.mjs. */
 export function regionBuildArgs(region, { regionFile, outDir }) {
   const args = [`--region=${regionFile}`, `--out=${outDir}`, '--yes'];
   if (region.zoom?.terrain) args.push(`--terrain-zoom=${region.zoom.terrain}`);
@@ -107,7 +108,7 @@ export function regionBuildArgs(region, { regionFile, outDir }) {
   return args;
 }
 
-/** ZIP name prefix of a region build: build/pwa/<id>-YYYY-MM-DD-z14.zip */
+/** ZIP name prefix of a region build: build/pwa-map-data/<id>-YYYY-MM-DD-z14.zip */
 export const regionZipPrefix = (region) => region.id;
 
 // --- ski areas (OpenSkiData ski_areas.geojson) ---

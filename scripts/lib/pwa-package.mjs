@@ -1,7 +1,7 @@
-// Pure helpers for build-pwa-data.mjs (kept separate so they can be tested): zip name, manifest, font stacks.
+// Pure helpers for build-pwa-map-data.mjs (kept separate so they can be tested): zip name, manifest, font stacks.
 import { MANIFEST_FORMAT_VERSION } from '../../packages/core/src/data-package.ts';
 
-/** build/pwa/<prefix>-YYYY-MM-DD-z<terrain zoom>.zip; region builds use the region id as the prefix. */
+/** build/pwa-map-data/<prefix>-YYYY-MM-DD-z<terrain zoom>.zip; region builds use the region id as the prefix. */
 export const zipFileName = (date, terrainZoom, prefix = 'openskimap-data') => `${prefix}-${date}-z${terrainZoom}.zip`;
 
 const EXPRESSION_OPS = new Set(['get', 'case', 'literal', '==', '<=', '>=', '<', '>', 'coalesce', 'has', 'any', 'all', '!', 'format', 'match', 'step', 'interpolate', 'let', 'var', 'to-string']);

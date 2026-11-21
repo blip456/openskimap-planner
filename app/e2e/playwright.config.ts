@@ -26,7 +26,7 @@ export default defineConfig({
     launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
   },
   projects: [
-    { name: 'desktop-wide', testMatch: ['desktop.spec.ts', 'route.spec.ts', 'explore.spec.ts', 'location.spec.ts', 'design.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
+    { name: 'desktop-wide', testMatch: ['desktop.spec.ts', 'region-builder.spec.ts', 'route.spec.ts', 'explore.spec.ts', 'location.spec.ts', 'design.spec.ts'], use:{ ...wide, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
     { name: 'desktop-iphone', testMatch: ['desktop.spec.ts', 'route.spec.ts', 'explore.spec.ts', 'location.spec.ts', 'design.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
     { name: 'pwa-wide', testMatch: ['pwa.spec.ts', 'pwa-data.spec.ts', 'route.spec.ts', 'explore.spec.ts', 'location.spec.ts', 'design.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
     { name: 'pwa-iphone', testMatch: ['pwa.spec.ts', 'pwa-data.spec.ts', 'route.spec.ts', 'explore.spec.ts', 'location.spec.ts', 'design.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
@@ -40,7 +40,7 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: `node app/e2e/static-server.mjs app/dist ${PWA_PORT}`,
+      command: `node app/e2e/static-server.mjs app/dist-pwa ${PWA_PORT}`,
       cwd: '../..',
       url: `http://127.0.0.1:${PWA_PORT}/`,
       reuseExistingServer: false,

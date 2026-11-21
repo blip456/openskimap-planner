@@ -1,4 +1,4 @@
-// Builds a small data ZIP like `npm run build:pwa-data` writes (STORE entries + manifest with SHA-256).
+// Builds a small data ZIP like `npm run build:pwa-map-data` writes (STORE entries + manifest with SHA-256).
 import { makeZip } from '@core/zip.ts';
 import { createSha256 } from '@core/sha256.ts';
 import miniResort from '../../packages/core/test/fixtures/mini-resort.json';

@@ -30,7 +30,7 @@
   {:else}
     <ol class="group steps" data-testid="first-run-steps">
       <li>
-        <span class="num">1</span><span>On your computer, run <code>npm run build:pwa-data</code>. It makes a ZIP file named
+        <span class="num">1</span><span>On your computer, run <code>npm run build:pwa-map-data</code>. It makes a ZIP file named
           <code>openskimap-data-….zip</code>.</span>
       </li>
       <li>

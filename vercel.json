@@ -3,7 +3,7 @@
   "framework": null,
   "installCommand": "npm ci --ignore-scripts",
   "buildCommand": "npm run build:pwa",
-  "outputDirectory": "app/dist",
+  "outputDirectory": "app/dist-pwa",
   "cleanUrls": false,
   "trailingSlash": false,
   "rewrites": [{ "source": "/((?!assets/|sw\\.js|workbox-|manifest\\.webmanifest).*)", "destination": "/index.html" }],

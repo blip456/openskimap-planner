@@ -40,13 +40,16 @@ describe('safeJoin', () => {
   });
 });
 
+/** The desktop server's paths: the default map in build/regions/default, fonts and sprites in build/. */
+const paths = (build) => ({ buildDir: build, mapDir: path.join(build, 'regions', 'default') });
+
 describe('dataFile', () => {
   const build = path.resolve('/b');
   test('maps the four kinds of data files', () => {
-    assert.equal(dataFile(build, '/data/planner/oberstdorf.json'), path.join(build, 'planner/oberstdorf.json'));
-    assert.equal(dataFile(build, '/data/tiles/basemap.pmtiles'), path.join(build, 'tileserver/data/basemap.pmtiles'));
-    assert.equal(dataFile(build, '/data/fonts/Noto%20Sans%20Medium/0-255.pbf'), path.join(build, 'tileserver/fonts/Noto Sans Medium/0-255.pbf'));
-    assert.equal(dataFile(build, '/data/sprites/light@2x.png'), path.join(build, 'tileserver/sprites/light@2x.png'));
+    assert.equal(dataFile(paths(build), '/data/planner/oberstdorf.json'), path.join(build, 'regions/default/planner/oberstdorf.json'));
+    assert.equal(dataFile(paths(build), '/data/tiles/basemap.pmtiles'), path.join(build, 'regions/default/tileserver/data/basemap.pmtiles'));
+    assert.equal(dataFile(paths(build), '/data/fonts/Noto%20Sans%20Medium/0-255.pbf'), path.join(build, 'tileserver/fonts/Noto Sans Medium/0-255.pbf'));
+    assert.equal(dataFile(paths(build), '/data/sprites/light@2x.png'), path.join(build, 'tileserver/sprites/light@2x.png'));
   });
   test('refuses everything else', () => {
     for (const p of [
@@ -60,7 +63,7 @@ describe('dataFile', () => {
       '/data/work/x.json',
       '/data/sprites/light.svg',
     ]) {
-      assert.equal(dataFile(build, p), null, p);
+      assert.equal(dataFile(paths(build), p), null, p);
     }
   });
 });
@@ -89,13 +92,13 @@ function raw(pathname, headers = {}) {
 before(async () => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-server-'));
   const build = path.join(tmp, 'build');
-  fs.mkdirSync(path.join(build, 'planner'), { recursive: true });
-  fs.mkdirSync(path.join(build, 'tileserver/data'), { recursive: true });
+  fs.mkdirSync(path.join(build, 'regions/default/planner'), { recursive: true });
+  fs.mkdirSync(path.join(build, 'regions/default/tileserver/data'), { recursive: true });
   fs.mkdirSync(path.join(build, 'tileserver/fonts/Noto Sans Regular'), { recursive: true });
-  fs.writeFileSync(path.join(build, 'planner/resorts.json'), JSON.stringify([{ id: 'r', name: 'R', bbox: [1, 2, 3, 4], center: [2, 3] }]));
-  fs.writeFileSync(path.join(build, 'planner/r.json'), '{"name":"R","runs":[],"lifts":[]}');
-  fs.writeFileSync(path.join(build, 'tileserver/data/ski.pmtiles'), tileBytes);
-  fs.writeFileSync(path.join(build, 'tileserver/data/basemap.pmtiles'), tileBytes);
+  fs.writeFileSync(path.join(build, 'regions/default/planner/resorts.json'), JSON.stringify([{ id: 'r', name: 'R', bbox: [1, 2, 3, 4], center: [2, 3] }]));
+  fs.writeFileSync(path.join(build, 'regions/default/planner/r.json'), '{"name":"R","runs":[],"lifts":[]}');
+  fs.writeFileSync(path.join(build, 'regions/default/tileserver/data/ski.pmtiles'), tileBytes);
+  fs.writeFileSync(path.join(build, 'regions/default/tileserver/data/basemap.pmtiles'), tileBytes);
   fs.writeFileSync(path.join(build, 'tileserver/fonts/Noto Sans Regular/0-255.pbf'), 'glyphs');
   fs.writeFileSync(path.join(build, 'secret.txt'), 'secret');
   fs.mkdirSync(path.join(tmp, 'app/assets'), { recursive: true });

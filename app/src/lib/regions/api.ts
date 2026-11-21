@@ -75,6 +75,17 @@ export interface ZipInfo {
   modifiedAt: string;
 }
 
+/** One thing the "Clean up files" section can delete (server/region-builds.mjs cleanupGroups). */
+export interface CleanupItem {
+  key: string;
+  label: string;
+  note: string;
+  /** optional items start unticked: deleting them makes the next build slower or needs a download */
+  optional: boolean;
+  count: number;
+  bytes: number;
+}
+
 /** Region id from its name, same rule as the server (scripts/lib/region.mjs slugify). */
 export function regionId(name: string): string {
   return name
@@ -112,6 +123,10 @@ export const regionsApi = {
   cancel: () => call<BuildStatus>('/api/builds/current', { method: 'DELETE' }),
   zips: () => call<{ zips: ZipInfo[] }>('/api/zips').then((r) => r.zips),
   zipUrl: (name: string) => `/api/zips/${encodeURIComponent(name)}`,
+  deleteZip: (name: string) =>
+    call<{ removed: string; folderRemoved: boolean; bytes: number }>(`/api/zips/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  cleanupItems: () => call<{ items: CleanupItem[] }>('/api/cleanup').then((r) => r.items),
+  cleanup: (keys: string[]) => call<{ removed: { key: string; count: number; bytes: number }[] }>('/api/cleanup', json('POST', { keys })),
 };
 
 export interface BuildEvents {

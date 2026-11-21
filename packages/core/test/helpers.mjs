@@ -6,7 +6,7 @@ export const FIXTURE = path.join(import.meta.dirname, 'fixtures/mini-resort.json
 export const loadFixture = () => JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
 
 // Real resort data from `npm run build` (not in git). PLANNER_DATA can point to another resort file.
-export const REAL_DATA = process.env.PLANNER_DATA ?? path.resolve(import.meta.dirname, '../../../build/planner/oberstdorf-kleinwalsertal.json');
+export const REAL_DATA = process.env.PLANNER_DATA ?? path.resolve(import.meta.dirname, '../../../build/regions/default/planner/oberstdorf-kleinwalsertal.json');
 export const realDataSkip = fs.existsSync(REAL_DATA)
   ? false
   : `real data not found (${REAL_DATA}); run \`npm run build\` first. Golden tests skipped.`;

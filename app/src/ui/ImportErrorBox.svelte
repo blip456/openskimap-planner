@@ -7,7 +7,7 @@
   let { failure }: { failure: ImportFailure } = $props();
 
   const HINTS: Record<ImportFailure['code'], string> = {
-    'not-data': 'Pick the ZIP file made by npm run build:pwa-data. Its name starts with "openskimap-data-". Do not unzip it or zip it again.',
+    'not-data': 'Pick the ZIP file made by npm run build:pwa-map-data. Its name starts with "openskimap-data-". Do not unzip it or zip it again.',
     damaged: 'Copy the file to the iPhone again. If it still fails, build it again on your computer.',
     'no-space': 'Your current data was not changed.',
     other: 'Your current data was not changed.',

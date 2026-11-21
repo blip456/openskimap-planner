@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // npm run dev:pwa [-- --phone]      Vite dev server of the PWA (http://localhost:5174). No service worker.
-// npm run preview:pwa [-- --phone]  builds the PWA, then serves app/dist with the service worker (http://localhost:4174).
+// npm run preview:pwa [-- --phone]  builds the PWA, then serves app/dist-pwa with the service worker (http://localhost:4174).
 //
 // --phone: HTTPS on the local network with a certificate from mkcert, so the iPhone can open it (plan §2.1).
 // Other arguments go to Vite.

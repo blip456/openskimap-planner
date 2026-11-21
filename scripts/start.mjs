@@ -7,8 +7,8 @@ import path from 'node:path';
 import { launch, npmRun } from './lib/launch.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-if (!fs.existsSync(path.join(ROOT, 'build/tileserver/config.json'))) {
-  console.error('build/tileserver/config.json not found. Run "npm run build" first.');
+if (!fs.existsSync(path.join(ROOT, 'build/regions/default/tileserver/config.json'))) {
+  console.error('build/regions/default/tileserver/config.json not found. Run "npm run build" first.');
   process.exit(1);
 }
 console.log('Building the desktop app (npm run build:desktop)…');

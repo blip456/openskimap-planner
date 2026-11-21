@@ -13,18 +13,18 @@ let server;
 let base;
 let regions;
 
-// Behaves like build-pwa-data.mjs: prints log lines, a "\r" progress bar, and "Done: <zip>" at the end.
+// Behaves like build-pwa-map-data.mjs: prints log lines, a "\r" progress bar, and "Done: <zip>" at the end.
 const FAKE_BUILD = `
 import fs from 'node:fs';
 import path from 'node:path';
 const arg = (k) => process.argv.find((a) => a.startsWith('--' + k + '='))?.slice(k.length + 3);
 const region = JSON.parse(fs.readFileSync(arg('region'), 'utf8'));
-const pwa = path.join(process.env.FAKE_BUILD_DIR, 'pwa');
+const pwa = path.join(process.env.FAKE_BUILD_DIR, 'pwa-map-data');
 console.log('[   0.0s] Region "' + region.name + '" args ' + process.argv.slice(2).join(' '));
 process.stderr.write('extract 10%\\rextract 50%\\rextract 100%\\r');
 if (region.name.includes('fail')) {
   console.error('\\nBuild failed: there are no runs or lifts in this box.');
-  console.error('\\nbuild:pwa-data failed: the data build failed (exit code 1)');
+  console.error('\\nbuild:pwa-map-data failed: the data build failed (exit code 1)');
   process.exit(1);
 }
 if (region.name.includes('slow')) {

@@ -1,4 +1,4 @@
-// Import + routing worker start on the real data ZIP (build/pwa/*.zip). Skips when `npm run build:pwa-data`
+// Import + routing worker start on the real data ZIP (build/pwa-map-data/*.zip). Skips when `npm run build:pwa-map-data`
 // has not run. Prints the timings (Node; the browser numbers are logged by the app and the smoke tests).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,7 +8,7 @@ import { MemoryDir } from '../src/lib/data/storage.ts';
 import { openLocalDataSource } from '../src/lib/data/local.ts';
 import { RoutingEngine } from '../src/lib/worker/engine.ts';
 
-const dir = path.join(import.meta.dirname, '../../build/pwa');
+const dir = path.join(import.meta.dirname, '../../build/pwa-map-data');
 const zip = fs.existsSync(dir) ? fs.readdirSync(dir).filter((n) => n.endsWith('.zip')).sort().at(-1) : undefined;
 
 describe.skipIf(!zip)('real data ZIP', () => {

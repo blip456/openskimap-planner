@@ -73,7 +73,7 @@ test('phone https: help text has the LAN URLs and the trust steps', () => {
 test('vercel.json: PWA build, SPA fallback, cache headers, manifest type, no functions', () => {
   const v = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'));
   assert.equal(v.buildCommand, 'npm run build:pwa');
-  assert.equal(v.outputDirectory, 'app/dist');
+  assert.equal(v.outputDirectory, 'app/dist-pwa');
   assert.equal(v.functions, undefined);
   assert.ok(!fs.existsSync(path.join(ROOT, 'api')), 'no serverless functions folder');
   const header = (source, key) => v.headers.find((h) => h.source === source)?.headers.find((x) => x.key === key)?.value;

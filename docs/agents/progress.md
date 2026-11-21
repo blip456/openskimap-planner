@@ -619,3 +619,106 @@ through; this entry picks it up, finds it essentially complete, verifies it, and
 **Questions for the owner:** none blocking. Want an e2e test for this page eventually (with a stubbed build), or is
 the existing unit/integration coverage (region helpers + server with a fake build script) enough, since it's a
 desktop-only tool you use yourself?
+
+### 2026-11-21 · after phase 8 · Build region: finish (e2e, bundle fix) and npm scripts docs
+
+**Done**
+- Found the uncommitted state: none in tracked files. The only untracked item is `.claude/` (local settings, not for git).
+  The "Build region" feature was committed in `d7f9a6c`. Its open issue was the missing e2e test, so that is what this
+  session finished.
+- `app/e2e/region-builder.spec.ts` (desktop-wide project): search "Nebelhorn", pick it, size estimate, name, Build →
+  "Save this region?" dialog → Cancel. It never starts a real build.
+- **Bug fixed:** `npm run test:e2e` failed its bundle check. The Build region chunk was in the PWA build and its text
+  contained the dev-only label "Load data from build/". `App.svelte` now imports the page only when
+  `VITE_TARGET !== 'pwa'`; the help text was reworded. See lessons.md (two new entries).
+- npm scripts: `package.json` reordered by topic (data, development, run, production builds, assets, checks). No
+  command changed. README "npm scripts" section rewritten as grouped tables. decisions.md has the details.
+
+**How to verify**
+- `npm test` (green: 78 core, 37 scripts, 29 server, 194 app).
+- `npm run test:e2e` builds both apps and runs the bundle checks. In this environment it cannot find the pinned
+  Chromium (see the Playwright lesson). Scratch config used here: a copy of `app/e2e/playwright.config.ts` outside the
+  repo that sets `launchOptions.executablePath` to `~/Library/Caches/ms-playwright/chromium_headless_shell-1228/…`.
+
+**Open issues**
+- Pinned `@playwright/test` 1.63.0 needs Chromium 1243; the cache has 1228. Not changed (CLAUDE.md: no `playwright install`).
+- The "Build region" menu row code is still in the PWA bundle, hidden at run time by `caps.regionBuilds`. Could be
+  gated at build time too (wrap that section in the same `VITE_TARGET` check) if the owner wants it out of the phone bundle.
+
+**Questions for the owner:** should the browser cache on this machine be updated to match the pinned Playwright?
+
+### 2026-11-21 · after phase 8 · Build region: "Clean up files" (owner request)
+
+**Done**
+- `server/region-builds.mjs`: `cleanupItems()` (count and size per group) and `cleanup(keys)`. Routes `GET` and `POST
+  /api/cleanup` in `server/server.mjs`. Groups: region build folders, region ZIPs, shared cache `build/work` (optional),
+  downloads `build/downloads` (optional). See decisions.md "Clean up files".
+- `app/src/ui/regions/RegionBuilder.svelte`: "Clean up files" section with checkboxes, sizes, a "Clean up…" button, a
+  confirm dialog, and a result line. Escape does not close the page while the dialog is open.
+- Tests: `server/test/region-cleanup.test.mjs` (7 tests, own temp folder). `app/e2e/region-builder.spec.ts` ticks the
+  downloads item, opens the dialog and cancels.
+
+**How to verify**
+- `npm test` (78 core, 37 scripts, 36 server, 194 app: green).
+- `npm run dev:desktop` → Menu → Build region → "Clean up files". Tick nothing and check the sizes. Only press
+  "Clean up…" when you really want to delete something.
+
+**Open issues**
+- The browser suite ran before this change (44 passed, 9 skipped, exit 0). Only the Build region spec was re-run after it.
+- The new section was not looked at in a screenshot; only the e2e checks it.
+- A region whose id starts with `openskimap-data-` would have its ZIPs treated as the main ZIP: they are kept by
+  "Clean up files". The id check (`ID_PATTERN`) allows that name, so the owner may want to reserve it.
+
+### 2026-11-21 · after phase 8 · PWA output folder renamed to app/dist-pwa (owner request)
+
+**Done:** the PWA build writes to `app/dist-pwa` (was `app/dist`), like `app/dist-desktop`. All references are updated
+(see decisions.md "PWA output folder renamed"). The old generated `app/dist` was deleted.
+
+**How to verify:** `npm run build:pwa` → `app/dist-pwa/sw.js` and `manifest.webmanifest` exist. `npm test` is green
+(78 core, 37 scripts, 36 server, 194 app). The full browser suite (scratch config, see the Playwright lesson) is the
+check that the PWA tests find the new folder.
+
+**Open issue:** the Vercel project's output directory must be `app/dist-pwa` on the Vercel side if it was set by hand.
+Not checked (no access to Vercel from here).
+
+### 2026-11-21 · after phase 8 · Build region: delete one region (owner request)
+
+**Done:** a trash button on each region ZIP. It deletes the ZIP and its `build/regions/<id>` folder (kept while another
+ZIP of that region is left). Confirm dialog first. See decisions.md "delete one region". Server tests: 12 in
+`server/test/region-cleanup.test.mjs`. Browser test with a fixture ZIP and folder in `region-builder.spec.ts`.
+
+**How to verify:** `npm run dev:desktop` → Menu → Build region → "ZIP files" → trash on a region ZIP.
+
+**Open issues:**
+- At the start of this work `build/regions` (three test region builds) and `build/certs` (mkcert files for the phone)
+  were no longer in `build/`. No code path found that deletes them on its own; the cause is not known. Not restored.
+- The full browser suite was started before the last `build:desktop`, so desktop-iphone tests timed out on the
+  replaced build. A clean rerun is needed.
+
+### 2026-11-21 · after phase 8 · The default build moved into build/regions/default (owner request)
+
+**Done:** `npm run build` writes to `build/regions/default/` (planner, tileserver, build-info.json). The desktop server,
+`npm start`, `npm run tiles`, `build:pwa-data`, the e2e helpers and the tests read from there. Fonts, sprites,
+downloads, work and the ZIPs stay in `build/`. See decisions.md "The default build lives in build/regions/default".
+The existing files were moved by hand (no re-download) and `npm run build -- --only=ski` regenerated the config.
+
+**How to verify:** `npm run build -- --only=ski` (needs the local download), `npm start` → the map loads. `npm run
+build:pwa-data` → `build/pwa/openskimap-data-….zip` is written. `npm test` green (78 core, 37 scripts, 41 server, 194 app).
+
+**Open issues:**
+- Old leftovers in `build/work/` (for example `ski/`, `state.json` from the old default build) are not used any more.
+  They can be removed with "Clean up files" (shared cache) or by hand.
+- The Vercel setting is not affected (it uses `app/dist-pwa`).
+
+### 2026-11-21 · after phase 8 · pwa-map-data names (owner request)
+
+**Done:** `build/pwa` → `build/pwa-map-data`, `npm run build:pwa-data` → `npm run build:pwa-map-data`, and the script
+file → `scripts/build-pwa-map-data.mjs`. All code, messages, tests and user guides use the new names (see decisions.md).
+The existing ZIPs were moved, not rebuilt. `npm run build:pwa-map-data` writes the same file name as before, in the new folder.
+
+**How to verify:** `npm run build:pwa-map-data` → the ZIP lands in `build/pwa-map-data/`. `npm test` green (78 core,
+37 scripts, 41 server, 194 app). The browser suite is the check for the app text and the Build region page.
+
+**Open issues:**
+- The default folder name `build/regions/default/` is still open (the owner was asked whether to name it after the resort).
+- A first run of the browser suite was stopped mid-way, because the folder move would have broken it. Rerun needed (in progress).

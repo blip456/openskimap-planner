@@ -720,7 +720,7 @@ below 10 000 (as today).
 | Backup | Export backup · Import backup… · Add {n} routes from the backup? · Add · Cancel |
 | Appearance | Solid interface · Shows buttons and panels without the see-through effect. Easier to read. · Keep screen on while planning · Units · Metric · Dark mode follows your iPhone setting. |
 | About | Version {v} · Update available · Reload · Data sources · Always check the piste map and the conditions on the day. |
-| First run | Ski route planner · Plan ski routes on your iPhone, also offline. First, add the map data. · On your computer, run `npm run build:pwa-data`. · Move the ZIP file to this iPhone with AirDrop or iCloud Drive. · Tap Import data file and pick the ZIP file. · Tip: add this app to your Home Screen first (Share › Add to Home Screen). The data is safer there. · Import data file |
+| First run | Ski route planner · Plan ski routes on your iPhone, also offline. First, add the map data. · On your computer, run `npm run build:pwa-map-data`. · Move the ZIP file to this iPhone with AirDrop or iCloud Drive. · Tap Import data file and pick the ZIP file. · Tip: add this app to your Home Screen first (Share › Add to Home Screen). The data is safer there. · Import data file |
 | Copy buttons | Copy · Copied |
 
 ---

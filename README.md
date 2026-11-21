@@ -15,7 +15,7 @@ There is one app and two builds:
 | Online mode (extra maps and search) | Off by default | On by default |
 | gpx.studio tile links | No | Yes (TileServer GL) |
 
-Internet is needed only for `npm run build` (and `npm run build:pwa-data`) and for the optional *online mode*.
+Internet is needed only for `npm run build` (and `npm run build:pwa-map-data`) and for the optional *online mode*.
 
 Guides:
 
@@ -58,8 +58,8 @@ reload on <http://localhost:5173>.
 
 ```sh
 npm run build                 # once, if build/ does not exist yet
-npm run build:pwa-data        # packs build/ into one ZIP: build/pwa/openskimap-data-YYYY-MM-DD-z14.zip
-npm run build:pwa-data z12    # or: smaller ZIP at zoom 12 (builds the data first if needed)
+npm run build:pwa-map-data        # packs build/regions/default/ into one ZIP: build/pwa-map-data/openskimap-data-YYYY-MM-DD-z14.zip
+npm run build:pwa-map-data z12    # or: smaller ZIP at zoom 12 (builds the data first if needed)
 npm run dev:pwa               # app on http://localhost:5174, no service worker (hot reload)
 npm run preview:pwa           # builds the real PWA and serves it on http://localhost:4174 with the service worker
 npm run dev:pwa -- --phone    # HTTPS on your Wi-Fi, to open it on the iPhone
@@ -91,7 +91,7 @@ You can build the map sharper or smaller. Add `z<N>` to the build command:
 ```sh
 npm run build z12           # small: terrain and basemap up to zoom 12
 npm run build z15           # sharper hillshading
-npm run build:pwa-data z13  # build at zoom 13 and pack the ZIP
+npm run build:pwa-map-data z13  # build at zoom 13 and pack the ZIP
 npm run build -- --terrain-zoom=16 --basemap-zoom=14 --ski-zoom=16   # each one on its own
 ```
 
@@ -115,7 +115,7 @@ Sizes of the data ZIP for the Oberstdorf resort (the ZIP file name has the terra
 | `z17` | 17 / 15 / 16 | estimate: 11,335 terrain tiles, about 1.6 GB. Not built yet. |
 
 `z15` and `z16` have not been measured. The build prints the expected tiles and MB before the terrain download, and
-`build:pwa-data` prints the size of every file at the end.
+`build:pwa-map-data` prints the size of every file at the end.
 
 - Above zoom 16 the build asks you to confirm. Use `--yes` to skip the question.
 - Where Mapterhorn has no data for a zoom, the build says so and uses the highest zoom that exists.
@@ -130,7 +130,7 @@ Sizes of the data ZIP for the Oberstdorf resort (the ZIP file name has the terra
 
 ## Data file for the iPhone
 
-`npm run build:pwa-data` creates `build/pwa/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip`. It holds the map files,
+`npm run build:pwa-map-data` creates `build/pwa-map-data/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip`. It holds the map files,
 the planner data (with the search index and ski areas already computed), the fonts the labels need and the icons. The
 ZIP is not compressed, so the phone can copy the big files straight out of it. `manifest.json` inside the ZIP lists
 the zoom levels, the data dates and a SHA-256 for each file.
@@ -141,27 +141,56 @@ message and your old data stays. The full steps are in `docs/iphone-guide.md`.
 
 ## npm scripts
 
+The scripts are grouped by topic. The order in `package.json` follows the same groups.
+
+**1. Map data** (needs internet for the first download; run once, then again when the data changes)
+
 | Script | What it does |
 | --- | --- |
-| `npm run build` | Builds the map data in `build/`. Accepts `z<N>` and the `--terrain-zoom`, `--basemap-zoom`, `--ski-zoom`, `--yes`, `--only=ski`, `--refresh`, `--refresh-basemap` options. |
-| `npm run build:ski` | Only rebuilds ski tiles, styles and planner data from the local download (seconds). |
-| `npm run build:pwa-data` | Packs `build/` into the data ZIP for the iPhone. Accepts `z<N>`. |
-| `npm run build:pwa` | Production build of the iPhone app into `app/dist` (with service worker and manifest). This is what Vercel runs. |
-| `npm run build:desktop` | Production build of the desktop app into `app/dist-desktop`. |
-| `npm run icons` | Makes all app icons from `app/public/logo.svg`. |
-| `npm start` | Desktop: builds the desktop app, then starts the tile server (:8080) and the desktop server (:8081). |
+| `npm run build` | Builds the map data in `build/regions/default/` for the desktop and the phone. Accepts `z<N>` and the `--terrain-zoom`, `--basemap-zoom`, `--ski-zoom`, `--yes`, `--only=ski`, `--refresh`, `--refresh-basemap` options. |
+| `npm run build:ski` | Only rebuilds ski tiles, styles and planner data from the local download (seconds). Same as `build -- --only=ski`. |
+| `npm run build:pwa-map-data` | Packs `build/regions/default/` into the data ZIP for the iPhone. Accepts `z<N>`. Offline, no download. |
+
+**2. Development** (hot reload, for changing the code)
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev:desktop` | Desktop app on http://localhost:5173 with hot reload. Also starts the desktop server (:8081) and TileServer GL (:8080). |
+| `npm run dev:pwa` | iPhone app on http://localhost:5174 with hot reload, no service worker. Add `-- --phone` for HTTPS on your Wi-Fi. |
+
+**3. Run without hot reload** (the built app, as the user gets it)
+
+| Script | What it does |
+| --- | --- |
+| `npm start` | Desktop: builds the desktop app, then starts TileServer GL (:8080) and the desktop server (:8081). Ctrl+C stops both. |
 | `npm run server` | Only the desktop server (:8081). |
 | `npm run tiles` | Only TileServer GL (:8080), for the gpx.studio links. |
-| `npm run dev:desktop` | Desktop development with hot reload (:5173), plus desktop server and tile server. |
-| `npm run dev:pwa` | iPhone app development with hot reload (:5174). Add `-- --phone` for HTTPS on your Wi-Fi. |
-| `npm run preview:pwa` | Builds the PWA and serves it with the service worker (:4174). Add `-- --phone` for HTTPS. |
+| `npm run preview:pwa` | Builds the PWA and serves it with the service worker on :4174, to test install, offline start and updates. Add `-- --phone` for HTTPS. |
+
+**4. Production builds** (the output goes to `app/dist-pwa` or `app/dist-desktop`)
+
+| Script | What it does |
+| --- | --- |
+| `npm run build:pwa` | Production build of the iPhone app into `app/dist-pwa` (with service worker and manifest). This is what Vercel runs. |
+| `npm run build:desktop` | Production build of the desktop app into `app/dist-desktop`. No service worker. |
+
+**5. Assets**
+
+| Script | What it does |
+| --- | --- |
+| `npm run icons` | Makes all app icons from `app/public/logo.svg`. |
+
+**6. Checks and tests** (`npm test` before every handover)
+
+| Script | What it does |
+| --- | --- |
+| `npm test` | Runs `typecheck` and all the unit tests below, in this order. |
 | `npm run typecheck` | TypeScript and Svelte checks for all packages. |
 | `npm run test:core` | Unit tests of `packages/core`. |
 | `npm run test:scripts` | Tests of the build scripts. |
 | `npm run test:server` | Tests of the desktop server. |
 | `npm run test:app` | Vitest tests of the app. |
-| `npm test` | Typecheck and all of the tests above. |
-| `npm run test:e2e` | Browser tests (Playwright, Chromium) of both builds. |
+| `npm run test:e2e` | Browser tests (Playwright, Chromium) of both builds. Builds both apps first and fails if dev-only code is in a production bundle. |
 
 ## Online and offline mode
 
@@ -179,7 +208,7 @@ cached by the service worker, so it starts without a network in both modes.
 ## Tests
 
 - `npm test`: typecheck and all unit tests (core, scripts, server, app). Run it before every handover.
-- `npm run test:e2e`: browser tests of both builds in Chromium. It needs `npm run build` and `npm run build:pwa-data`
+- `npm run test:e2e`: browser tests of both builds in Chromium. It needs `npm run build` and `npm run build:pwa-map-data`
   first. Add `-- --trace off` to keep the output small.
 - Some things only a real iPhone can show. The checklists are listed in `docs/iphone-guide.md` under "Testing".
 
@@ -435,7 +464,7 @@ that exist more than once). The build stops with suggestions if a name is not fo
 
 Then run `npm run build`. The basemap, terrain and contours are re-extracted automatically because the region
 changed. Restart `npm start` so the servers pick up the new files, and pick the resort in **Settings › Resort**. For
-the iPhone, build a new data file (`npm run build:pwa-data`) and import it.
+the iPhone, build a new data file (`npm run build:pwa-map-data`) and import it.
 
 Settings in `resorts.json`:
 
@@ -459,7 +488,7 @@ only needs a higher `terrainMaxZoom` if you want sharper hillshading.
   local download (seconds).
 - `npm run build -- --refresh-basemap`: get the latest Protomaps basemap, terrain and contours again.
 - `npm run build -- --refresh`: force a new OpenSkiData download (respect the once-per-day rule).
-- After a new build, run `npm run build:pwa-data` and import the new ZIP on the iPhone.
+- After a new build, run `npm run build:pwa-map-data` and import the new ZIP on the iPhone.
 
 ## Project layout
 
@@ -475,17 +504,20 @@ app/                      the planner app (Vite + Svelte 5 + TypeScript), one co
   dist/, dist-desktop/    build output of the PWA and the desktop build (not in git)
 server/                   desktop server: the desktop build, the files of build/, project-folder routes,
                           Google Maps short links
-scripts/                  build.mjs (data build), build-pwa-data.mjs (the ZIP), start.mjs, dev-desktop.mjs,
+scripts/                  build.mjs (data build), build-pwa-map-data.mjs (the ZIP), start.mjs, dev-desktop.mjs,
                           dev-pwa.mjs, icons.mjs, e2e.mjs, measure-perf.mjs; lib/ and test/
 docs/                     guides (iphone-guide.md, vercel.md), the plan, design spec, notes of the agents
 vercel.json               settings for hosting the PWA on Vercel
 saved-routes/             routes saved to the "Project folder" (desktop, not in git)
-build/                    everything `npm run build` creates (not in git)
+build/                    everything the builds create (not in git)
+  regions/                one folder per map build. The resorts.json build is regions/default/, and every
+                          "Build region" build is regions/<id>/. Each holds the same things:
+    default/              planner/ (runs, lifts, places per resort, for routing and search), tileserver/
+                          (PMTiles data, styles, config for TileServer GL), build-info.json
+  tileserver/fonts, sprites/  fonts and sprites, shared by every map build
   downloads/              OpenSkiData downloads (kept to respect the once-per-day download rule)
-  work/                   intermediate files (filtered GeoJSON, contour lines, terrain pieces per zoom)
-  tileserver/             what TileServer GL serves: config, PMTiles data, styles, fonts, sprites
-  planner/                runs, lifts and places per resort, used for routing and search
-  pwa/                    the data ZIP for the iPhone
+  work/                   shared caches (basemap, terrain and contour extracts per zoom)
+  pwa/                    the data ZIP files for the iPhone (the main one and one per region)
   certs/                  mkcert certificate for `--phone`
 ```
 
