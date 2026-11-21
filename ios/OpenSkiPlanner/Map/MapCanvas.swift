@@ -3,11 +3,19 @@ import SkiCore
 import SwiftUI
 import UIKit
 
+/// What a tap on the map hit.
+enum MapTap {
+    /// A run, lift or lift station of the ski map (its OpenSkiData id) and the tapped spot.
+    case feature(id: String, at: Pt)
+    /// Anywhere else.
+    case empty(Pt)
+}
+
 /// The offline map: MapLibre Native showing the bundled ski map (PMTiles, no network), the route and its points.
 struct MapCanvas: UIViewRepresentable {
     @ObservedObject var model: PlannerModel
-    /// Called with the tapped position when the user taps the map.
-    var onTap: (Pt) -> Void
+    /// Called for every tap on the map.
+    var onTap: (MapTap) -> Void
     /// Each change centres the map on the GPS position and follows it.
     var locateRequest = 0
 
@@ -52,7 +60,7 @@ struct MapCanvas: UIViewRepresentable {
     // MARK: - coordinator
 
     final class Coordinator: NSObject, MLNMapViewDelegate, UIGestureRecognizerDelegate {
-        var onTap: (Pt) -> Void
+        var onTap: (MapTap) -> Void
         weak var map: MLNMapView?
         var styleName = ""
         var lastLocateRequest = 0
@@ -64,14 +72,32 @@ struct MapCanvas: UIViewRepresentable {
         private var lastFocus: Pt?
         private var lastPointCount = 0
 
-        init(onTap: @escaping (Pt) -> Void) {
+        init(onTap: @escaping (MapTap) -> Void) {
             self.onTap = onTap
         }
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let map, gesture.state == .ended else { return }
-            let c = map.convert(gesture.location(in: map), toCoordinateFrom: map)
-            onTap(Pt(lon: c.longitude, lat: c.latitude))
+            let point = gesture.location(in: map)
+            let c = map.convert(point, toCoordinateFrom: map)
+            let tapped = Pt(lon: c.longitude, lat: c.latitude)
+            if let id = featureId(near: point, on: map) {
+                onTap(.feature(id: id, at: tapped))
+            } else {
+                onTap(.empty(tapped))
+            }
+        }
+
+        /// Id of the run, lift or lift station under the finger. A fingertip is wide, so the search box is too;
+        /// run areas (polygons) are left out, otherwise every tap inside a piste area would hit.
+        private func featureId(near point: CGPoint, on map: MLNMapView) -> String? {
+            guard let style = map.style else { return nil }
+            let layers = Set(style.layers.map(\.identifier).filter {
+                ($0.hasPrefix(MapIDs.skiRunPrefix) || $0.hasPrefix(MapIDs.skiLiftPrefix)) && $0 != MapIDs.skiRunAreas
+            })
+            let box = CGRect(x: point.x - 14, y: point.y - 14, width: 28, height: 28)
+            return map.visibleFeatures(in: box, styleLayerIdentifiers: layers)
+                .lazy.compactMap { $0.attribute(forKey: "id") as? String }.first
         }
 
         /// Taps must not block the map's own pan and zoom gestures.
@@ -112,6 +138,15 @@ struct MapCanvas: UIViewRepresentable {
 
         private func renderRoute(_ model: PlannerModel, in style: MLNStyle) {
             let coords = model.result?.coordinates ?? []
+
+            if let source = style.source(withIdentifier: MapIDs.selectionSource) as? MLNShapeSource {
+                if let line = model.selection?.line, line.count > 1 {
+                    var coordinates = line.map(\.coordinate)
+                    source.shape = MLNPolylineFeature(coordinates: &coordinates, count: UInt(coordinates.count))
+                } else {
+                    source.shape = MLNShapeCollectionFeature(shapes: [])
+                }
+            }
 
             if let source = style.source(withIdentifier: MapIDs.routeLineSource) as? MLNShapeSource {
                 if coords.count > 1 {

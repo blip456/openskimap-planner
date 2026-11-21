@@ -43,6 +43,27 @@ enum PisteLabels {
         }
     }
 
+    /// "Chairlift" for "chair_lift" (names as in planner/search.mjs).
+    static func liftTypeName(_ liftType: String?) -> String {
+        switch liftType {
+        case "gondola": return "Gondola"
+        case "cable_car": return "Cable car"
+        case "mixed_lift": return "Gondola/chair combo"
+        case "chair_lift": return "Chairlift"
+        case "funicular": return "Funicular"
+        case "railway": return "Railway"
+        case "rack_railway": return "Rack railway"
+        case "t-bar": return "T-bar"
+        case "j-bar": return "J-bar"
+        case "platter": return "Platter lift"
+        case "drag_lift": return "Drag lift"
+        case "rope_tow": return "Rope tow"
+        case "magic_carpet": return "Magic carpet"
+        case let other?: return other.replacingOccurrences(of: "_", with: " ").capitalized
+        case nil: return "Lift"
+        }
+    }
+
     /// Lift groups of `PlanOptions.liftGroups`, in display order.
     static let liftGroups: [(key: String, name: String)] = [
         ("gondola", "Gondola / cable car"), ("chair_lift", "Chairlift"), ("rail", "Funicular / train"),
@@ -78,14 +99,6 @@ enum RoutePointRole: String {
             self = .end
         } else {
             self = .stop
-        }
-    }
-
-    var hex: String {
-        switch self {
-        case .start: return "#2e9d3a"
-        case .stop: return "#1f6fd6"
-        case .end: return "#d8251d"
         }
     }
 

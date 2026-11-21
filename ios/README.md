@@ -97,11 +97,12 @@ With a free Apple ID the app expires after 7 days; rebuild from Xcode to refresh
 - The map shows the resorts in `resorts.json` only (the same data as the web planner). Outside them the basemap
   is empty.
 - The app loads the first resort in the export; several regions and downloading new ones are not built yet.
-- Route points are set by tapping the map (every tap adds a point, like the web planner's *Plan route* mode).
-  Pinch and drag still move the map; a quick double tap zooms instead of adding two points.
+- Tapping a run, lift or lift station opens its info card (length, vertical, slope or ride time and speed,
+  elevation profile, facts) with **Start**, **Stop** and **Destination** buttons for that spot. Tapping empty map
+  adds a route point (or first closes an open card). A quick double tap zooms instead.
 - Web-only features: saving routes to the project folder, Google Maps links, online geocoding, online base maps,
-  TileServer GL tiles for gpx.studio, info cards with elevation profiles, the gradient profile chart, GPX download
-  of a saved route or a whole folder.
+  TileServer GL tiles for gpx.studio, whole-piste totals and slope-coloured profiles on info cards, the route
+  gradient profile chart, GPX download of a saved route or a whole folder.
 - Always check the official piste map, signs and conditions on the day. OSM data can be incomplete.
 
 ## Data & licences

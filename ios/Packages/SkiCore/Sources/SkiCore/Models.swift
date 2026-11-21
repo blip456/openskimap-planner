@@ -72,15 +72,68 @@ public struct FlexString: Decodable, Hashable, Sendable {
     }
 }
 
+extension KeyedDecodingContainer {
+    /// The value, or nil when it is missing, null or of another type: one odd field never breaks a resort file.
+    func lenient<T: Decodable>(_ type: T.Type, _ key: Key) -> T? {
+        (try? decodeIfPresent(type, forKey: key)) ?? nil
+    }
+}
+
+/// A ski area a run or lift belongs to.
+public struct SkiAreaRef: Decodable, Sendable, Hashable {
+    public let id: String
+    public let name: String?
+}
+
+/// Country, region and locality of a feature (OpenSkiData `places`).
+public struct PlaceInfo: Decodable, Sendable, Hashable {
+    public let country: String?
+    public let region: String?
+    public let locality: String?
+}
+
 public struct RunProps: Decodable, Sendable {
     public let id: FlexString?
     public let name: String?
+    public let ref: String?
     public let label: String?
     public let kind: String?
     public let difficulty: String?
     public let color: String?
     public let oneway: Bool?
     public let status: String?
+    public let grooming: String?
+    public let lit: Bool?
+    public let snowmaking: Bool?
+    public let patrolled: Bool?
+    public let gladed: Bool?
+    public let skiAreas: [SkiAreaRef]?
+    public let place: PlaceInfo?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, ref, label, kind, difficulty, color, oneway, status
+        case grooming, lit, snowmaking, patrolled, gladed, skiAreas, place
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(FlexString.self, .id)
+        name = c.lenient(String.self, .name)
+        ref = c.lenient(String.self, .ref)
+        label = c.lenient(String.self, .label)
+        kind = c.lenient(String.self, .kind)
+        difficulty = c.lenient(String.self, .difficulty)
+        color = c.lenient(String.self, .color)
+        oneway = c.lenient(Bool.self, .oneway)
+        status = c.lenient(String.self, .status)
+        grooming = c.lenient(String.self, .grooming)
+        lit = c.lenient(Bool.self, .lit)
+        snowmaking = c.lenient(Bool.self, .snowmaking)
+        patrolled = c.lenient(Bool.self, .patrolled)
+        gladed = c.lenient(Bool.self, .gladed)
+        skiAreas = c.lenient([SkiAreaRef].self, .skiAreas)
+        place = c.lenient(PlaceInfo.self, .place)
+    }
 }
 
 public struct LiftProps: Decodable, Sendable {
@@ -89,9 +142,44 @@ public struct LiftProps: Decodable, Sendable {
     public let label: String?
     public let liftType: String?
     public let oneway: Bool?
+    /// Ride time in seconds.
     public let duration: Double?
     public let status: String?
     public let stations: [LiftStation]?
+    /// Persons per hour.
+    public let capacity: Double?
+    /// Seats per chair or cabin.
+    public let occupancy: Double?
+    public let bubble: Bool?
+    public let heating: Bool?
+    /// "up", "both" or "unknown" (see liftDirection in scripts/lib/ski.mjs).
+    public let direction: String?
+    public let skiAreas: [SkiAreaRef]?
+    public let place: PlaceInfo?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, label, liftType, oneway, duration, status, stations
+        case capacity, occupancy, bubble, heating, direction, skiAreas, place
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(FlexString.self, .id)
+        name = c.lenient(String.self, .name)
+        label = c.lenient(String.self, .label)
+        liftType = c.lenient(String.self, .liftType)
+        oneway = c.lenient(Bool.self, .oneway)
+        duration = c.lenient(Double.self, .duration)
+        status = c.lenient(String.self, .status)
+        stations = c.lenient([LiftStation].self, .stations)
+        capacity = c.lenient(Double.self, .capacity)
+        occupancy = c.lenient(Double.self, .occupancy)
+        bubble = c.lenient(Bool.self, .bubble)
+        heating = c.lenient(Bool.self, .heating)
+        direction = c.lenient(String.self, .direction)
+        skiAreas = c.lenient([SkiAreaRef].self, .skiAreas)
+        place = c.lenient(PlaceInfo.self, .place)
+    }
 }
 
 public struct LiftStation: Decodable, Sendable {
@@ -124,6 +212,19 @@ public struct SpotProps: Decodable, Sendable {
     public let label: String?
     public let name: String?
     public let spotType: String?
+    /// For lift stations: the lift they belong to.
+    public let liftId: FlexString?
+
+    private enum CodingKeys: String, CodingKey { case id, label, name, spotType, liftId }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.lenient(FlexString.self, .id)
+        label = c.lenient(String.self, .label)
+        name = c.lenient(String.self, .name)
+        spotType = c.lenient(String.self, .spotType)
+        liftId = c.lenient(FlexString.self, .liftId)
+    }
 }
 
 public struct Place: Decodable, Sendable, Hashable {

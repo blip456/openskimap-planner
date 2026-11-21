@@ -40,4 +40,5 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 9HFM9AZ9WH # Apple developer team used to sign for your iPhone
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Shows where you are on the ski map."

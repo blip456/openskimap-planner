@@ -32,7 +32,7 @@ struct ContentView: View {
 
     private var planner: some View {
         ZStack(alignment: .top) {
-            MapCanvas(model: model, onTap: { model.addPoint($0) }, locateRequest: locateRequest)
+            MapCanvas(model: model, onTap: handleMapTap, locateRequest: locateRequest)
                 .ignoresSafeArea()
 
             VStack(spacing: 8) {
@@ -45,13 +45,25 @@ struct ContentView: View {
             .padding(.horizontal, 14)
             .padding(.top, 8)
         }
-        .overlay(alignment: .bottomTrailing) {
-            locateButton
-                .padding(.trailing, 16)
-                .padding(.bottom, 124) // above the panel bar
-        }
         .overlay(alignment: .bottom) {
-            panelBar
+            // stacked, so the location button moves up when the error banner appears
+            VStack(alignment: .trailing, spacing: 10) {
+                locateButton
+                    .padding(.trailing, 16)
+                if let card = model.selection {
+                    FeatureCardView(card: card,
+                                    onAdd: { model.addSelectedSpot(as: $0) },
+                                    onClose: { model.closeSelection() })
+                        .id(card.id)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if panel == nil, let error = model.routeError {
+                    routeErrorBanner(error)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                panelBar
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.routeError)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.selection?.id)
         }
         .sheet(item: $panel) { panel in
             panelContent(panel)
@@ -114,6 +126,24 @@ struct ContentView: View {
                 DisplaySettingsView(model: model)
             }
         }
+    }
+
+    /// Why the tapped points give no route (e.g. a point too far from any run), shown on the map itself.
+    private func routeErrorBanner(_ message: String) -> some View {
+        Button {
+            panel = .route
+        } label: {
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassBackground(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 28)
     }
 
     // MARK: - location
@@ -234,6 +264,21 @@ struct ContentView: View {
     }
 
     // MARK: - actions
+
+    /// Like the web planner: a run or lift opens its info card; empty map adds a route point, or only closes an
+    /// open card first.
+    private func handleMapTap(_ tap: MapTap) {
+        switch tap {
+        case let .feature(id, spot):
+            if !model.select(featureId: id, at: spot) { model.addPoint(spot) }
+        case let .empty(spot):
+            if model.selection != nil {
+                model.closeSelection()
+            } else {
+                model.addPoint(spot)
+            }
+        }
+    }
 
     private func openSearch() {
         searchOpen = true

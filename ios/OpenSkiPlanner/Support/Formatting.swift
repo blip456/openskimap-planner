@@ -12,9 +12,11 @@ func formatDuration(_ seconds: Double) -> String {
     return minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(minutes % 60) min"
 }
 
-/// Label of a distance marker on the route: "250 m", "1 km", "2 km".
+/// Label of a distance marker on the route: "250 m", "1 km", "1.5 km".
 func formatMarkerDistance(_ metres: Double) -> String {
-    metres < 1000 ? "\(Int(metres)) m" : "\(Int(metres / 1000)) km"
+    if metres < 1000 { return "\(Int(metres.rounded())) m" }
+    let km = metres / 1000
+    return km == km.rounded() ? "\(Int(km)) km" : String(format: "%.1f km", km)
 }
 
 extension Array where Element: Equatable {

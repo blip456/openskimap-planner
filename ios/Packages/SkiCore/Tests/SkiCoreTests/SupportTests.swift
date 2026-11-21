@@ -45,3 +45,50 @@ final class PlanOptionsCodingTests: XCTestCase {
         XCTAssertEqual(decoded, expected)
     }
 }
+
+final class LineStatsTests: XCTestCase {
+    /// About 111 m due north, dropping 50 m.
+    private let run = [Pt(lon: 10.0, lat: 47.0, ele: 1000), Pt(lon: 10.0, lat: 47.001, ele: 950)]
+
+    func testRunStatistics() {
+        let stats = lineStats(run, isLift: false)
+        let horizontal = haversine(run[0], run[1])
+        XCTAssertEqual(stats.horizontalLength, horizontal, accuracy: 0.01)
+        XCTAssertEqual(stats.length, hypot(horizontal, 50), accuracy: 0.01)
+        XCTAssertEqual(stats.vertical, 50)
+        XCTAssertEqual(stats.descent, 50)
+        XCTAssertEqual(stats.ascent, 0)
+        XCTAssertEqual(stats.avgSlope ?? 0, 50 / horizontal, accuracy: 1e-9)
+        XCTAssertEqual(stats.maxSlope ?? 0, 50 / horizontal, accuracy: 1e-9)
+        XCTAssertEqual(stats.profile.count, 81)
+        XCTAssertEqual(stats.profile.first?.elevation, 1000)
+        XCTAssertEqual(stats.profile.last?.elevation ?? 0, 950, accuracy: 1e-9)
+        XCTAssertNil(stats.duration)
+    }
+
+    func testLiftIsDescribedBottomToTopWithSpeeds() {
+        let stats = lineStats(run, isLift: true, duration: 60)
+        XCTAssertEqual(stats.eleStart, 950)
+        XCTAssertEqual(stats.eleEnd, 1000)
+        XCTAssertEqual(stats.speed ?? 0, stats.length / 60, accuracy: 1e-9)
+        XCTAssertEqual(stats.verticalSpeed ?? 0, 50, accuracy: 1e-9) // 50 m in one minute
+    }
+
+    func testLineWithoutElevationHasOnlyLengths() {
+        let flat = run.map { Pt(lon: $0.lon, lat: $0.lat) }
+        let stats = lineStats(flat, isLift: false)
+        XCTAssertEqual(stats.length, stats.horizontalLength)
+        XCTAssertNil(stats.vertical)
+        XCTAssertTrue(stats.profile.isEmpty)
+    }
+}
+
+final class FeatureLookupTests: XCTestCase {
+    func testFindsRunsAndLiftsByID() throws {
+        let resort = try RoutingTests().loadResort()
+        let lookup = FeatureLookup(resort)
+        XCTAssertEqual(lookup.run(id: "r2")?.properties.label, "Red run")
+        XCTAssertEqual(lookup.lift(id: "l1")?.properties.duration, 300)
+        XCTAssertNil(lookup.run(id: "l1"))
+    }
+}

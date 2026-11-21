@@ -7,11 +7,14 @@ enum MapIDs {
     static let routeLineSource = "route-line"
     static let routePointsSource = "route-points"
     static let routeDistancesSource = "route-distances"
+    static let selectionSource = "selection"
+    static let selection = "selection-highlight"
 
     static let routeLine = "route-line-layer"
     static let routeArrows = "route-arrows"
     static let routeDistanceLabels = "route-distance-labels"
-    static let routePointDots = "route-points-circle"
+    /// One circle layer per point role (start, stop, end), e.g. `route-points-start`.
+    static let routePointDotsPrefix = "route-points-"
     static let routePointLetters = "route-points-letter"
 
     /// Layers of the ski style (scripts/lib/styles.mjs): runs start with `ski-run`, lifts with `ski-lift`.
@@ -26,7 +29,8 @@ enum MapIDs {
 }
 
 private let routeOrange = UIColor(red: 1.0, green: 0.42, blue: 0.0, alpha: 1)
-private let labelFont = NSExpression(forConstantValue: ["Noto Sans Bold"])
+/// Must be a font stack bundled by `ios:export` (fonts/: Noto Sans Regular, Medium, Italic); a missing one draws no text.
+private let labelFont = NSExpression(forConstantValue: ["Noto Sans Medium"])
 
 extension MLNStyle {
     /// Route line with direction arrows, distance labels and the lettered route points (empty until a route exists).
@@ -35,7 +39,16 @@ extension MLNStyle {
         let line = MLNShapeSource(identifier: MapIDs.routeLineSource, shape: empty, options: nil)
         let points = MLNShapeSource(identifier: MapIDs.routePointsSource, shape: empty, options: nil)
         let distances = MLNShapeSource(identifier: MapIDs.routeDistancesSource, shape: empty, options: nil)
-        [line, points, distances].forEach(addSource)
+        let selection = MLNShapeSource(identifier: MapIDs.selectionSource, shape: empty, options: nil)
+        [selection, line, points, distances].forEach(addSource)
+
+        // the run or lift of the open info card, under the route
+        let highlight = MLNLineStyleLayer(identifier: MapIDs.selection, source: selection)
+        highlight.lineColor = NSExpression(forConstantValue: UIColor(red: 1.0, green: 0.84, blue: 0.04, alpha: 0.9))
+        highlight.lineWidth = NSExpression(forConstantValue: 10)
+        highlight.lineCap = NSExpression(forConstantValue: "round")
+        highlight.lineJoin = NSExpression(forConstantValue: "round")
+        addLayer(highlight)
 
         let lineLayer = MLNLineStyleLayer(identifier: MapIDs.routeLine, source: line)
         lineLayer.lineColor = NSExpression(forConstantValue: routeOrange)
@@ -66,17 +79,16 @@ extension MLNStyle {
         distanceLabels.textAllowsOverlap = NSExpression(forConstantValue: true)
         addLayer(distanceLabels)
 
-        let dots = MLNCircleStyleLayer(identifier: MapIDs.routePointDots, source: points)
-        dots.circleColor = NSExpression(mglJSONObject: [
-            "match", ["get", "role"],
-            RoutePointRole.start.rawValue, RoutePointRole.start.hex,
-            RoutePointRole.end.rawValue, RoutePointRole.end.hex,
-            RoutePointRole.stop.hex,
-        ])
-        dots.circleRadius = NSExpression(forConstantValue: 12)
-        dots.circleStrokeColor = NSExpression(forConstantValue: UIColor.white)
-        dots.circleStrokeWidth = NSExpression(forConstantValue: 2)
-        addLayer(dots)
+        // one layer per role with a constant colour: simple and reliable, no colour expression to evaluate
+        for role in [RoutePointRole.stop, .start, .end] {
+            let dots = MLNCircleStyleLayer(identifier: MapIDs.routePointDotsPrefix + role.rawValue, source: points)
+            dots.predicate = NSPredicate(format: "role == %@", role.rawValue)
+            dots.circleColor = NSExpression(forConstantValue: UIColor(role.color))
+            dots.circleRadius = NSExpression(forConstantValue: 12)
+            dots.circleStrokeColor = NSExpression(forConstantValue: UIColor.white)
+            dots.circleStrokeWidth = NSExpression(forConstantValue: 2.5)
+            addLayer(dots)
+        }
 
         let letters = MLNSymbolStyleLayer(identifier: MapIDs.routePointLetters, source: points)
         letters.text = NSExpression(forKeyPath: "letter")

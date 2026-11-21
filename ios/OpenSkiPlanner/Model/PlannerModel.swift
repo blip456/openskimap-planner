@@ -28,6 +28,8 @@ final class PlannerModel: ObservableObject {
 
     /// Set when the map should fly somewhere (search results).
     @Published var focus: Pt?
+    /// Info card of the tapped run or lift; nil when no card is open.
+    @Published private(set) var selection: FeatureCard?
     @Published var show3D = false
     @Published var display = DisplaySettings.load() {
         didSet { display.save() }
@@ -39,6 +41,7 @@ final class PlannerModel: ObservableObject {
     @Published private(set) var openRouteName = ""
 
     private var network: SkiNetwork?
+    private var lookup: FeatureLookup?
     private var searchIndex: [SearchHit] = []
     /// Earlier route points, newest last (undo).
     private var history: [[Pt]] = []
@@ -63,13 +66,14 @@ final class PlannerModel: ObservableObject {
             guard let first = index.first else { throw OfflineData.DataError.noResorts }
             let data = try Data(contentsOf: dir.appendingPathComponent("\(first.id).json"))
             // decoding and building the graph takes a moment for big resorts; keep the UI responsive
-            let (resort, network, hits) = try await Task.detached(priority: .userInitiated) {
+            let (resort, network, hits, lookup) = try await Task.detached(priority: .userInitiated) {
                 let resort = try JSONDecoder().decode(ResortData.self, from: data)
-                return (resort, SkiNetwork(resort: resort), SearchIndex.build(resort))
+                return (resort, SkiNetwork(resort: resort), SearchIndex.build(resort), FeatureLookup(resort))
             }.value
             self.resort = resort
             self.network = network
             self.searchIndex = hits
+            self.lookup = lookup
             state = .ready
         } catch {
             Logger.app.error("Loading offline data failed: \(error)")
@@ -111,6 +115,35 @@ final class PlannerModel: ObservableObject {
         if history.count > historyLimit { history.removeFirst() }
         change(&points)
         recalculate()
+    }
+
+    // MARK: - info cards
+
+    /// Opens the info card of a run, lift or lift station; returns false when the id is not in the resort data.
+    @discardableResult
+    func select(featureId: String, at tapped: Pt) -> Bool {
+        guard let lookup, let card = FeatureCard.make(featureId: featureId, tapped: tapped, lookup: lookup) else {
+            return false
+        }
+        selection = card
+        return true
+    }
+
+    func closeSelection() {
+        selection = nil
+    }
+
+    /// Adds the spot tapped for the open card as start, stop (before the destination) or destination.
+    func addSelectedSpot(as role: RoutePointRole) {
+        guard let p = selection?.tapped else { return }
+        changePoints { points in
+            switch role {
+            case .start: points.insert(p, at: 0)
+            case .stop: points.insert(p, at: points.count < 2 ? points.count : points.count - 1)
+            case .end: points.append(p)
+            }
+        }
+        selection = nil
     }
 
     // MARK: - options
