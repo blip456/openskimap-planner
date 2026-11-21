@@ -1,0 +1,234 @@
+/* Inset grouped lists (spec §2.10), shared by all sheet contents. Sizes in rem so they follow Dynamic Type. */
+.grp {
+  background: var(--cell-bg, var(--bg-cell));
+  border-radius: var(--r-cell);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.grp-h {
+  margin: 0 16px 7px;
+  font-size: var(--t-footnote);
+  line-height: 1.38;
+  font-weight: var(--fw-regular);
+  color: var(--label-2);
+}
+.grp-h.big {
+  font-size: var(--t-title3);
+  font-weight: var(--fw-semibold);
+  color: var(--label);
+  margin-left: 4px;
+}
+.grp-f {
+  margin: 0 16px;
+  font-size: var(--t-footnote);
+  line-height: 1.38;
+  color: var(--label-2);
+}
+.grp-gap {
+  height: 24px;
+}
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--cell-min-h);
+  padding: 10px var(--cell-pad-x);
+  box-sizing: border-box;
+  width: 100%;
+  border: 0;
+  margin: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--t-body);
+  text-align: left;
+}
+.row + .row::before,
+.row + .row-wrap > .row::before,
+.row-wrap + .row::before,
+.row-wrap + .row-wrap > .row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: var(--sep-inset, 16px);
+  height: 0.5px;
+  background: var(--separator);
+}
+button.row,
+label.row,
+.row.tappable {
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+button.row:active,
+label.row:active,
+.row.tappable:active {
+  background: var(--bg-cell-pressed);
+  transition-duration: 0ms;
+}
+@media (hover: hover) {
+  button.row:hover,
+  label.row:hover,
+  .row.tappable:hover {
+    background: var(--fill-4);
+  }
+}
+.row:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.row .txt {
+  flex: 1;
+  min-width: 0;
+}
+.row .t {
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row .s {
+  font-size: var(--t-footnote);
+  color: var(--label-2);
+  line-height: 1.38;
+}
+.row .val {
+  color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+}
+.row.link .t,
+.row.link {
+  color: var(--accent);
+}
+.row.destructive .t,
+.row.destructive {
+  color: var(--red);
+}
+.row .chev {
+  color: var(--label-3);
+  display: grid;
+}
+.row .chk {
+  color: var(--accent);
+  display: grid;
+}
+.tile {
+  flex: none;
+  width: 29px;
+  height: 29px;
+  border-radius: var(--r-icon);
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.row.has-icon {
+  --sep-inset: 57px;
+  min-height: 52px;
+}
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--r-xs);
+  box-shadow: inset 0 0 0 0.5px var(--swatch-border);
+  vertical-align: -1px;
+}
+/* small capsule buttons in sheets (36 high, fill-3) */
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.cap-btn {
+  position: relative;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--fill-3);
+  color: var(--accent);
+  font: var(--fw-semibold) var(--t-subhead) var(--font);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cap-btn::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+.cap-btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.cap-btn.destructive {
+  color: var(--red);
+}
+.cap-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.cap-btn:not(:disabled):active {
+  transform: scale(var(--press-scale));
+}
+/* round 36 px button in sheet headers and rows; hit area 44 */
+.round-btn {
+  position: relative;
+  flex: none;
+  width: var(--ctl-sm);
+  height: var(--ctl-sm);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--fill-3);
+  color: var(--label-2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.round-btn::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+.round-btn.accent {
+  color: var(--accent);
+}
+.round-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* empty state (spec §2.20) */
+.empty-state {
+  text-align: center;
+  padding: 16px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.empty-state .icon {
+  color: var(--label-3);
+  display: grid;
+}
+.empty-state h3 {
+  margin: 4px 0 0;
+  font-size: var(--t-body);
+  font-weight: var(--fw-semibold);
+}
+.empty-state p {
+  margin: 0;
+  max-width: 280px;
+  font-size: var(--t-subhead);
+  color: var(--label-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cap-btn:not(:disabled):active {
+    transform: none;
+  }
+}

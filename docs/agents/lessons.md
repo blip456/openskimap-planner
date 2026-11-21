@@ -120,3 +120,35 @@ wrong assumption. Format:
 - **Prevention:** `@playwright/test` is a devDependency pinned to **1.63.0**, the version of the preinstalled browsers
   (`/opt/pw-browsers`), so no `playwright install` is needed here. `NODE_PATH` is still right for plain `.cjs` scripts.
   If the global Playwright is updated, update the pin too.
+
+## 2026-11-20 · phase 4a · a tap test went through to the sheet (iPhone, large detent)
+- **What happened:** on the iPhone projects, `undo` with `tap({ force: true })` after a settings change did nothing.
+- **Root cause:** at the large detent the sheet covers the top row (design), so the forced tap landed on the sheet.
+  `force` skips Playwright's "is it covered?" check and hides this kind of problem.
+- **Prevention:** do not use `force: true` in the e2e tests; bring the sheet to medium first (as a user would). The
+  decision that undo is not reachable at the large detent on the phone is written in decisions.md.
+
+## 2026-11-20 · phase 4a · clip-path also clips hit testing
+- **What happened:** the swipe-to-delete test touched a saved row and nothing happened.
+- **Root cause:** at the medium detent the part of the sheet below the tab bar is cut off with `clip-path`; clipped
+  parts get no pointer events, and the row was in that part (Playwright's bounding box still reports it).
+- **Prevention:** in tests, move the sheet to large and `scrollIntoViewIfNeeded()` before touching rows that may be
+  below the medium sheet.
+
+## 2026-11-20 · phase 4a · axis labels overlapped (seen only in the screenshots)
+- **What happened:** the profile chart showed "3 km3.6 km" at the end of the distance axis on the iPhone width.
+- **Root cause:** ticks were dropped by distance (less than 45 % of a step before the end), not by pixels.
+- **Prevention:** the chart drops ticks closer than 44 px to the end label. Look at every screenshot after a UI
+  change; the unit test for `distanceTicks` also had a wrong expectation written from memory (again) — compute
+  expectations from the function's rule first.
+
+## 2026-11-20 · phase 4a · MapLibre marker classes (caught before it failed)
+- **What happened:** updating the route markers in place with `el.className = …` would remove MapLibre's own
+  `maplibregl-marker` classes, and the markers would lose their positioning.
+- **Prevention:** only use `classList.toggle` on elements handed to MapLibre (comment in `MapView.svelte`).
+
+## 2026-11-20 · phase 4a · cutting old functions out of app.js
+- **What happened:** the first version of the parity test failed with a syntax error.
+- **Root cause:** `const fmtTime = (s) => {` spans several lines; the extractor ended at the first `;`.
+- **Prevention:** the extractor treats a first line ending in `{` or `[` as a block that ends at a line starting with
+  `}` / `]`. A mutation check (changing the slice length and the 30 m window) made the parity test fail as expected.

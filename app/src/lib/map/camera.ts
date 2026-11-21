@@ -17,7 +17,10 @@ export function coverZoom(bbox: readonly [number, number, number, number], width
   return Math.max(zw, zh);
 }
 
-export function boundsOf(coords: readonly (readonly [number, number, number?])[]): [[number, number], [number, number]] | null {
+/** A map coordinate [lon, lat] or [lon, lat, ele] */
+export type Coord = readonly [number, number, number?];
+
+export function boundsOf(coords: readonly Coord[]): [[number, number], [number, number]] | null {
   if (!coords.length) return null;
   let w = Infinity;
   let s = Infinity;

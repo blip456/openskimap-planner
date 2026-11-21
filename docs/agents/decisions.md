@@ -151,3 +151,56 @@ Full spec: `docs/design/spec.md`, tokens: `docs/design/tokens.css`, mockups: `do
 - **Smoke tests:** `@playwright/test` 1.63.0 pinned (see lessons). Four projects: desktop build at 1280×800 and at iPhone
   size (390×844, touch), PWA build at both sizes. The PWA build is served by `app/e2e/static-server.mjs` (static, like
   Vercel), the desktop build by the real desktop server with project-folder routes off.
+
+## 2026-11-20 · phase 4a · route features in the new app (senior engineer)
+- **State shape.** `RouteState` (points, plan mode, options, result, undo history, saved-route link, collapsed legs,
+  nearest names), `UiState` (open sheet, detent, Route sub-page, toast, map feedback: highlight, profile cursor, fit
+  requests, flashed point row), `SavedState` (library of the open storage place), and `AppState.display`
+  (`DisplayData`, same keys as the old `state.display`; 4b's Map sheet changes it). Pure helpers live in
+  `app/src/lib/route/` (options, history, profile, steps), `lib/share.ts`, `lib/keyboard.ts`, `lib/saved/stores.ts`.
+- **Persistence key `openskimap-planner-v1`** (`version: 1` inside), separate from the phase 3 settings key. When it
+  is missing, the old planner's `ski-planner-v1` is read once (same origin on the desktop, port 8081), so the route
+  and settings of the old planner carry over. Every field is cleaned on load (`cleanPlannerData`); when storage is
+  full the history is dropped and the save is retried (as the old planner). Points, view and the saved-route link
+  are dropped when the stored resort is not the one opened. "Open sections" are now the open sheet, its detent and
+  the Route sub-page (the old `<details>` sections do not exist any more).
+- **Undo history: 50 steps** for points + route settings, stored with the state (the old planner kept 100 in memory
+  and stored 50; now it is 50 everywhere, as the task asks).
+- **Too many points** (25) is a toast, not a route error (the old planner had a separate error line for it).
+- **Routing debounce 150 ms** (old `scheduleRoute`), stale answers ignored by a request id. Saving and sharing call
+  the worker again with the route name, so the GPX `<name>` is the route name (old planner did the same on save).
+- **Map padding at the large detent** stays at the medium value: at large the sheet covers the map anyway, and a
+  padding of almost the whole height would make the camera jump. The padding is only set after the sheet settles.
+- **Auto-fit only for a new route** (no route before): after a marker drag the map no longer jumps (phase 3 fitted
+  every changed route that was partly hidden).
+- **BottomSheet geometry:** one element as tall as the large detent; medium is a `translateY`. At medium the part
+  below the tab bar is cut off with `clip-path` (bottom corners 32) and left/right insets of 8 are switched with the
+  "look" when the drag passes the halfway point; the body gets bottom padding so all content can be scrolled with a
+  wheel. At medium the body has `touch-action: none` (every touch drag moves the sheet), at large `pan-y` + a
+  `touchmove` handler (non-passive) that takes over a downward drag at `scrollTop 0`. Plan/Locate ride on the sheet
+  via the `--sheet-y` / `--sheet-progress` variables the sheet sets on `<html>`.
+- **Chart readout replaces the chart header** (spec decision) instead of a floating bubble; the task's "value bubble"
+  is this readout (distance, elevation, gradient, run kind + name). Touch: horizontal drag > 6 px scrubs (pointer
+  capture, events stop at the chart so the sheet does not move), vertical drag scrolls/moves the sheet; a tap shows
+  one point; release keeps it 1 s, then fades. Mouse: hover. Keyboard: ←/→ (Shift: 10 %), the chart is a
+  `role="slider"`.
+- **Marker drag with pointer events** (not MapLibre's `draggable`): touch lifts the marker 26 px above the finger
+  (after 150 ms or the first move), mouse keeps the grab offset. The marker element stops `touchstart`/`mousedown`/
+  `click`, so the map neither pans nor adds a point. A **mouse click removes** the point, a **touch tap opens the
+  Route sheet and flashes the row** (decided per pointer type, not per device). Markers are kept and updated in
+  place, so only a new marker plays the drop-in animation.
+- **Share decision:** share sheet only when `navigator.canShare({ files })` is true **and** the device is not a
+  desktop (hover + fine pointer). macOS browsers can share files too, but the desktop keeps downloading as the old
+  planner did. A closed share sheet (`AbortError`) is not an error; other share errors fall back to a download.
+- **Saved routes:** `BrowserRouteStore` uses the old database `ski-planner` / store `routes` (version 1, keyPath
+  `id`) and the same record fields, so routes saved by the old planner on the same origin appear. Records without
+  points/resort are skipped. `ServerRouteStore` sends the summary and GPX (the new desktop server does not route).
+  Delete asks no question; the toast "Route deleted · Undo" puts the record back (browser: same id and dates;
+  project folder: a new id, the server cannot re-create an id). Edit mode (header) shows ⊖ buttons; touch swipes;
+  with a mouse every row has a delete button.
+- **Undo on the phone at the large detent** is not reachable (the large sheet covers the top row, as designed); the
+  user drags the sheet down first. Desktop has ⌘Z / Ctrl+Z.
+- **Test hooks:** `?e2e` also sets `window.__app` (the `AppState`), so Playwright can read points and results.
+- **Parity test with the old code:** `app/test/legacy-parity.test.ts` cuts the old functions out of
+  `planner/public/app.js` and compares profile points, gradient, segments (both modes), step texts and distance
+  markers on 36 real routes. It skips itself when `planner/` is removed in 4b.

@@ -17,6 +17,24 @@ import TriangleAlert from '@lucide/svelte/icons/triangle-exclamation-point';
 import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 import Wrench from '@lucide/svelte/icons/wrench';
 import X from '@lucide/svelte/icons/x';
+import Share from '@lucide/svelte/icons/share';
+import ChevronDown from '@lucide/svelte/icons/chevron-down';
+import ChevronRight from '@lucide/svelte/icons/chevron-right';
+import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+import Check from '@lucide/svelte/icons/check';
+import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
+import Footprints from '@lucide/svelte/icons/footprints';
+import ArrowUp from '@lucide/svelte/icons/arrow-up';
+import ArrowDown from '@lucide/svelte/icons/arrow-down';
+import Undo2 from '@lucide/svelte/icons/undo-2';
+import Redo2 from '@lucide/svelte/icons/redo-2';
+import Folder from '@lucide/svelte/icons/folder';
+import CircleCheck from '@lucide/svelte/icons/circle-check';
+import CircleMinus from '@lucide/svelte/icons/circle-minus';
+import Maximize2 from '@lucide/svelte/icons/maximize-2';
+import Minus from '@lucide/svelte/icons/minus';
+import Plus from '@lucide/svelte/icons/plus';
+import LocateFixed from '@lucide/svelte/icons/locate-fixed';
 
 export const icons = {
   bookmark: Bookmark,
@@ -35,6 +53,24 @@ export const icons = {
   arrowUpDown: ArrowUpDown,
   wrench: Wrench,
   x: X,
+  share: Share,
+  chevronDown: ChevronDown,
+  chevronRight: ChevronRight,
+  chevronLeft: ChevronLeft,
+  check: Check,
+  slidersHorizontal: SlidersHorizontal,
+  footprints: Footprints,
+  arrowUp: ArrowUp,
+  arrowDown: ArrowDown,
+  undo2: Undo2,
+  redo2: Redo2,
+  folder: Folder,
+  circleCheck: CircleCheck,
+  circleMinus: CircleMinus,
+  maximize2: Maximize2,
+  minus: Minus,
+  plus: Plus,
+  locateFixed: LocateFixed,
 };
 
 export type IconName = keyof typeof icons;

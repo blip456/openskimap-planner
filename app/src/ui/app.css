@@ -1,4 +1,5 @@
 @import './tokens.css';
+@import './lists.css';
 
 /* Full-screen app: fixed layout (avoids vh/svh differences in standalone mode, plan §8.6). */
 html,

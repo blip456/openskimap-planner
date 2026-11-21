@@ -6,7 +6,7 @@
 | 1 Shared core | done (waiting for commit) |
 | 2 Data ZIP + zoom levels | done (waiting for commit) |
 | 3 App skeleton + dev commands | done (waiting for commit) |
-| 4 Feature parity | to do |
+| 4 Feature parity | 4a (route) done, waiting for commit · 4b to do |
 | 5 PWA + import | to do |
 | 6 iPhone features | to do |
 | 7 Liquid Glass UI + responsive | to do |
@@ -150,3 +150,88 @@ Screenshots: `docs/agents/screenshots/phase3/`.
   older ZIPs work with English labels.
 - Not yet in the UI (later phases): 3D toggle, search, info cards (explore taps are logged to the console), saved
   routes, settings menu, sheet drag/large detent, desktop side panel, nearest names for route points.
+
+### 2026-11-20 · phase 4a · senior frontend engineer · everything about the route
+**Done**
+- Route points: plan mode (tap/click adds A, B, C…, max 25 → toast), colours start/stop/end, nearest run/lift name
+  as point title (worker `nearest`, ≤ 150 m), markers dragged with pointer events (touch lifts the marker 26 px
+  above the finger; mouse keeps the grab offset), mouse click on a marker removes it, a touch tap opens the Route
+  sheet and flashes the row. Reverse, Clear, remove (✕) in the list.
+- Routing through the worker, debounced 150 ms, stale answers ignored; errors ("No route found" block with a
+  Route settings button), warnings (harder runs, gaps, lifts down, moved points) as rows.
+- `BottomSheet` (spec §2.9): medium + large detents, drag on handle/header always and on the body at medium, velocity
+  projection, close below medium − 80 px, scroll handoff at large (touch), map padding after settling, safe areas,
+  keyboard on the handle (↑/↓/Enter), Esc closes, reduced motion fades. Plan/Locate ride on the sheet.
+- Route sheet: header (route name or "Route", resort · "Changed since you saved it" / "N points", Share GPX,
+  Close), summary + chips (skiing, lifts, ascent, avg/max gradient), points, warnings, gradient profile (official /
+  steepness, A/B/C marks, axes, legend, touch scrubbing + hover + ←/→, readout in the header, cursor on the map),
+  directions per leg (collapsible and remembered, hover/tap highlights, zoom button, step tap zooms), route arrows
+  and distance markers (read from `app.display.showArrows/showDistances`).
+- Route settings sub-page (Runs grid, Prefer easier, Use ski paths, No route found?, Lifts, Avoid drag lifts, Ride
+  lifts down + types, waiting time stepper, Speed presets with active highlight, "Speed per run colour" sub-page,
+  Max walk slider). Undo/redo (50 steps, points + settings) with the glass capsule, ⌘Z/Ctrl+Z, ⌘Y/Ctrl+Y/⇧⌘Z, P, Esc.
+- Persistence (`openskimap-planner-v1`, migrates the old `ski-planner-v1`), Saved tab (save / save changes / save as
+  new, folder field + picker, open, delete by swipe / Edit mode / button, Undo toast, GPX per route, folder ZIP,
+  This device | Project folder on the desktop), GPX share/download decision.
+- Files: `app/src/lib/route/*`, `lib/share.ts`, `lib/keyboard.ts`, `lib/saved/stores.ts`,
+  `lib/stores/{route,ui,saved}.svelte.ts`, `lib/stores/planner-persist.ts`, `ui/BottomSheet.svelte`,
+  `ui/sheet-physics.ts`, `ui/{SheetHeader,SubPageHeader,Switch,Segmented,UndoRedo,Toast}.svelte`, `ui/lists.css`,
+  `ui/route/*`, `ui/saved/*`, `ui/MapView.svelte`, `App.svelte`.
+
+**Tests**
+- `npm test`: typecheck + 73 core + 14 script + 19 server + **85 app** (Vitest, 11 files; new: route-lib, persist,
+  share, saved (fake-indexeddb + the real desktop server for the project folder), legacy-parity (old app.js
+  functions vs the new ones on 36 real routes; skips when `planner/` is gone), more store tests).
+- `npm run test:e2e`: 8 tests (4 projects × smoke + `route.spec.ts`). The route test plans 3 points by tapping,
+  drags B, undo/redo, marker tap, sheet drag to large, profile scrub with touch (CDP touch events) or mouse, steepness
+  mode, collapses a leg, settings change (blue off → route changes/warns) + preset + undo, share (stubbed
+  `navigator.share` on the phone, download on the desktop), save, folder ZIP, reload (points, open sheet, saved
+  route, name, undo history, collapsed leg), clear + open saved, body drag handoff, swipe-delete + Undo, P/Esc.
+- Screenshots: `docs/agents/screenshots/phase4a/` (route medium, large, profile scrub, settings, saved; iPhone and
+  wide, both builds).
+
+**Parity checklist (route features of the old planner → new place)**
+
+| Old planner | New place | State |
+| --- | --- | --- |
+| Plan mode button, P, Esc, mode hint | Plan button, mode pill, keyboard | done |
+| Click map adds point, max 25 | `RouteState.tap/addPoint` + toast | done |
+| Markers A, B, C, colours, drag, click removes | `MapView` markers (touch tap opens the row) | done |
+| Point list, Reverse, Clear | Route sheet `PointList` | done (titles: nearest name) |
+| scheduleRoute, stale protection, errors, warnings | `RouteState` + `RouteBody` | done |
+| Summary chips incl. avg/max gradient | `RouteSummary` | done |
+| Gradient profile (official/steepness, A/B/C, axes, hover, map cursor) | `ProfileChart` (+ touch, keyboard) | done |
+| Directions per leg, collapsed legs remembered, hover highlight, zoom | `Directions` | done |
+| Route arrows, distance markers | `route-layers.ts` | done (toggles: Map sheet, 4b) |
+| Runs / Lifts / Speed / Advanced settings | Route settings sub-pages | done |
+| Undo/redo + shortcuts, history stored | `History`, `UndoRedo`, `keyboard.ts` | done |
+| localStorage state | `planner-persist.ts` | done (map view saved; resort switch UI is 4b) |
+| Save / Save as new / status / folder datalist | Saved sheet | done |
+| Saved list by folder, open, delete, GPX, ZIP | Saved sheet | done |
+| This browser / Project folder | segmented control (desktop with `projectFolderRoutes`) | done |
+| Download GPX | Share GPX (share sheet / download) | done |
+| Export / import backup, "Copy all to this browser" | store methods exist (`exportBackup`, `importBackup`, `getWithGpx`) | **4b** (Menu › Routes backup) |
+| Info cards, search, pin actions | – | **4b** |
+| Map options (layers, colours, ski areas, basemap, 3D, arrows/distances toggles) | `app.display` is ready | **4b** |
+| Resort switch | `app.switchResort(id)` exists | **4b** (Menu › Resort) |
+| Desktop side panel | `RouteHeader/RouteBody`, `SavedHeader/SavedBody` are separate parts | **4b** |
+| gpx.studio links | – | **4b** |
+
+**Notes for 4b**
+- Sheet contents are header + body components that take `app`; put them in a desktop panel without the BottomSheet.
+- The top-right row in `App.svelte` (`.top-right`) holds the undo capsule; add the 3D capsule after it.
+- `MapView.onmaptap` is called first on every tap; explore-mode info cards go after `route.tap()` (now logs).
+- `UiState.fitTo`, `setHighlight`, `profileCursor` can be reused by info cards and search.
+- The old planner's `planner/public/route-stores.js` is ported; when `planner/` goes, `legacy-parity.test.ts`
+  skips itself (delete it then, or keep a copy of the old functions in `packages/core/test/reference/`).
+
+**Open issues**
+- Not checked on a real iPhone: share sheet with files, touch drag feel, `clip-path` + `backdrop-filter` on Safari.
+- At the large detent the undo capsule is under the sheet on the phone (by design).
+- Route point names use the nearest run/lift; the old planner showed coordinates. Places (huts) are 4b's search data.
+
+### Orchestrator review of 4a screenshots (for 4b)
+Fix in 4b: (1) summary chips overflow the right edge on iPhone width (wrap or horizontal scroll with fade);
+(2) list separators in the point list extend past the row/group edge; (3) profile x-axis labels "3 km" and
+"3.6 km" overlap (skip a tick label that is too close to the end label); (4) the profile legend is hidden behind
+the tab bar at the large detent — content needs bottom padding = tab bar height + safe area.

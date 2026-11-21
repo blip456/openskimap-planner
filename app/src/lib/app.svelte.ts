@@ -9,8 +9,16 @@ import type { ImportProgress } from './data/import/pipeline.ts';
 import { startRoutingWorker, type RoutingClient } from './worker/client.ts';
 import type { LoadInfo } from './worker/engine.ts';
 import { Settings } from './stores/settings.svelte.ts';
-import { RouteState } from './stores/route.svelte.ts';
-import { UiState } from './stores/ui.svelte.ts';
+import { RouteState, type LngLat } from './stores/route.svelte.ts';
+import { UiState, type Detent, type RoutePage, type SheetId } from './stores/ui.svelte.ts';
+import { SavedState } from './stores/saved.svelte.ts';
+import { defaultStorage, type KeyValue } from './stores/persist.ts';
+import { loadPlannerData, savePlannerData, STATE_VERSION, type DisplayData, type MapView, type PlannerData } from './stores/planner-persist.ts';
+import { BrowserRouteStore, ServerRouteStore } from './saved/stores.ts';
+import { gpxFileName, shareFile } from './share.ts';
+
+/** Points further than this from any run or lift keep their coordinates as title. */
+const NAME_DISTANCE = 150;
 
 export type AppStatus = 'starting' | 'no-data' | 'ready' | 'error';
 
@@ -30,14 +38,142 @@ export class AppState {
   dataVersion = $state(0);
 
   readonly settings: Settings;
-  readonly route = new RouteState();
+  readonly route: RouteState;
   readonly ui = new UiState();
+  /** display options (route arrows and distances here; the Map sheet of phase 4b changes the rest) */
+  display = $state<DisplayData>() as DisplayData;
+  saved = $state.raw<SavedState>() as SavedState;
+  /** desktop with a mouse: click removes a marker, GPX is downloaded instead of shared */
+  readonly desktop = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  /** last map view, saved with the state (set by the map on moveend) */
+  mapView: MapView | null = null;
   routing: RoutingClient | null = null;
   private stopWorker: (() => void) | null = null;
   private cancelImport: (() => void) | null = null;
+  private readonly kv: KeyValue | null;
+  private stored: PlannerData;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private stopPersist: (() => void) | null = null;
 
-  constructor() {
-    this.settings = new Settings({ online: this.caps.onlineByDefault });
+  constructor(kv: KeyValue | null = defaultStorage()) {
+    this.kv = kv;
+    this.settings = new Settings({ online: this.caps.onlineByDefault }, kv);
+    const { data, source } = loadPlannerData(kv);
+    if (source === 'legacy') console.info('[state] took over the route and settings of the old planner');
+    this.stored = data;
+    this.display = data.display;
+    this.mapView = data.view;
+    this.route = new RouteState({ stored: data });
+    this.route.onNotice = (text) => this.ui.showToast(text);
+    const s = data.sections;
+    if (s.sheet === 'route' || s.sheet === 'saved' || s.sheet === 'map') this.ui.openSheet(s.sheet as SheetId, s.detent === 'large' ? 'large' : 'medium');
+    if (s.routePage === 'settings' || s.routePage === 'speeds') this.ui.routePage = s.routePage as RoutePage;
+    this.saved = this.makeSaved(data.routeStorage);
+  }
+
+  private makeSaved(storage: 'browser' | 'server'): SavedState {
+    const browser = new BrowserRouteStore(typeof indexedDB === 'undefined' ? (undefined as unknown as IDBFactory) : indexedDB);
+    return new SavedState(
+      {
+        route: this.route,
+        resort: () => this.resort,
+        hasResort: (id) => !!this.data?.info.resorts.some((r) => r.id === id),
+        switchResort: (id) => this.switchResort(id, true),
+        makeRoute: async (name) => {
+          const r = await this.routeNow(name);
+          return { gpx: r.gpx, summary: r.summary, legs: r.legs.length };
+        },
+        afterOpen: (r) => {
+          this.ui.openSheet('route', 'medium');
+          this.ui.fitTo(r.points);
+        },
+        toast: (text, action) => this.ui.showToast(text, { action }),
+      },
+      { browser, server: this.caps.projectFolderRoutes ? new ServerRouteStore() : null },
+      storage,
+    );
+  }
+
+  /** Everything that is saved in localStorage, read inside an effect (so it re-runs on every change). */
+  plannerData(): PlannerData {
+    const ui = this.ui;
+    return {
+      version: STATE_VERSION,
+      resort: this.resort?.id ?? this.stored.resort,
+      ...this.route.toData(),
+      routeStorage: this.saved.storage,
+      display: $state.snapshot(this.display) as DisplayData,
+      sections: { ...(ui.sheet ? { sheet: ui.sheet, detent: ui.detent } : {}), routePage: ui.routePage },
+      view: this.mapView,
+    };
+  }
+
+  /** Saves now (also on pagehide). */
+  saveNow(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    if (this.status === 'ready') savePlannerData(this.kv, this.plannerData());
+  }
+
+  scheduleSave(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.saveNow(), 150);
+  }
+
+  private startPersistence(): void {
+    if (this.stopPersist) return;
+    this.stopPersist = $effect.root(() => {
+      $effect(() => {
+        JSON.stringify(this.plannerData()); // track every field
+        this.scheduleSave();
+      });
+    });
+    addEventListener('pagehide', () => this.saveNow());
+  }
+
+  setMapView(view: MapView): void {
+    this.mapView = view;
+    this.scheduleSave();
+  }
+
+  /** Routes the current points now (for saving and sharing: the GPX carries the route name). */
+  async routeNow(name: string) {
+    if (!this.routing) throw new Error('Routing is not ready yet.');
+    const points = this.route.points.map((p) => [p[0], p[1]] as LngLat);
+    return this.routing.call('route', points, $state.snapshot(this.route.options), name.slice(0, 120));
+  }
+
+  /** Share GPX (iPhone share sheet) or download it (desktop). */
+  async shareGpx(): Promise<void> {
+    if (this.route.points.length < 2 || !this.resort) return;
+    try {
+      const name = this.route.routeName.trim() || `${this.resort.name} route`;
+      const r = await this.routeNow(name);
+      await shareFile(new Blob([r.gpx], { type: 'application/gpx+xml' }), gpxFileName(name), { desktop: this.desktop });
+    } catch (err) {
+      this.ui.showToast(`Could not make the GPX file: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async shareBlob(make: () => Promise<{ blob: Blob; filename: string }>): Promise<void> {
+    try {
+      const { blob, filename } = await make();
+      await shareFile(blob, filename, { desktop: this.desktop });
+    } catch (err) {
+      this.ui.showToast(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /** Switches the resort (keepPoints: a saved route of that resort is being opened). */
+  async switchResort(id: string, keepPoints = false): Promise<void> {
+    const resort = this.data?.info.resorts.find((r) => r.id === id);
+    if (!resort || !this.data || resort.id === this.resort?.id) return;
+    this.settings.setResort(id);
+    this.resort = resort;
+    this.mapView = null;
+    if (!keepPoints) this.route.clear();
+    this.dataVersion++;
+    await this.startRouting(this.data, resort);
   }
 
   async start(): Promise<void> {
@@ -45,6 +181,7 @@ export class AppState {
       if (TARGET === 'desktop') {
         const server = await fetchServerCapabilities();
         this.caps = mergeServerCapabilities(this.caps, server);
+        if (this.caps.projectFolderRoutes) this.saved = this.makeSaved(this.stored.routeStorage);
         if (!server.data) throw new Error(server.dataError ?? 'The desktop server has no map data. Run npm run build first.');
         await this.useData(new ServerDataSource(server.data, location.origin));
       } else {
@@ -67,12 +204,22 @@ export class AppState {
   }
 
   private async useData(ds: DataSource): Promise<void> {
-    const resort = ds.info.resorts.find((r) => r.id === this.settings.resortId) ?? ds.info.resorts[0];
+    const wanted = this.settings.resortId ?? this.stored.resort;
+    const resort = ds.info.resorts.find((r) => r.id === wanted) ?? ds.info.resorts[0];
     if (!resort) throw new Error('The data has no resorts.');
+    // points, view and saved-route link belong to the stored resort
+    if (this.stored.resort && this.stored.resort !== resort.id) {
+      this.route.points = [];
+      this.route.unlinkSaved();
+    }
+    if (this.mapView && this.mapView.resort !== resort.id) this.mapView = null;
+    this.stored = { ...this.stored, resort: resort.id };
     this.data = ds;
     this.resort = resort;
     this.dataVersion++;
     this.status = 'ready';
+    this.startPersistence();
+    void this.saved.load();
     await this.startRouting(ds, resort);
   }
 
@@ -80,6 +227,7 @@ export class AppState {
     this.stopWorker?.();
     this.routingReady = false;
     this.route.setRouter(null);
+    this.route.setNamer(null);
     const { client, terminate } = startRoutingWorker();
     this.routing = client;
     this.stopWorker = terminate;
@@ -101,6 +249,15 @@ export class AppState {
     this.loadInfo = { ...info, timings: { ...t, totalMs: Math.round(performance.now() - t0) } };
     this.routingReady = true;
     this.route.setRouter((points, options) => client.call('route', points, options));
+    this.route.setNamer(async (p) => {
+      const hit = await client.call('nearest', p);
+      return hit && hit.distance <= NAME_DISTANCE && hit.names.length ? hit.names[0] : null;
+    });
+  }
+
+  /** Sheet detent changes (persisted with the state). */
+  setDetent(d: Detent): void {
+    this.ui.detent = d;
   }
 
   /** Imports a data ZIP (file picker or the dev "Load data from build/" button). */

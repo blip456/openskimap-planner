@@ -7,15 +7,23 @@
   import GlassButton from './ui/GlassButton.svelte';
   import PlanButton from './ui/PlanButton.svelte';
   import ModePill from './ui/ModePill.svelte';
+  import UndoRedo from './ui/UndoRedo.svelte';
   import BottomSheet from './ui/BottomSheet.svelte';
-  import RouteSheet from './ui/RouteSheet.svelte';
+  import SheetHeader from './ui/SheetHeader.svelte';
+  import RouteHeader from './ui/route/RouteHeader.svelte';
+  import RouteBody from './ui/route/RouteBody.svelte';
+  import SavedHeader from './ui/saved/SavedHeader.svelte';
+  import SavedBody from './ui/saved/SavedBody.svelte';
   import CreditLine from './ui/CreditLine.svelte';
   import Toast from './ui/Toast.svelte';
+  import { isTyping, shortcutFor } from './lib/keyboard.ts';
 
   const app = new AppState();
+  // test hook for the Playwright tests (?e2e), like window.__map in MapView
+  if (new URLSearchParams(location.search).has('e2e')) (window as Window & { __app?: AppState }).__app = app;
   const route = app.route;
   const ui = app.ui;
-  const desktop = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const desktop = app.desktop;
 
   let DevOverlay = $state<Component<{ app: AppState }> | null>(null);
   let innerHeight = $state(800);
@@ -38,22 +46,41 @@
     hadResult = has;
   });
 
-  const sheetTitles = { route: 'Route', saved: 'Saved routes', map: 'Map' } as const;
-  // map padding = the part of the map covered by the medium sheet (its top is at 47.5 % of the height)
-  const bottomPadding = $derived(ui.sheet ? Math.round(innerHeight * 0.525) : 0);
+  // map padding = the part of the map covered by the sheet at the medium detent (spec §2.9). At the large detent
+  // the sheet covers the map anyway; the padding stays at the medium value so the camera does not jump.
+  const bottomPadding = $derived.by(() => {
+    if (!ui.sheet) return 0;
+    const mediumTop = ui.detent === 'medium' && ui.sheetTop !== null ? ui.sheetTop : Math.round(innerHeight * 0.475);
+    return Math.max(0, innerHeight - mediumTop);
+  });
 
   function onkeydown(e: KeyboardEvent) {
-    const t = e.target as HTMLElement | null;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-    if (app.status !== 'ready' || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === 'p' || e.key === 'P') route.togglePlanMode();
-    else if (e.key === 'Escape') {
-      if (ui.sheet) ui.closeSheet();
+    if (app.status !== 'ready') return;
+    const action = shortcutFor(e, isTyping(e.target));
+    if (!action) return;
+    e.preventDefault();
+    if (action === 'undo') route.undo();
+    else if (action === 'redo') route.redo();
+    else if (action === 'plan') route.togglePlanMode();
+    else if (action === 'escape') {
+      if (ui.sheet) closeSheet();
       else route.togglePlanMode(false);
     }
   }
 
-  const soon = (what: string, phase: number) => ui.showToast(`${what} comes in phase ${phase}.`);
+  function closeSheet() {
+    ui.closeSheet();
+    ui.profileCursor = null;
+    ui.setHighlight(null);
+  }
+
+  function markerTap(i: number) {
+    ui.openSheet('route');
+    ui.routePage = 'main';
+    ui.flash(i);
+  }
+
+  const soon = (what: string) => ui.showToast(`${what} comes in the next update.`);
 </script>
 
 <svelte:window bind:innerHeight {onkeydown} />
@@ -69,11 +96,32 @@
   <NoData {app} />
 {:else if app.data && app.resort}
   {#key app.dataVersion}
-    <MapView ds={app.data} resort={app.resort} {route} {bottomPadding} onmarkertap={() => ui.openSheet('route')} />
+    <MapView
+      ds={app.data}
+      resort={app.resort}
+      {route}
+      {ui}
+      display={app.display}
+      {bottomPadding}
+      initialView={app.mapView}
+      onview={(v) => app.setMapView(v)}
+      onmarkertap={markerTap}
+      onmaptap={() => {
+        if (ui.sheet && ui.detent === 'large') {
+          ui.detent = 'medium';
+          return true;
+        }
+        return false;
+      }}
+    />
   {/key}
 
   <div class="top-left">
-    <GlassButton icon="menu" label="Menu" onclick={() => soon('The settings menu', 4)} />
+    <GlassButton icon="menu" label="Menu" onclick={() => soon('The settings menu')} />
+  </div>
+  <!-- top-right row: undo/redo, then the 3D capsule (phase 4b) -->
+  <div class="top-right">
+    <UndoRedo canUndo={route.canUndo} canRedo={route.canRedo} onundo={() => route.undo()} onredo={() => route.redo()} {desktop} />
   </div>
 
   {#if route.planMode}
@@ -82,31 +130,45 @@
     </div>
   {/if}
 
-  <div class="controls" class:on-sheet={ui.sheet !== null}>
+  <div class="controls" class:on-sheet={ui.sheet !== null} class:under-large={ui.sheet !== null && ui.detent === 'large'}>
     <PlanButton on={route.planMode} {desktop} ontoggle={() => route.togglePlanMode()} />
-    <GlassButton icon="navigation" label="Show my location" onclick={() => soon('My location', 6)} />
+    <GlassButton icon="navigation" label="Show my location" onclick={() => soon('My location')} />
   </div>
 
   {#if !ui.sheet}<CreditLine />{/if}
 
   {#if ui.sheet}
     <BottomSheet
-      title={sheetTitles[ui.sheet]}
-      subtitle={ui.sheet === 'route' ? app.resort.name : undefined}
-      onclose={() => ui.closeSheet()}
+      detent={ui.detent}
+      labelledby="sheet-title"
+      ondetent={(d) => (ui.detent = d)}
+      onsettle={(top) => (ui.sheetTop = top)}
+      onclose={closeSheet}
+      scrollKey={`${ui.sheet}:${ui.routePage}`}
     >
+      {#snippet header()}
+        {#if ui.sheet === 'route'}
+          <RouteHeader {app} onclose={closeSheet} />
+        {:else if ui.sheet === 'saved'}
+          <SavedHeader {app} onclose={closeSheet} />
+        {:else}
+          <SheetHeader title="Map" onclose={closeSheet} />
+        {/if}
+      {/snippet}
       {#if ui.sheet === 'route'}
-        <RouteSheet {route} {desktop} />
+        {#key ui.routePage}<RouteBody {app} />{/key}
+      {:else if ui.sheet === 'saved'}
+        <SavedBody {app} />
       {:else}
-        <p class="later">This panel comes in phase 4.</p>
+        <p class="later">The map options come in the next update.</p>
       {/if}
     </BottomSheet>
   {/if}
 
-  <TabBar open={ui.sheet} onselect={(id) => ui.toggleSheet(id)} onsearch={() => soon('Search', 4)} />
+  <TabBar open={ui.sheet} onselect={(id) => (ui.sheet === id ? closeSheet() : ui.openSheet(id))} onsearch={() => soon('Search')} />
 {/if}
 
-{#if ui.toast}<Toast text={ui.toast} />{/if}
+{#if ui.toast}<Toast toast={ui.toast} ondone={() => ui.hideToast()} />{/if}
 {#if DevOverlay}<DevOverlay {app} />{/if}
 
 <style>
@@ -133,6 +195,14 @@
     z-index: var(--z-controls);
     top: var(--controls-top);
     left: calc(var(--edge) + var(--safe-left));
+  }
+  .top-right {
+    position: fixed;
+    z-index: var(--z-controls);
+    top: var(--controls-top);
+    right: calc(var(--edge) + var(--safe-right));
+    display: flex;
+    gap: 8px;
   }
   /* mode pill: centred in the width left of the compass column (spec §2.5) */
   .mode-row {
@@ -162,11 +232,16 @@
   .controls > :global(*) {
     pointer-events: auto;
   }
-  /* at the medium detent the Plan and Locate buttons ride 16 px above the sheet (spec §2.9); on wide screens the
-   * sheet (max 560 px, centred) leaves them free */
+  /* at the medium detent the Plan and Locate buttons ride 16 px above the sheet and fade out towards the large
+   * detent (spec §2.9); on wide screens the sheet (max 560 px, centred) leaves them free */
   @media (max-width: 899px) {
     .controls.on-sheet {
-      bottom: calc(100% - var(--sheet-medium-top) + 16px);
+      bottom: auto;
+      top: calc(var(--sheet-y, var(--sheet-medium-top)) - 16px - var(--ctl));
+      opacity: calc(1 - 2 * var(--sheet-progress, 0));
+    }
+    .controls.under-large {
+      visibility: hidden;
     }
   }
   .later {
