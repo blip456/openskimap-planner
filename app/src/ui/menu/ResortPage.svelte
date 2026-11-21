@@ -29,4 +29,8 @@
     </button>
   {/each}
 </div>
-<p class="grp-f">To add a resort, add it to resorts.json, build a new data file with it{app.caps.importData ? ' and import it' : ''}.</p>
+<p class="grp-f">
+  To add a resort, add it to resorts.json, build a new data file with it{app.caps.importData ? ' and import it' : ''}.{app.caps.regionBuilds
+    ? ' For a data file for your phone, use Settings › Build region.'
+    : ''}
+</p>

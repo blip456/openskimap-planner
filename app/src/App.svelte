@@ -29,6 +29,7 @@
   import UpdatePrompt from './ui/UpdatePrompt.svelte';
   import { layoutFor, toastPlacement } from './lib/stores/ui.svelte.ts';
   import { isTyping, shortcutFor } from './lib/keyboard.ts';
+  import { viewportHeight } from './lib/viewport.ts';
 
   const app = new AppState();
   // test hook for the Playwright tests (?e2e), like window.__map in MapView
@@ -47,7 +48,13 @@
   $effect(() => {
     if (ui.menuOpen && !Menu) void import('./ui/menu/Menu.svelte').then((m) => (Menu = m.default));
   });
-  let innerHeight = $state(800);
+  // desktop "Build region" page: loaded on first use
+  let RegionBuilder = $state<Component<{ app: AppState; onclose: () => void }> | null>(null);
+  $effect(() => {
+    if (ui.regionBuilderOpen && !RegionBuilder) void import('./ui/regions/RegionBuilder.svelte').then((m) => (RegionBuilder = m.default));
+  });
+  /** app height (not window.innerHeight: short in the iOS Home Screen app, see lib/viewport.ts) */
+  let innerHeight = $state(viewportHeight());
   let innerWidth = $state(1280);
   let mapApi: MapApi | null = null;
 
@@ -116,7 +123,7 @@
   });
 
   function onkeydown(e: KeyboardEvent) {
-    if (app.status !== 'ready') return;
+    if (app.status !== 'ready' || ui.regionBuilderOpen) return;
     const action = shortcutFor(e, isTyping(e.target));
     if (!action) return;
     e.preventDefault();
@@ -195,7 +202,7 @@
   }
 
   function toggle3d() {
-    app.display.terrain3d = !app.display.terrain3d;
+    app.set3d(!app.display.terrain3d);
   }
 
   const myLocation = app.location;
@@ -212,7 +219,7 @@
   });
 </script>
 
-<svelte:window bind:innerHeight bind:innerWidth {onkeydown} />
+<svelte:window bind:innerWidth onresize={() => (innerHeight = viewportHeight())} {onkeydown} />
 
 {#snippet menuButton(size: number)}
   <span class="menu-wrap">
@@ -246,7 +253,6 @@
       {myLocation}
       display={app.display}
       basemap={app.basemap}
-      online={app.onlineUsable}
       skiAreas={app.skiAreas}
       {padding}
       hoverEnabled={hoverDevice}
@@ -266,7 +272,11 @@
       onfallback={(msg) => app.onlineFallback(msg)}
       onterrainmissing={() => {
         app.display.terrain3d = false;
-        ui.showToast('3D needs terrain data. Turn on online mode or build the data with terrain.');
+        ui.showToast(
+          app.onlineUsable
+            ? '3D needs terrain data. Build the map data with terrain, or pick an online map.'
+            : '3D needs terrain data. Build the map data with terrain.',
+        );
       }}
       onready={(api) => (mapApi = api)}
     />
@@ -400,6 +410,8 @@
 
   {#if ui.menuOpen && Menu}<Menu {app} popover={ui.wide && !ui.landscape} />{/if}
 {/if}
+
+{#if ui.regionBuilderOpen && RegionBuilder}<RegionBuilder {app} onclose={() => (ui.regionBuilderOpen = false)} />{/if}
 
 {#if showUpdate && app.status !== 'no-data'}<UpdatePrompt {placement} onreload={() => app.applyUpdate()} onlater={() => (updateLater = true)} />{/if}
 {#if ui.toast}<Toast toast={ui.toast} ondone={() => ui.hideToast()} {placement} shift={showUpdate && app.status !== 'no-data' ? 52 : 0} />{/if}

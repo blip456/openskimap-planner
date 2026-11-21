@@ -5,7 +5,11 @@
 //   npm run build:pwa-data z12        build the data at zoom 12 first (if build/ has another zoom), then pack
 //   npm run build:pwa-data -- --terrain-zoom=15 --basemap-zoom=14 --yes
 //
-// Output: build/pwa/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip (no compression, ZIP64 when needed).
+//   npm run build:pwa-data -- --region=region.json --out=build/regions/x   build one region (always a fresh build
+//                                     into its own folder; see scripts/lib/region.mjs), then pack it
+//
+// Output: build/pwa/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip, or build/pwa/<region id>-YYYY-MM-DD-z<N>.zip for a
+// region (no compression, ZIP64 when needed). The last line is "Done: <path of the ZIP>".
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -21,14 +25,17 @@ import { buildSearchIndex } from '../packages/core/src/search.ts';
 import { buildSkiAreas } from '../packages/core/src/ski-areas.ts';
 import { tileRange } from '../packages/core/src/geo.ts';
 import { buildBasemapStyle, buildOverlayStyle } from '../packages/core/src/styles/index.ts';
+import { RegionError, regionZipPrefix, validateRegion } from './lib/region.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const BUILD = path.join(ROOT, 'build');
-const PLANNER = path.join(BUILD, 'planner');
-const TILES = path.join(BUILD, 'tileserver/data');
+// set in main() from --out (region builds have their own folder); fonts and sprites are always shared in build/
+let OUT = BUILD;
+let PLANNER = path.join(BUILD, 'planner');
+let TILES = path.join(BUILD, 'tileserver/data');
+let INFO = path.join(BUILD, 'build-info.json');
 const FONTS = path.join(BUILD, 'tileserver/fonts');
 const SPRITES = path.join(BUILD, 'tileserver/sprites');
-const INFO = path.join(BUILD, 'build-info.json');
 const SPRITE_FILES = ['light.json', 'light.png', 'light@2x.json', 'light@2x.png'];
 
 const t0 = Date.now();
@@ -71,7 +78,7 @@ async function collectLabelRanges(plannerData, bboxes, language) {
     for (const t of iter) texts.add(t);
   };
   for (const data of plannerData) add(labelStrings(data, accept));
-  const skiDir = path.join(BUILD, 'work/ski');
+  const skiDir = path.join(OUT, 'work/ski');
   if (fs.existsSync(skiDir)) {
     for (const f of fs.readdirSync(skiDir).filter((n) => n.endsWith('.geojson'))) {
       add(labelStrings(JSON.parse(fs.readFileSync(path.join(skiDir, f), 'utf8')), accept));
@@ -113,7 +120,25 @@ async function main() {
   const config = readJson(path.join(ROOT, 'resorts.json'));
   const settings = config?.settings ?? {};
 
-  const reason = buildNeeded(args, settings);
+  let region = null;
+  if (args.region) {
+    try {
+      region = validateRegion(readJson(path.resolve(args.region)));
+    } catch (err) {
+      if (err instanceof RegionError) throw new Error(`Region file ${args.region}: ${err.message}`);
+      throw err;
+    }
+    if (!args.out) throw new Error('--region needs --out=<folder> too (a region is built into its own folder).');
+  }
+  if (args.out) {
+    OUT = path.resolve(args.out);
+    PLANNER = path.join(OUT, 'planner');
+    TILES = path.join(OUT, 'tileserver/data');
+    INFO = path.join(OUT, 'build-info.json');
+  }
+
+  // a region is always built fresh (its box or zoom may have changed); the shared caches keep this fast
+  const reason = region ? `region "${region.name}"` : buildNeeded(args, settings);
   if (reason) {
     log(`Running the data build first: ${reason}`);
     await runBuild(process.argv.slice(2));
@@ -189,7 +214,7 @@ async function main() {
 
   const outDir = path.join(BUILD, 'pwa');
   fs.mkdirSync(outDir, { recursive: true });
-  const outFile = path.join(outDir, zipFileName(buildDate, info.zoom.terrain));
+  const outFile = path.join(outDir, zipFileName(buildDate, info.zoom.terrain, region ? regionZipPrefix(region) : undefined));
   log(`Writing ${path.relative(ROOT, outFile)}…`);
   const result = await writeZip(outFile, entries);
 

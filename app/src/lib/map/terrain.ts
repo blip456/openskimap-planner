@@ -1,20 +1,21 @@
-// 3D terrain (old planner applyTerrain): its own elevation source (sharing the hillshade's lowers the quality),
-// from the local terrain, or Mapterhorn online as a fallback in online mode.
+// 3D terrain (old planner applyTerrain): its own elevation source (sharing the hillshade's lowers the quality), a
+// copy of the style's elevation source: the imported terrain on the offline ski map, Mapterhorn online on the online
+// maps. The offline ski map never goes online.
 import type { Map as MlMap, RasterDEMSourceSpecification } from 'maplibre-gl';
-import { ONLINE_DEM } from './basemaps.ts';
+import { TERRAIN_LAYERS } from './basemaps.ts';
 
-/** Turns 3D on or off. Returns false when 3D is wanted but there is no elevation data (offline, no terrain). */
-export function applyTerrain(map: MlMap, on: boolean, online: boolean): boolean {
+/** Turns 3D on or off. Returns false when 3D is wanted but the style has no elevation data. */
+export function applyTerrain(map: MlMap, on: boolean): boolean {
   try {
     if (!on) {
       if (map.getTerrain()) map.setTerrain(null);
       return true;
     }
     if (!map.getSource('terrain-3d')) {
-      const local = map.getStyle().sources?.terrain ?? map.getStyle().sources?.dem;
-      const src = local?.type === 'raster-dem' ? { ...local } : online ? { ...ONLINE_DEM } : null;
-      if (!src) return false;
-      map.addSource('terrain-3d', src as RasterDEMSourceSpecification);
+      const sources = map.getStyle().sources ?? {};
+      const src = sources.terrain ?? sources.dem;
+      if (src?.type !== 'raster-dem') return false;
+      map.addSource('terrain-3d', { ...src } as RasterDEMSourceSpecification);
     }
     map.setTerrain({ source: 'terrain-3d', exaggeration: 1.2 });
     map.setSky({
@@ -29,5 +30,12 @@ export function applyTerrain(map: MlMap, on: boolean, online: boolean): boolean 
   } catch {
     // the style is still loading; style.load applies it again
     return true;
+  }
+}
+
+/** Shows or hides the hillshading and contour lines (hidden layers load no tiles). */
+export function showTerrainLayers(map: MlMap, on: boolean): void {
+  for (const id of TERRAIN_LAYERS) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
   }
 }

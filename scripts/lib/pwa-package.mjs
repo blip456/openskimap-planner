@@ -1,7 +1,8 @@
 // Pure helpers for build-pwa-data.mjs (kept separate so they can be tested): zip name, manifest, font stacks.
 import { MANIFEST_FORMAT_VERSION } from '../../packages/core/src/data-package.ts';
 
-export const zipFileName = (date, terrainZoom) => `openskimap-data-${date}-z${terrainZoom}.zip`;
+/** build/pwa/<prefix>-YYYY-MM-DD-z<terrain zoom>.zip; region builds use the region id as the prefix. */
+export const zipFileName = (date, terrainZoom, prefix = 'openskimap-data') => `${prefix}-${date}-z${terrainZoom}.zip`;
 
 const EXPRESSION_OPS = new Set(['get', 'case', 'literal', '==', '<=', '>=', '<', '>', 'coalesce', 'has', 'any', 'all', '!', 'format', 'match', 'step', 'interpolate', 'let', 'var', 'to-string']);
 const isFontList = (v) => Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === 'string') && !EXPRESSION_OPS.has(v[0]);

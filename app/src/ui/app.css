@@ -16,6 +16,23 @@ body {
   position: fixed;
   inset: 0;
 }
+/* iOS 26+ Home Screen app (black-translucent status bar): the page is moved up under the status bar, but the viewport
+ * stays short by the status bar height, which left an empty strip at the bottom. 100vh is the full screen there; the
+ * body takes it and becomes the containing block of the fixed layers (map, buttons, sheets), so they reach the bottom.
+ * iOS also draws a fade over the status bar that reaches below it: the top map buttons move down out of it. */
+@media (display-mode: standalone) {
+  html,
+  body {
+    height: 100vh;
+  }
+  body {
+    bottom: auto;
+    contain: layout;
+  }
+  :root {
+    --controls-top: calc(var(--safe-top) + 22px); /* tokens.css: safe-top + 6 */
+  }
+}
 button,
 nav,
 .glass {

@@ -7,6 +7,7 @@
   import { onMount, type Snippet } from 'svelte';
   import type { Detent } from '../lib/stores/ui.svelte.ts';
   import { chooseDetent } from './sheet-physics.ts';
+  import { viewportHeight } from '../lib/viewport.ts';
 
   let {
     detent,
@@ -39,7 +40,7 @@
 
   let el: HTMLDivElement;
   let body: HTMLDivElement;
-  let vh = $state(typeof innerHeight === 'number' ? innerHeight : 800);
+  let vh = $state(viewportHeight());
   /** top of the large detent (safe-top + 8), measured */
   let largeTop = $state(8);
   /** current translateY; null until measured */
@@ -57,7 +58,7 @@
   const largeLook = $derived(progress > 0.5);
 
   function measure() {
-    vh = innerHeight;
+    vh = viewportHeight();
     largeTop = el.offsetTop; // a fixed element: from the top of the viewport, without the transform
   }
 

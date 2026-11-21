@@ -272,3 +272,15 @@ wrong assumption. Format:
   once (`SwipeRow` guard + `SavedState.delete` ignores a second delete of the same route); unit test "a second delete
   of the same route while the first runs is ignored" (fails without the guard). Failure screenshots are now kept
   (`screenshot: 'only-on-failure'` in the Playwright config).
+
+## 2026-11-21 · after phase 8 · a manual test ZIP broke the real-data test
+- **What happened:** `app/test/real-data.test.ts` (which always picks the newest `.zip` in `build/pwa/`) failed on
+  `engine.search('Nebelhorn')` returning 0 results.
+- **Root cause:** a previous manual test of the new "Build region" page had built a small region ZIP
+  (`test-ifen-box-…zip`) straight into `build/pwa/` and never cleaned it up. It was newer than the real Oberstdorf
+  ZIP, so the test picked it up instead; that small test box has no Nebelhorn ski area.
+- **Prevention:** every region build's ZIP lands in `build/pwa/` by design (`server/region-builds.mjs`), the same
+  folder as the main build's ZIP, so the page can list/download it and the dev "Load data from build/" button can
+  find it too. After trying a region build by hand, delete its ZIP (and `build/regions/<id>/`) when done. Before
+  trusting `real-data.test.ts`'s failure as a code bug, check `ls -la build/pwa/` for anything that isn't the
+  expected build's ZIP — the test always picks the newest one.

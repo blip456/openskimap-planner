@@ -414,3 +414,56 @@ Full spec: `docs/design/spec.md`, tokens: `docs/design/tokens.css`, mockups: `do
   with `E2E_ALL_SHOTS=1` (they are a record of how the app looked then, and rewriting them made git noisy). A shared
   imported-data fixture was not done: an import takes about 1 s, and OPFS belongs to one browser context.
 - **Removed** the unused `app/src/ui/RouteSheet.svelte` (phase 3 leftover, not imported anywhere).
+
+## 2026-11-21 · after phase 7 · Terrain switch and terrain per base map (owner request)
+- **Terrain switch** (Map sheet › Terrain, `display.terrain`, default on): hides everything from the Mapterhorn
+  elevation tiles: hillshading and contour lines (layer visibility, `TERRAIN_LAYERS`) and 3D. Terrain off also switches
+  3D off; switching 3D on (switch or map button) turns Terrain on again (`AppState.setTerrain` / `set3d`).
+- **Terrain per base map:** the offline ski map only uses the imported terrain and never goes online (3D used to fall
+  back to Mapterhorn online in online mode). OpenFreeMap and OpenSnowMap always use Mapterhorn online. 3D copies the
+  elevation source of the current style. `demSource(basemap, hasLocalTerrain)`.
+- **Base map rows show their sources** ("OpenSkiData + Protomaps, from your map data", …); "OpenFreeMap + pistes" is
+  now "OpenFreeMap". No online "Ski map": Protomaps has no free online tile service without an API key (owner chose
+  to skip it).
+
+## 2026-11-21 · after phase 7 · iOS 26+ Home Screen app: bottom strip and status bar fade (owner request)
+- **Bottom strip:** with `black-translucent` + `viewport-fit=cover`, iOS 26+ moves the page up under the status bar
+  but keeps the viewport (and `innerHeight`) short by the status bar height: an empty strip at the bottom. In
+  `display-mode: standalone`, `html, body` get `height: 100vh` (the full screen there) and the body gets
+  `contain: layout`, so it is the containing block of all fixed layers. JS heights (sheet detents, map padding) use
+  `lib/viewport.ts` (`max(body.clientHeight, innerHeight)`), not `innerHeight`.
+- **Status bar fade:** iOS 26.1+ draws its own fade over the status bar that reaches below it and cannot be removed
+  (WebKit 317153, 325807). The owner kept the map under the status bar; in standalone `--controls-top` is
+  safe-top + 22 (was + 6) so the top buttons sit below the fade. Override in app.css (tokens.css stays the designer
+  file). Only checkable on a real iPhone, from the Home Screen.
+
+## 2026-11-21 · after phase 8 · "Build region" (owner request, agreed in planning before implementation)
+Not part of `docs/pwa-plan.md`; agreed with the owner in a planning conversation first (see progress.md handover for
+the full exchange). One ZIP per region; switching phones means clearing data and importing a new ZIP (no multi-region
+support on the phone — out of scope, as agreed).
+- **A region is a box or a list of ski areas**, never both (`scripts/lib/region.mjs`): `bbox` is built exactly as
+  drawn, no margin; `skiAreas` + `marginKm` works like a `resorts.json` entry today. Resorts (and now regions) can
+  carry an optional `bbox` that skips the ski-area lookup entirely (`scripts/build.mjs` `resolveResorts`).
+- **Runs/lifts are never cut at the box edge** (owner's answer): a run or lift that touches the box is kept whole,
+  even past the edge, over an empty background. Only basemap, terrain, contours and ski tiles are clipped to the box.
+- **One build at a time, server-side lock** (`server/region-builds.mjs`): a second `POST /api/builds` while one runs
+  is refused; `DELETE` sends SIGTERM then SIGKILL after a grace period. Build runs as a child process
+  (`scripts/build-pwa-data.mjs --region=<file> --out=build/regions/<id>`), stdout/stderr lines plus the `\r` progress
+  bar are kept in a ring buffer and polled by the page (`GET /api/builds/current`), not SSE — simpler, and the page
+  already polls for other things.
+- **Save or one-off, asked at Build time** (owner's answer): clicking Build always asks; "Save and build" writes
+  `regions.json` (created on first save) before starting, "Build once" starts without saving anything. Saved regions
+  get Rebuild/Delete in the page.
+- **`regions.json` and `build/regions/<id>/` are never read by the desktop app itself** (owner's answer: no need to
+  open a region build on desktop). The main `build/` and the desktop's own data are untouched by a region build;
+  downloads, extract caches, fonts and sprites stay shared so a region build is fast after the first one.
+- **`GET /api/skiareas/search`** matches accents/case-insensitively and ranks downhill areas and name-prefix matches
+  first, read from the already-downloaded `build/downloads/ski_areas.geojson` (no extra network call).
+- **Feature flag `PLANNER_REGION_BUILDS`** (default on) lets the server turn this off; `capabilities().regionBuilds`
+  tells the page whether to show the menu row. Desktop-only: the page is lazy-loaded (`import()`), and
+  `scripts/e2e.mjs` already fails the production build if dev-only code leaks in, which doubles as a check that this
+  page (desktop menu only, not loaded by the PWA at all) never reaches the phone bundle.
+- **No automated test runs a real build.** `server/test/region-builds.test.mjs` and `scripts/test/region.test.mjs`
+  use a fake build script (prints the same log shape, no tippecanoe/GDAL/network). The desktop page itself
+  (`app/src/ui/regions/RegionBuilder.svelte`) has `data-testid` hooks but no Playwright spec yet — see progress.md
+  open issues.

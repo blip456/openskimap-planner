@@ -12,6 +12,7 @@
 | 7 Liquid Glass UI + responsive | done, waiting for commit and the owner's iPhone review (`docs/agents/iphone-test-phase7.md`) |
 | 8 Docs | done, waiting for commit |
 | Design | spec done (`docs/design/`) |
+| Build region (owner request, after phase 8) | done, waiting for commit |
 
 ## Handover entries
 
@@ -556,3 +557,65 @@ exact iOS blue even if it is a bit harder to read?
   entry for a Home Screen app on a real iPhone is not checked. The guide also mentions Motion & Fitness for the
   compass, which is not verified on a real device.
 - Vercel steps are written from `vercel.json`, not tried on Vercel.
+
+### 2026-11-21 · after phase 8 · senior engineer · "Build region" (owner request)
+A planning session (not written to `docs/pwa-plan.md`, since this came after it) agreed the design directly with the
+owner: a desktop-only page to build a single-region ZIP, either by drawing a box or by searching a ski area, with an
+explicit "save for later rebuild, or build once" choice. That session's implementation got interrupted partway
+through; this entry picks it up, finds it essentially complete, verifies it, and closes it out. See decisions.md
+("after phase 8 · Build region") for the agreed design and the deviations recorded during planning.
+
+**Done (found already written, then verified and fixed)**
+- `scripts/lib/region.mjs`: pure region helpers (box or ski-area-list region, validation, slugify, size estimate),
+  shared by the build and the server.
+- `scripts/build.mjs` / `scripts/build-args.mjs`: `--region=<file> --out=<dir>` builds one region into its own
+  folder; a resort or region `bbox` skips the ski-area lookup and is built exactly as drawn (no margin); runs/lifts
+  touching the box are kept whole past the edge; downloads and extract caches stay shared in `build/`.
+  `scripts/build-pwa-data.mjs` / `scripts/lib/pwa-package.mjs`: the ZIP is named `<region-id>-<date>-z<N>.zip`.
+- `server/region-builds.mjs` + wiring in `server/server.mjs`: ski-area search, size estimate, `regions.json`
+  read/write (created only on first save), start/poll/cancel a build (one at a time, child process), list/download
+  built ZIPs. Flag `PLANNER_REGION_BUILDS` (default on), reported in `capabilities()`.
+- `app/src/lib/regions/` (`bbox.ts` box/corner maths, `layers.ts` map layers, `api.ts` client) and
+  `app/src/ui/regions/RegionBuilder.svelte`: the "Build region" menu page (draw or search tab, live size estimate,
+  Build → save-or-once dialog → progress log → download link, saved-regions list with Rebuild/Delete, built-ZIPs
+  list). Wired into the menu (`RootPage.svelte`, behind `caps.regionBuilds`) and lazy-loaded from `App.svelte`.
+- `app/src/lib/viewport.ts` was also present (unrelated small fix noted in decisions.md "iOS 26+ … bottom strip",
+  already finished and documented by an earlier session).
+
+**What I did this session**
+- Found a leftover manual test run from the interrupted session: `build/pwa/test-ifen-box-2026-11-21-z12.zip` and
+  `build/regions/test-ifen-box/` (not in git, not in `regions.json` — a one-off build, never saved). It was newer
+  than the real Oberstdorf ZIP, so `app/test/real-data.test.ts` (which always picks the newest ZIP in `build/pwa/`)
+  picked it up and failed on `engine.search('Nebelhorn')`, since that small test box doesn't include Nebelhorn.
+  Deleted both; `npm test` is green again (194 app tests, no change to the test itself needed).
+  **Lesson added** to `docs/agents/lessons.md`.
+- Found two leftover dev processes from the interrupted session (`node server/server.mjs`, `vite --mode desktop`,
+  started hours earlier) still bound to ports 8081/5173, serving the *old* `server.mjs` (no `regionBuilds` in
+  `/api/capabilities`). Stopped them and started a fresh `npm run dev:desktop` so the current code is what runs.
+- Manually verified the full page in a real (headless) Chromium session against the dev server, since this UI had
+  never been run before: open Menu → Build region → Search tab → "Nebelhorn" returns the real ski area → picking it
+  shows the size estimate ("About 4 × 4 km… roughly 5 MB")  → Draw tab → dragging on the map produces a bbox field →
+  naming the region and clicking Build shows the save/build-once dialog. No console or page errors at any step. Did
+  not run an actual build through the UI (would download real data and run tippecanoe/GDAL for several minutes); the
+  server-side build pipeline itself is already covered by `server/test/region-builds.test.mjs` with a fake build
+  script.
+- Wrote this handover entry and the decisions.md entry; neither existed yet (the interrupted session had implemented
+  the feature but not documented it).
+
+**How to verify**
+- `npm test` (green: 78 core + 37 scripts incl. region helpers + 29 server incl. 10 region-build tests + 194 app).
+- `npm run dev:desktop` → Menu → "Build region" → try both tabs; a real build takes a few minutes (downloads +
+  tippecanoe/GDAL) and writes a ZIP into `build/pwa/`.
+
+**Open issues / notes**
+- No Playwright (`app/e2e/`) spec for the Build region page, even though the component already has `data-testid`
+  hooks for one. A full end-to-end test would need to run a real build (slow, needs network + tippecanoe/GDAL) or a
+  stubbed build command injected into the server the way `region-builds.test.mjs` does — the current `app/e2e/`
+  harness has no way to swap the server's build command for a fake one. Left open rather than guessing at a harness
+  change; flagged here instead of adding a test that doesn't really exercise the real build.
+- Not tried against a very large box (the `MAX_SPAN_DEG` / size-estimate refusal path) or against cancelling a
+  real (not fake) build mid-way, since both need a real multi-minute build to reach.
+
+**Questions for the owner:** none blocking. Want an e2e test for this page eventually (with a stubbed build), or is
+the existing unit/integration coverage (region helpers + server with a fake build script) enough, since it's a
+desktop-only tool you use yourself?

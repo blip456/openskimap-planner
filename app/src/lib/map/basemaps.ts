@@ -1,16 +1,16 @@
 // Base maps (docs/pwa-plan.md §6): the Protomaps ski map from the local data always; OpenSnowMap and
 // OpenFreeMap + OpenSkiData pistes only in online mode. Port of the old planner's ONLINE_STYLE and
 // loadOpenFreeMapStyle; the runs and lifts on OpenFreeMap now come from the local ski tiles (pmtiles://ski) instead of
-// the tile server, and the hillshading uses the local terrain when there is one (Mapterhorn online as fallback).
+// the tile server. The offline ski map only uses the imported terrain; the online maps use Mapterhorn online.
 import type { Style, StyleLayer } from '@core/styles/index.ts';
 import type { DisplayData } from '../stores/planner-persist.ts';
 
 export type BasemapId = DisplayData['basemap'];
 
-export const BASEMAPS: readonly { id: BasemapId; label: string; online: boolean }[] = [
-  { id: 'local', label: 'Ski map (offline)', online: false },
-  { id: 'online', label: 'OpenSnowMap', online: true },
-  { id: 'openfreemap', label: 'OpenFreeMap + pistes', online: true },
+export const BASEMAPS: readonly { id: BasemapId; label: string; sources: string; online: boolean }[] = [
+  { id: 'local', label: 'Ski map (offline)', sources: 'OpenSkiData + Protomaps, from your map data', online: false },
+  { id: 'openfreemap', label: 'OpenFreeMap', sources: 'OpenSkiData + OpenFreeMap', online: true },
+  { id: 'online', label: 'OpenSnowMap', sources: 'OpenStreetMap + OpenSnowMap pistes', online: true },
 ];
 
 /** Online base maps need online mode; without it the offline map is used (the choice is kept for later). */
@@ -35,7 +35,7 @@ export const isOnlineUrl = (url: string): boolean => ONLINE_HOSTS.some((h) => ur
 
 export const OPENFREEMAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
-// Online elevation tiles (Mapterhorn): 3D and hillshading when there is no local terrain.
+// Online elevation tiles (Mapterhorn): 3D and hillshading on the online maps.
 export const ONLINE_DEM = {
   type: 'raster-dem',
   tiles: ['https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'],
@@ -54,15 +54,18 @@ const HILLSHADE: StyleLayer = {
   paint: { 'hillshade-exaggeration': 0.3, 'hillshade-shadow-color': '#3d3527' },
 };
 
-/** Elevation source for hillshading / 3D: local terrain first, Mapterhorn only in online mode. */
-export function demSource(hasLocalTerrain: boolean, online: boolean): Record<string, unknown> | null {
-  if (hasLocalTerrain) return { ...LOCAL_DEM };
-  return online ? { ...ONLINE_DEM } : null;
+/** Layers drawn from the elevation tiles (the Terrain switch hides them). */
+export const TERRAIN_LAYERS = ['hillshade', 'contours-minor', 'contours-index', 'contours-label'];
+
+/** Elevation source for hillshading / 3D: the offline ski map only uses the imported terrain, online maps Mapterhorn. */
+export function demSource(basemap: BasemapId, hasLocalTerrain: boolean): Record<string, unknown> | null {
+  if (basemap !== 'local') return { ...ONLINE_DEM };
+  return hasLocalTerrain ? { ...LOCAL_DEM } : null;
 }
 
 /** OpenStreetMap with the transparent piste overlay of OpenSnowMap. */
-export function openSnowMapStyle(hasLocalTerrain: boolean): Style {
-  const dem = demSource(hasLocalTerrain, true)!;
+export function openSnowMapStyle(): Style {
+  const dem = demSource('online', false)!;
   return {
     version: 8,
     name: 'OpenStreetMap + OpenSnowMap',
@@ -95,14 +98,14 @@ export function openSnowMapStyle(hasLocalTerrain: boolean): Style {
  * layers keep their ids, so info cards, "Show" and run colours work as on the ski map.
  * `base` is the OpenFreeMap style JSON, `overlay` the core ski overlay style (with `pmtiles://ski`).
  */
-export function openFreeMapStyle(base: Style, overlay: Style, hasLocalTerrain: boolean): Style {
+export function openFreeMapStyle(base: Style, overlay: Style): Style {
   const style = structuredClone(base);
   const at = (id: string, fallback: number) => {
     const i = style.layers.findIndex((l) => l.id === id);
     return i < 0 ? fallback : i;
   };
   style.name = 'OpenFreeMap + OpenSkiData';
-  style.sources.dem = demSource(hasLocalTerrain, true)!;
+  style.sources.dem = demSource('openfreemap', false)!;
   style.layers.splice(at('water', 0) + 1, 0, structuredClone(HILLSHADE));
   style.sources.ski = overlay.sources.ski;
   const font = labelFont('openfreemap');
@@ -131,7 +134,6 @@ export interface StyleDeps {
   local: () => Style;
   /** the ski overlay (runs + lifts only) for OpenFreeMap */
   overlay: () => Style;
-  hasLocalTerrain: boolean;
   fetch?: typeof fetch;
   /** cached OpenFreeMap style JSON between switches */
   cache?: { openFreeMap?: Style };
@@ -142,7 +144,7 @@ export const NO_NETWORK = 'No internet. Using the offline map.';
 /** The style for a base map. Online maps fall back to the offline map with a message when they cannot load. */
 export async function styleFor(id: BasemapId, deps: StyleDeps): Promise<StyleChoice> {
   if (id === 'local') return { style: deps.local(), used: 'local' };
-  if (id === 'online') return { style: openSnowMapStyle(deps.hasLocalTerrain), used: 'online' };
+  if (id === 'online') return { style: openSnowMapStyle(), used: 'online' };
   try {
     const cache = deps.cache ?? {};
     if (!cache.openFreeMap) {
@@ -150,7 +152,7 @@ export async function styleFor(id: BasemapId, deps: StyleDeps): Promise<StyleCho
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       cache.openFreeMap = (await res.json()) as Style;
     }
-    return { style: openFreeMapStyle(cache.openFreeMap, deps.overlay(), deps.hasLocalTerrain), used: 'openfreemap' };
+    return { style: openFreeMapStyle(cache.openFreeMap, deps.overlay()), used: 'openfreemap' };
   } catch {
     return { style: deps.local(), used: 'local', warning: 'Could not load OpenFreeMap (no internet?). Showing the offline ski map.' };
   }

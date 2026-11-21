@@ -72,7 +72,7 @@ const etagOf = (stat) => `"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).
  * Sends a file with Range, HEAD, ETag/If-None-Match support. Returns false when the file does not exist
  * (the caller sends 404).
  */
-export function sendFile(req, res, file, { cacheControl = 'no-cache', type } = {}) {
+export function sendFile(req, res, file, { cacheControl = 'no-cache', type, headers: extra = {} } = {}) {
   let stat;
   try {
     stat = fs.statSync(file);
@@ -87,6 +87,7 @@ export function sendFile(req, res, file, { cacheControl = 'no-cache', type } = {
     'Cache-Control': cacheControl,
     ETag: etag,
     'Last-Modified': stat.mtime.toUTCString(),
+    ...extra,
   };
 
   // a Range is only honoured when If-Range (if sent) still matches the file

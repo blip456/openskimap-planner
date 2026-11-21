@@ -2,7 +2,8 @@
 // Desktop server for the new app (docs/pwa-plan.md §2, §3). No framework. It serves:
 //   - the desktop build of the app (app/dist-desktop),
 //   - the data files of `npm run build` under /data (PMTiles with HTTP Range, planner JSON, fonts, sprites),
-//   - /api/capabilities, /api/routes* (routes in the project folder), /api/resolve (Google Maps short links).
+//   - /api/capabilities, /api/routes* (routes in the project folder), /api/resolve (Google Maps short links),
+//   - /api/regions*, /api/skiareas, /api/builds*, /api/zips* ("Build region": one data ZIP per region, region-builds.mjs).
 // Routing, search and info cards run in the browser (routing worker); this server does no routing.
 import fs from 'node:fs';
 import http from 'node:http';
@@ -10,6 +11,7 @@ import path from 'node:path';
 import { MIME, safeJoin, sendFile } from './files.mjs';
 import { DEFAULT_FOLDER, RouteStore, StoreError, slug } from './routes-store.mjs';
 import { resolveGoogleLink } from './google-links.mjs';
+import { BuildError, RegionBuilds } from './region-builds.mjs';
 import { SearchError } from '../packages/core/src/search.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -31,7 +33,7 @@ const readJson = (file) => {
 };
 
 /** What the app gets at /api/capabilities (see app/src/lib/platform/index.ts). */
-export function capabilities({ buildDir, tileServerUrl, serverRoutes, projectRoot = ROOT }) {
+export function capabilities({ buildDir, tileServerUrl, serverRoutes, regionBuilds = false, projectRoot = ROOT }) {
   const resorts = readJson(path.join(buildDir, 'planner/resorts.json'));
   const tilesDir = path.join(buildDir, 'tileserver/data');
   const tiles = ['ski', 'basemap', 'terrain', 'contours'].filter((t) => fs.existsSync(path.join(tilesDir, `${t}.pmtiles`)));
@@ -42,6 +44,7 @@ export function capabilities({ buildDir, tileServerUrl, serverRoutes, projectRoo
     tileServerUrl,
     projectFolderRoutes: serverRoutes,
     googleShortLinks: true,
+    regionBuilds,
     data: ok
       ? {
           resorts,
@@ -128,11 +131,13 @@ export function createServer({
   routesDir = path.join(ROOT, 'saved-routes'),
   resolveLink = resolveGoogleLink,
   log = console,
+  /** RegionBuilds instance ("Build region" page), or null to turn it off */
+  regions = null,
 } = {}) {
   let store = null;
   const routeStore = () => (store ??= new RouteStore(routesDir));
 
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     let url;
     try {
       url = new URL(req.url ?? '/', 'http://localhost');
@@ -150,7 +155,12 @@ export function createServer({
       }
 
       if (pathname === '/api/capabilities' && isGet) {
-        return send(res, 200, capabilities({ buildDir, tileServerUrl, serverRoutes }));
+        return send(res, 200, capabilities({ buildDir, tileServerUrl, serverRoutes, regionBuilds: regions !== null }));
+      }
+
+      if (pathname.startsWith('/api/regions') || pathname.startsWith('/api/skiareas') || pathname.startsWith('/api/builds') || pathname.startsWith('/api/zips')) {
+        if (!regions) throw new HttpError(403, 'Region builds are turned off.');
+        return await handleRegions(req, res, url, regions);
       }
 
       if (pathname === '/api/resolve' && isGet) {
@@ -207,24 +217,90 @@ export function createServer({
       if (!path.extname(pathname)) return void sendFile(req, res, path.join(appDir, 'index.html'), { type: MIME['.html'] });
       throw new HttpError(404, 'Not found');
     } catch (err) {
-      if (err instanceof HttpError) return send(res, err.status, { error: err.message });
+      if (err instanceof HttpError || err instanceof BuildError) return send(res, err.status, { error: err.message });
       if (err instanceof StoreError || err instanceof SearchError) return send(res, 400, { error: err.message });
       log.error(err);
       send(res, 500, { error: 'Internal error, see the server console' });
     }
   });
+  if (regions) server.on('close', () => regions.shutdown());
+  return server;
+}
+
+/** /api/regions*, /api/skiareas, /api/builds*, /api/zips* ("Build region" page, desktop only). */
+async function handleRegions(req, res, url, regions) {
+  const { pathname } = url;
+  const method = req.method === 'HEAD' ? 'GET' : req.method;
+
+  if (pathname === '/api/regions/defaults' && method === 'GET') return send(res, 200, regions.defaults());
+  if (pathname === '/api/skiareas' && method === 'GET') return send(res, 200, { results: regions.search(url.searchParams.get('q')) });
+  if (pathname === '/api/regions/estimate' && method === 'POST') return send(res, 200, regions.estimate(await readBody(req)));
+  if (pathname === '/api/regions' && method === 'GET') return send(res, 200, { regions: regions.listRegions() });
+  if (pathname === '/api/regions' && method === 'POST') return send(res, 200, regions.saveRegion(await readBody(req)));
+  const rm = /^\/api\/regions\/([a-z0-9][a-z0-9-]*)$/.exec(pathname);
+  if (rm && method === 'DELETE') {
+    regions.deleteRegion(rm[1]);
+    return send(res, 200, { ok: true });
+  }
+
+  if (pathname === '/api/builds' && method === 'POST') {
+    const body = await readBody(req);
+    return send(res, 200, regions.start(body.region, { save: body.save === true }));
+  }
+  if (pathname === '/api/builds/current' && method === 'GET') return send(res, 200, { build: regions.status(), lines: regions.lines() });
+  if (pathname === '/api/builds/current' && method === 'DELETE') return send(res, 200, regions.cancel());
+  if (pathname === '/api/builds/current/events' && method === 'GET') {
+    // server-sent events: the current status and every output line, then live updates
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+    const write = (type, data) => res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+    write('hello', { build: regions.status(), lines: regions.lines() });
+    const off = regions.subscribe(write);
+    const ping = setInterval(() => res.write(': ping\n\n'), 15000);
+    req.on('close', () => {
+      clearInterval(ping);
+      off();
+    });
+    return;
+  }
+
+  if (pathname === '/api/zips' && method === 'GET') return send(res, 200, { zips: regions.zips() });
+  const zm = /^\/api\/zips\/([^/]+)$/.exec(pathname);
+  if (zm && method === 'GET') {
+    let name;
+    try {
+      name = decodeURIComponent(zm[1]);
+    } catch {
+      throw new HttpError(400, 'Bad file name');
+    }
+    const file = regions.zipFile(name);
+    if (!file || !sendFile(req, res, file, { type: 'application/zip', headers: { 'Content-Disposition': `attachment; filename="${name}"` } })) {
+      throw new HttpError(404, 'Not found');
+    }
+    return;
+  }
+  throw new HttpError(404, 'Not found');
 }
 
 if (import.meta.main) {
   const port = Number(process.env.PORT ?? process.env.DESKTOP_PORT ?? 8081);
   const host = process.env.HOST ?? '127.0.0.1';
   const serverRoutes = !OFF.includes(String(process.env.PLANNER_SERVER_ROUTES ?? '1').toLowerCase());
+  const regionBuilds = !OFF.includes(String(process.env.PLANNER_REGION_BUILDS ?? '1').toLowerCase());
+  const regions = regionBuilds ? new RegionBuilds() : null;
   const server = createServer({
     tileServerUrl: process.env.TILESERVER_URL ?? 'http://localhost:8080',
     serverRoutes,
     routesDir: process.env.ROUTES_DIR ?? path.join(ROOT, 'saved-routes'),
     appDir: process.env.APP_DIR ? path.resolve(process.env.APP_DIR) : undefined,
+    regions,
   });
+  // stop a running region build together with the server
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.on(sig, () => {
+      regions?.shutdown();
+      process.exit(0);
+    });
+  }
   server.listen(port, host, () => {
     console.log(`Desktop server: http://localhost:${port}`);
     if (!fs.existsSync(path.join(ROOT, 'build/planner/resorts.json'))) console.log('No map data yet: run npm run build first.');

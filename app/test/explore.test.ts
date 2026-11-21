@@ -233,11 +233,11 @@ describe('base maps and online mode', () => {
     expect(isOnlineUrl('pmtiles://ski')).toBe(false);
   });
 
-  test('elevation: local terrain first, Mapterhorn only online', () => {
-    expect(demSource(true, false)).toMatchObject({ url: 'pmtiles://terrain' });
-    expect(demSource(false, false)).toBeNull();
-    expect((demSource(false, true) as { tiles: string[] }).tiles[0]).toMatch(/mapterhorn/);
-    expect(openSnowMapStyle(true).sources.dem).toMatchObject({ url: 'pmtiles://terrain' });
+  test('elevation: the offline ski map only uses imported terrain, online maps Mapterhorn online', () => {
+    expect(demSource('local', true)).toMatchObject({ url: 'pmtiles://terrain' });
+    expect(demSource('local', false)).toBeNull();
+    expect((demSource('openfreemap', true) as { tiles: string[] }).tiles[0]).toMatch(/mapterhorn/);
+    expect((openSnowMapStyle().sources.dem as { tiles: string[] }).tiles[0]).toMatch(/mapterhorn/);
   });
 
   test('OpenFreeMap: ski layers from the local ski tiles, OpenFreeMap fonts, hillshade after water', () => {
@@ -251,8 +251,9 @@ describe('base maps and online mode', () => {
       layers: [{ id: 'background' }, { id: 'water' }, { id: 'waterway_line_label' }, { id: 'place' }],
     };
     const overlay = buildOverlayStyle({ bounds: [10, 47, 10.1, 47.1], urls: { tiles: { ski: 'pmtiles://ski' } } });
-    const s = openFreeMapStyle(base, overlay, false);
+    const s = openFreeMapStyle(base, overlay);
     expect(s.sources.ski).toMatchObject({ url: 'pmtiles://ski' });
+    expect((s.sources.dem as { tiles: string[] }).tiles[0]).toMatch(/mapterhorn/);
     expect(s.layers[2].id).toBe('hillshade');
     expect(s.layers.findIndex((l) => l.id === 'ski-runs-downhill')).toBeLessThan(s.layers.findIndex((l) => l.id === 'waterway_line_label'));
     const label = s.layers.find((l) => l.id === 'ski-runs-label') as unknown as { layout: Record<string, unknown> };
@@ -262,7 +263,7 @@ describe('base maps and online mode', () => {
 
   test('styleFor: OpenFreeMap falls back to the offline map when it cannot load', async () => {
     const local = { name: 'local' } as unknown as Style;
-    const deps = { local: () => local, overlay: () => buildOverlayStyle({ bounds: [0, 0, 1, 1] }), hasLocalTerrain: true };
+    const deps = { local: () => local, overlay: () => buildOverlayStyle({ bounds: [0, 0, 1, 1] }) };
     const failed = await styleFor('openfreemap', { ...deps, fetch: async () => Promise.reject(new TypeError('Failed to fetch')) });
     expect(failed.used).toBe('local');
     expect(failed.style).toBe(local);

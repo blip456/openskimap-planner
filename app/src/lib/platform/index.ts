@@ -19,6 +19,8 @@ export interface Capabilities {
   googleShortLinks: boolean;
   /** default for the online-mode switch */
   onlineByDefault: boolean;
+  /** build data ZIPs for other regions ("Build region", desktop server) */
+  regionBuilds: boolean;
 }
 
 /** What the desktop server reports at /api/capabilities. */
@@ -26,6 +28,8 @@ export interface ServerCapabilities {
   tileServerUrl: string | null;
   projectFolderRoutes: boolean;
   googleShortLinks: boolean;
+  /** older servers do not send it */
+  regionBuilds?: boolean;
   data: ServerDataInfo | null;
   /** why data is null (e.g. "Run npm run build first") */
   dataError?: string;
@@ -50,6 +54,7 @@ export function staticCapabilities(target: Target): Capabilities {
         projectFolderRoutes: false,
         googleShortLinks: false,
         onlineByDefault: false,
+        regionBuilds: false,
       }
     : {
         target,
@@ -59,6 +64,7 @@ export function staticCapabilities(target: Target): Capabilities {
         projectFolderRoutes: false,
         googleShortLinks: false,
         onlineByDefault: true,
+        regionBuilds: false,
       };
 }
 
@@ -69,6 +75,7 @@ export function mergeServerCapabilities(base: Capabilities, server: ServerCapabi
     tileServerUrl: server.tileServerUrl,
     projectFolderRoutes: server.projectFolderRoutes,
     googleShortLinks: server.googleShortLinks,
+    regionBuilds: server.regionBuilds === true,
   };
 }
 

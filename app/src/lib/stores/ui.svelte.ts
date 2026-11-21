@@ -42,6 +42,8 @@ export class UiState {
   focusSearch = $state(0);
   menuOpen = $state(false);
   menuPage = $state<MenuPage>('root');
+  /** desktop: the full-screen "Build region" page is open */
+  regionBuilderOpen = $state(false);
   /** map bearing / pitch (compass button) */
   bearing = $state(0);
   pitch = $state(0);

@@ -349,17 +349,19 @@ The **Map** tab has everything about what you see:
     A legend lists the region with its ski areas: hover an entry to highlight it, tap or click it to zoom there.
   - *Route arrows* show which way you are going; *route distances* show how far into the route you are (every
     100 m / 250 m / 500 m / 1 km…, depending on the route length).
-- **Terrain:** *3D terrain* shows the mountains in 3D (also the **3D** button on the map). The map tilts when you
-  switch it on; tilt it with two fingers (or right-click drag / Ctrl + drag). When the map is turned, the **compass**
-  button appears; tap it to point north again. 3D uses the terrain from the built data.
-- **Base map** (online mode only):
-  - *Ski map (offline)*: the map from your built data (Protomaps basemap + runs and lifts). Always available; all
-    map features work with it.
-  - *OpenSnowMap*: OpenStreetMap tiles with the piste overlay of [OpenSnowMap](https://www.opensnowmap.org). Runs
-    and lifts are part of the picture there, so *Show*, *Run colours* and the info cards on runs and lifts are not
-    available. Routing, search and saved routes work as usual.
-  - *OpenFreeMap + pistes*: the [OpenFreeMap](https://openfreemap.org) vector map with the OpenSkiData runs and lifts
-    from your built data on top. Everything works like on the ski map.
+- **Terrain:** *Terrain* shows or hides everything that comes from the Mapterhorn elevation data: hillshading,
+  contour lines and 3D. *3D terrain* shows the mountains in 3D (also the **3D** button on the map); switching it on
+  also turns *Terrain* back on. The map tilts when you switch it on; tilt it with two fingers (or right-click drag /
+  Ctrl + drag). When the map is turned, the **compass** button appears; tap it to point north again. On the offline
+  ski map the terrain comes only from the built data (never online); the online maps use Mapterhorn online.
+- **Base map** (online mode only; each choice shows where its data comes from):
+  - *Ski map (offline)*: OpenSkiData + Protomaps, from your built data. Always available; all map features work with
+    it, and it never goes online.
+  - *OpenFreeMap*: the [OpenFreeMap](https://openfreemap.org) vector map with the OpenSkiData runs and lifts from your
+    built data on top, and Mapterhorn online terrain. Everything works like on the ski map.
+  - *OpenSnowMap*: OpenStreetMap tiles with the piste overlay of [OpenSnowMap](https://www.opensnowmap.org) and
+    Mapterhorn online terrain. Runs and lifts are part of the picture there, so *Show*, *Run colours* and the info
+    cards on runs and lifts are not available. Routing, search and saved routes work as usual.
 
   Without internet the app shows "No internet. Using the offline map." and switches back to the offline map. When
   online mode is turned off, the offline map is used.

@@ -55,7 +55,7 @@ describe('planner state in localStorage', () => {
     expect(data.points).toEqual(legacyState.points);
     expect(data.options.difficulties).toEqual(['novice', 'easy', 'intermediate']);
     expect(data.options.speeds.easy).toBe(16);
-    expect(data.display).toEqual(legacyState.display);
+    expect(data.display).toEqual({ ...legacyState.display, terrain: true }); // the old planner had no Terrain switch
     expect(data.routeStorage).toBe('server');
     expect(data.collapsedLegs).toEqual(['A-B']);
     expect(data.view).toEqual(legacyState.view);
@@ -64,6 +64,12 @@ describe('planner state in localStorage', () => {
     // our key wins once it exists
     savePlannerData(kv, { ...data, routeName: 'New name' });
     expect(loadPlannerData(kv)).toMatchObject({ source: 'stored', data: { routeName: 'New name', version: 1 } });
+  });
+
+  test('Terrain off also means no 3D', () => {
+    const data = cleanPlannerData({ display: { terrain: false, terrain3d: true } });
+    expect(data.display.terrain).toBe(false);
+    expect(data.display.terrain3d).toBe(false);
   });
 
   test('round trip', () => {

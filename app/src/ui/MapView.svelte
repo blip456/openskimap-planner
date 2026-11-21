@@ -30,7 +30,7 @@
   import { addSkiAreaLayers, emphasizeSkiArea, setSkiAreaData, showSkiAreas } from '../lib/map/ski-area-layers.ts';
   import { addSlopeLayer, applyLayerFilter } from '../lib/map/layer-filter.ts';
   import { isOnlineUrl, labelFont, styleFor, type BasemapId, type StyleDeps } from '../lib/map/basemaps.ts';
-  import { applyTerrain } from '../lib/map/terrain.ts';
+  import { applyTerrain, showTerrainLayers } from '../lib/map/terrain.ts';
   import { allInside, boundsOf, coverZoom } from '../lib/map/camera.ts';
   import type { MapApi, Padding } from '../lib/map/types.ts';
   import type { LocationState } from '../lib/stores/location.svelte.ts';
@@ -48,7 +48,6 @@
     explore,
     myLocation,
     basemap = 'local',
-    online = false,
     skiAreas = null,
     padding = { top: 0, right: 0, bottom: 0, left: 0 },
     hoverEnabled = false,
@@ -72,7 +71,6 @@
     myLocation: LocationState;
     /** the base map to show (already gated by online mode) */
     basemap?: BasemapId;
-    online?: boolean;
     skiAreas?: SkiAreas | null;
     /** the parts of the map covered by sheets / the desktop panel */
     padding?: Padding;
@@ -114,7 +112,6 @@
     return {
       local: () => buildMapStyle(ds, resort) as never,
       overlay: () => buildOverlayStyle({ bounds: resort.bbox, urls: { tiles: { ski: 'pmtiles://ski' }, glyphs: ds.glyphsUrl() } }),
-      hasLocalTerrain: ds.info.tiles.includes('terrain'),
       cache: styleCache,
     };
   }
@@ -371,14 +368,20 @@
     turnNorth(m);
   });
 
+  // Terrain switch: hillshading and contour lines (3D is switched off with it, see App)
+  $effect(() => {
+    void styleVersion;
+    if (map && styleReady) showTerrainLayers(map, display.terrain);
+  });
+
   // 3D terrain; switching it on tilts the map, switching it off flattens it again
   let terrainWas: boolean | null = null;
   $effect(() => {
     void styleVersion;
     const m = map;
-    const on = display.terrain3d;
+    const on = display.terrain && display.terrain3d;
     if (!m || !styleReady) return;
-    if (!applyTerrain(m, on, online)) {
+    if (!applyTerrain(m, on)) {
       onterrainmissing?.();
       return;
     }

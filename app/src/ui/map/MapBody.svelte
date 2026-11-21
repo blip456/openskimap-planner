@@ -4,7 +4,7 @@
   import Icon from '../Icon.svelte';
   import Switch from '../Switch.svelte';
   import { SLOPE_CLASSES } from '@core/slope.ts';
-  import { basemapChoices, hasSkiLayers } from '../../lib/map/basemaps.ts';
+  import { BASEMAPS, basemapChoices, hasSkiLayers } from '../../lib/map/basemaps.ts';
   import type { AppState } from '../../lib/app.svelte.ts';
   import type { SkiAreaSummary } from '@core/ski-areas.ts';
 
@@ -148,12 +148,17 @@
   <h3 class="grp-h">Terrain</h3>
   <div class="grp">
     <label class="row tappable">
+      <span class="txt"><span class="t">Terrain</span><span class="s">Hillshading and contour lines</span></span>
+      <Switch checked={d.terrain} onchange={(v) => app.setTerrain(v)} testid="terrain" />
+    </label>
+    <label class="row tappable">
       <span class="txt"><span class="t">3D terrain</span></span>
-      <Switch checked={d.terrain3d} onchange={(v) => (d.terrain3d = v)} testid="terrain-3d" />
+      <Switch checked={d.terrain3d} onchange={(v) => app.set3d(v)} testid="terrain-3d" />
     </label>
   </div>
   <p class="grp-f">
-    Tilts the map to show the mountains. {app.desktop ? 'Tilt with right-click drag or Ctrl + drag.' : 'Tilt with two fingers.'}
+    {app.basemap === 'local' ? 'Terrain from your map data (Mapterhorn).' : 'Terrain from Mapterhorn online.'}
+    3D tilts the map to show the mountains. {app.desktop ? 'Tilt with right-click drag or Ctrl + drag.' : 'Tilt with two fingers.'}
   </p>
 
   <div class="grp-gap"></div>
@@ -162,7 +167,7 @@
     <div class="grp" role="radiogroup" aria-label="Base map" data-testid="basemap-choices">
       {#each basemapChoices(true) as b (b.id)}
         <button type="button" class="row" role="radio" aria-checked={d.basemap === b.id} onclick={() => app.setBasemap(b.id)} data-testid={`basemap-${b.id}`}>
-          <span class="txt"><span class="t">{b.label}</span></span>
+          <span class="txt"><span class="t">{b.label}</span><span class="s">{b.sources}</span></span>
           {#if d.basemap === b.id}<span class="chk"><Icon name="check" size={20} strokeWidth={2.6} /></span>{/if}
         </button>
       {/each}
@@ -176,7 +181,7 @@
     {/if}
   {:else}
     <div class="grp">
-      <div class="row"><span class="txt"><span class="t">Ski map (offline)</span></span><span class="chk"><Icon name="check" size={20} strokeWidth={2.6} /></span></div>
+      <div class="row"><span class="txt"><span class="t">{BASEMAPS[0].label}</span><span class="s">{BASEMAPS[0].sources}</span></span><span class="chk"><Icon name="check" size={20} strokeWidth={2.6} /></span></div>
     </div>
     <p class="grp-f" data-testid="basemap-offline-hint">
       Turn on online mode in <button type="button" class="link" onclick={() => app.ui.openMenu()}>Settings</button> to use online maps.
@@ -185,6 +190,11 @@
 </div>
 
 <style>
+  /* title with a subtitle line under it (terrain switch, base map sources) */
+  .txt > .t,
+  .txt > .s {
+    display: block;
+  }
   .legend {
     display: flex;
     flex-wrap: wrap;

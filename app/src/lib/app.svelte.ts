@@ -176,6 +176,18 @@ export class AppState {
     if (id !== 'local' && !this.network) this.onlineFallback(NO_NETWORK);
   }
 
+  /** Terrain switch: everything from the elevation tiles. 3D needs it, so off also switches 3D off. */
+  setTerrain(on: boolean): void {
+    this.display.terrain = on;
+    if (!on) this.display.terrain3d = false;
+  }
+
+  /** 3D switch / button: switching 3D on also shows the terrain again. */
+  set3d(on: boolean): void {
+    if (on) this.display.terrain = true;
+    this.display.terrain3d = on;
+  }
+
   /** An online map did not load (no internet): tell the user and show the offline map. */
   onlineFallback(message: string): void {
     if (this.onlineFailed) return;

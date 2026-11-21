@@ -26,13 +26,15 @@
     border-radius: var(--r-pill);
     cursor: pointer;
     font: inherit;
+    display: flex;
+    align-items: center;
   }
   .capsule.compact {
     height: 36px;
     padding: 0 12px 0 10px;
   }
   .content {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 6px;
     transition: transform var(--dur-press) var(--spring-press);

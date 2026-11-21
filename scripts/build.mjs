@@ -9,6 +9,10 @@
 //   npm run build -- --terrain-zoom=16 --basemap-zoom=14 --ski-zoom=16   each zoom on its own (overrides z<N>)
 //   npm run build z17 -- --yes        skip the question above zoom 16
 //   Zoom order: long flags > z<N> > resorts.json settings. Extracts are cached per zoom in build/work/.
+//   npm run build -- --region=region.json --out=build/regions/x   one region (scripts/lib/region.mjs) instead of
+//                                     resorts.json, written to its own folder. Downloads, caches, fonts and sprites
+//                                     stay shared in build/. A resort or region with a `bbox` is built exactly as
+//                                     drawn: all runs and lifts that touch the box are kept whole.
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -47,30 +51,11 @@ import {
   parseBuildArgs,
   resolveZoom,
 } from './lib/build-args.mjs';
+import { RegionError, checkBbox, regionToResort, validateRegion } from './lib/region.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 // everything the build creates lives in build/ (safe to delete; `npm run build` recreates it)
 const BUILD = path.join(ROOT, 'build');
-const DIR = {
-  raw: path.join(BUILD, 'downloads'),
-  work: path.join(BUILD, 'work'),
-  tileserver: path.join(BUILD, 'tileserver'),
-  tsData: path.join(BUILD, 'tileserver/data'),
-  fonts: path.join(BUILD, 'tileserver/fonts'),
-  sprites: path.join(BUILD, 'tileserver/sprites'),
-  styles: path.join(BUILD, 'tileserver/styles'),
-  planner: path.join(BUILD, 'planner'),
-};
-
-const OSD_BASE = 'https://tiles.openskimap.org';
-const OSD_FILES = ['ski_areas', 'runs', 'lifts', 'spots'];
-const PROTOMAPS_BUILDS = 'https://build-metadata.protomaps.dev/builds.json';
-const PROTOMAPS_BASE = 'https://build.protomaps.com';
-const MAPTERHORN_BASE = 'https://download.mapterhorn.com';
-const ASSETS_BASE = 'https://raw.githubusercontent.com/protomaps/basemaps-assets/main';
-const FONTSTACKS = ['Noto Sans Regular', 'Noto Sans Medium', 'Noto Sans Italic'];
-const DAY_MS = 24 * 60 * 60 * 1000;
-const BUILD_INFO = path.join(BUILD, 'build-info.json');
 
 let args;
 try {
@@ -81,6 +66,31 @@ try {
   process.exit(2);
 }
 const onlySki = args.only === 'ski';
+
+// output of this build: build/ itself, or the folder of --out (region builds). Downloads, the extract caches, fonts
+// and sprites are always shared in build/.
+const OUT = args.out ? path.resolve(args.out) : BUILD;
+const DIR = {
+  raw: path.join(BUILD, 'downloads'),
+  cache: path.join(BUILD, 'work'),
+  work: path.join(OUT, 'work'),
+  tileserver: path.join(OUT, 'tileserver'),
+  tsData: path.join(OUT, 'tileserver/data'),
+  fonts: path.join(BUILD, 'tileserver/fonts'),
+  sprites: path.join(BUILD, 'tileserver/sprites'),
+  styles: path.join(OUT, 'tileserver/styles'),
+  planner: path.join(OUT, 'planner'),
+};
+
+const OSD_BASE = 'https://tiles.openskimap.org';
+const OSD_FILES = ['ski_areas', 'runs', 'lifts', 'spots'];
+const PROTOMAPS_BUILDS = 'https://build-metadata.protomaps.dev/builds.json';
+const PROTOMAPS_BASE = 'https://build.protomaps.com';
+const MAPTERHORN_BASE = 'https://download.mapterhorn.com';
+const ASSETS_BASE = 'https://raw.githubusercontent.com/protomaps/basemaps-assets/main';
+const FONTSTACKS = ['Noto Sans Regular', 'Noto Sans Medium', 'Noto Sans Italic'];
+const DAY_MS = 24 * 60 * 60 * 1000;
+const BUILD_INFO = path.join(OUT, 'build-info.json');
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -205,9 +215,19 @@ function resolveResorts(config) {
   }
 
   return config.resorts.map((resort) => {
+    if (resort.bbox) {
+      // a drawn box: no ski area lookup and no margin; everything that touches the box is kept
+      let bbox;
+      try {
+        bbox = checkBbox(resort.bbox);
+      } catch (err) {
+        throw new Error(`Resort "${resort.id}": ${err.message}`);
+      }
+      return { ...resort, exactBbox: bbox, ids: new Set(), roughBbox: bbox, margin: 0, skiAreaFeatures: skiAreas };
+    }
     const ids = new Set();
     let rough = emptyBbox();
-    for (const entry of resort.skiAreas) {
+    for (const entry of resort.skiAreas ?? []) {
       let matches;
       if (typeof entry === 'object' && entry.id) {
         matches = skiAreas.filter((f) => f.properties.id === entry.id);
@@ -333,11 +353,18 @@ async function extractResorts(resorts) {
   }
 
   for (const r of resorts) {
-    if (!bboxValid(r.linkedBbox)) throw new Error(`Resort "${r.id}" has no runs or lifts linked to its ski areas.`);
-    r.bbox = roundBbox(bufferBbox(r.linkedBbox, r.margin));
+    if (r.exactBbox) {
+      r.bbox = r.exactBbox;
+    } else {
+      if (!bboxValid(r.linkedBbox)) throw new Error(`Resort "${r.id}" has no runs or lifts linked to its ski areas.`);
+      r.bbox = roundBbox(bufferBbox(r.linkedBbox, r.margin));
+    }
     r.features = {};
     for (const layer of ['runs', 'lifts', 'spots']) {
       r.features[layer] = r.candidates[layer].filter((c) => bboxIntersects(c.bbox, r.bbox)).map((c) => c.feature);
+    }
+    if (r.exactBbox && r.features.runs.length + r.features.lifts.length === 0) {
+      throw new Error(`Resort "${r.id}": there are no runs or lifts in this box. Draw it around a ski area.`);
     }
     assignPistes(r.features.runs);
     r.skiAreaLabels = r.skiAreaFeatures
@@ -354,6 +381,7 @@ async function extractResorts(resorts) {
       });
     delete r.candidates;
     delete r.skiAreaFeatures;
+    delete r.exactBbox;
     const c = r.features;
     log(`  ${r.name}: ${c.runs.length} runs, ${c.lifts.length} lifts, ${c.spots.length} spots, bbox ${r.bbox.join(',')}`);
   }
@@ -581,7 +609,7 @@ async function useCached({ label, out, cache, upToDate, refresh, build }) {
 async function extractBasemap(region, settings, state) {
   const zoom = settings.basemapMaxZoom ?? 15;
   const key = hash([region.hash, zoom]);
-  const cache = path.join(DIR.work, 'basemap', `z${zoom}`, `${region.hash}.pmtiles`);
+  const cache = path.join(DIR.cache, 'basemap', `z${zoom}`, `${region.hash}.pmtiles`);
   const metaFile = `${cache}.json`;
   const changed = await useCached({
     label: `Basemap z${zoom}`,
@@ -643,7 +671,7 @@ async function findHighResPieces(resorts, maxZoom) {
 async function extractTerrain(resorts, region, settings, state) {
   const requested = settings.terrainMaxZoom ?? 14;
   const key = hash([region.hash, requested]);
-  const cache = path.join(DIR.work, 'terrain', `z${requested}`, `${region.hash}.pmtiles`);
+  const cache = path.join(DIR.cache, 'terrain', `z${requested}`, `${region.hash}.pmtiles`);
   const out = path.join(DIR.tsData, 'terrain.pmtiles');
   const changed = await useCached({
     label: `Terrain z${requested}`,
@@ -664,7 +692,7 @@ async function extractTerrain(resorts, region, settings, state) {
         throw new Error('Cancelled. Choose a lower zoom (for example z16) or use --yes.');
       }
 
-      const work = path.join(DIR.work, 'terrain', `tmp-z${requested}`);
+      const work = path.join(DIR.work, `terrain-tmp-z${requested}`);
       fs.rmSync(work, { recursive: true, force: true });
       fs.mkdirSync(work, { recursive: true });
       try {
@@ -692,7 +720,7 @@ async function extractTerrain(resorts, region, settings, state) {
   // old layout: loose parts directly in build/work/terrain (the cache now holds the merged file)
   if (fs.existsSync(cache)) {
     for (const f of ['planet.pmtiles', ...fs.readdirSync(path.dirname(path.dirname(cache))).filter((n) => /^\d+-\d+-\d+\.pmtiles$/.test(n))]) {
-      fs.rmSync(path.join(DIR.work, 'terrain', f), { force: true });
+      fs.rmSync(path.join(DIR.cache, 'terrain', f), { force: true });
     }
   }
   state.terrain = key;
@@ -797,7 +825,7 @@ async function buildContours(resorts, settings, state) {
   await useCached({
     label: 'Contours',
     out,
-    cache: path.join(DIR.work, 'contours-cache', `${key}.pmtiles`),
+    cache: path.join(DIR.cache, 'contours-cache', `${key}.pmtiles`),
     upToDate: state.contours === key,
     refresh: args.refreshBasemap,
     build: (tmp) => buildContoursFile(resorts, interval, index, terrain, tmp),
@@ -998,9 +1026,32 @@ async function writeBuildInfo(requested, state) {
   return info;
 }
 
-async function main() {
+/** resorts.json, or with --region one region with the settings of resorts.json (its own zoom wins). */
+function loadConfig() {
   const config = readJson(path.join(ROOT, 'resorts.json'), null);
-  if (!config?.resorts?.length) throw new Error('resorts.json has no resorts');
+  if (!args.region) {
+    if (!config?.resorts?.length) throw new Error('resorts.json has no resorts');
+    return config;
+  }
+  const raw = readJson(path.resolve(args.region), null);
+  if (!raw) throw new Error(`Cannot read the region file ${args.region}`);
+  let region;
+  try {
+    region = validateRegion(raw);
+  } catch (err) {
+    if (err instanceof RegionError) throw new Error(`Region file ${args.region}: ${err.message}`);
+    throw err;
+  }
+  const settings = { ...(config?.settings ?? {}) };
+  if (region.zoom?.terrain) settings.terrainMaxZoom = region.zoom.terrain;
+  if (region.zoom?.basemap) settings.basemapMaxZoom = region.zoom.basemap;
+  if (region.zoom?.ski) settings.skiMaxZoom = region.zoom.ski;
+  log(`Region "${region.name}" (${region.bbox ? `box ${region.bbox.join(',')}` : `${region.skiAreas.length} ski area(s)`}) → ${path.relative(ROOT, OUT)}`);
+  return { settings, resorts: [regionToResort(region)] };
+}
+
+async function main() {
+  const config = loadConfig();
   const statePath = path.join(DIR.work, 'state.json');
   const state = readJson(statePath, {});
 

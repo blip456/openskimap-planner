@@ -1,6 +1,6 @@
 <script lang="ts">
-  // Menu root (spec §3.5): Resort · Online mode · Data (PWA) · Routes backup · Appearance · gpx.studio (desktop
-  // build) · About & credits.
+  // Menu root (spec §3.5): Resort · Online mode · Data (PWA) · Routes backup · Appearance · gpx.studio and Build
+  // region (desktop build) · About & credits.
   import Icon from '../Icon.svelte';
   import Switch from '../Switch.svelte';
   import type { IconName } from '../icons.ts';
@@ -45,7 +45,23 @@
   <div class="grp-gap"></div>
   <div class="grp">
     {@render chevronRow('gpx', 'link', 'var(--teal)', 'gpx.studio')}
+    {#if caps.regionBuilds}
+      <button
+        type="button"
+        class="row has-icon"
+        onclick={() => {
+          app.ui.closeMenu();
+          app.ui.regionBuilderOpen = true;
+        }}
+        data-testid="menu-row-regions"
+      >
+        <span class="tile" style:background="var(--purple)"><Icon name="box" size={18} /></span>
+        <span class="txt"><span class="t">Build region</span></span>
+        <span class="chev"><Icon name="chevronRight" size={14} strokeWidth={3} /></span>
+      </button>
+    {/if}
   </div>
+  {#if caps.regionBuilds}<p class="grp-f">Make a data file for another region, for your phone.</p>{/if}
 {/if}
 
 <div class="grp-gap"></div>

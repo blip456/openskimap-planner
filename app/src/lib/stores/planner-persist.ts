@@ -24,6 +24,8 @@ export interface DisplayData {
   /** route gradient chart: official difficulty or steepness */
   profileColor: 'official' | 'steepness';
   basemap: 'local' | 'online' | 'openfreemap';
+  /** everything from the Mapterhorn elevation tiles: hillshading, contour lines and 3D */
+  terrain: boolean;
   terrain3d: boolean;
   layers: { downhill: boolean; lifts: boolean; nordic: boolean; other: boolean };
 }
@@ -35,6 +37,7 @@ export const DEFAULT_DISPLAY: DisplayData = {
   colorBy: 'difficulty',
   profileColor: 'official',
   basemap: 'local',
+  terrain: true,
   terrain3d: false,
   layers: { downhill: true, lifts: true, nordic: true, other: true },
 };
@@ -91,7 +94,8 @@ export function cleanDisplay(v: unknown): DisplayData {
     colorBy: pick(x.colorBy, ['difficulty', 'slope'], d.colorBy),
     profileColor: pick(x.profileColor, ['official', 'steepness'], d.profileColor),
     basemap: pick(x.basemap, ['local', 'online', 'openfreemap'], d.basemap),
-    terrain3d: bool(x.terrain3d, d.terrain3d),
+    terrain: bool(x.terrain, d.terrain),
+    terrain3d: bool(x.terrain, d.terrain) && bool(x.terrain3d, d.terrain3d),
     layers: {
       downhill: bool(layers.downhill, true),
       lifts: bool(layers.lifts, true),

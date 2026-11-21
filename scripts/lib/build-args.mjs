@@ -15,6 +15,8 @@ export const CONFIRM_ABOVE_ZOOM = 16;
 export const AVG_TERRAIN_TILE_BYTES = 155_000;
 
 const FLAGS = new Set(['only', 'refresh', 'refresh-basemap', 'yes']);
+// options with a path value: --region=<file> (one region instead of resorts.json), --out=<dir> (output folder)
+const PATH_FLAGS = new Set(['region', 'out']);
 const ZOOM_FLAGS = { 'terrain-zoom': 'terrain', 'basemap-zoom': 'basemap', 'ski-zoom': 'ski' };
 const ZOOM_RANGES = { terrain: TERRAIN_ZOOM_RANGE, basemap: BASEMAP_ZOOM_RANGE, ski: SKI_ZOOM_RANGE };
 
@@ -29,11 +31,20 @@ function parseZoomValue(label, text, [min, max]) {
 
 /**
  * Parses process.argv.slice(2).
- * Returns { only, refresh, refreshBasemap, yes, zoom: { terrain, basemap, ski } } where each zoom is a number
+ * Returns { only, refresh, refreshBasemap, yes, region, out, zoom: { terrain, basemap, ski } } where each zoom is a number
  * or null (null = use resorts.json). `z<N>` gives terrain N and basemap min(N, 15); long flags override it.
  */
 export function parseBuildArgs(argv) {
-  const out = { only: null, refresh: false, refreshBasemap: false, yes: false, shortZoom: null, zoom: { terrain: null, basemap: null, ski: null } };
+  const out = {
+    only: null,
+    refresh: false,
+    refreshBasemap: false,
+    yes: false,
+    region: null,
+    out: null,
+    shortZoom: null,
+    zoom: { terrain: null, basemap: null, ski: null },
+  };
   const longZoom = {};
   for (const arg of argv) {
     if (/^z/i.test(arg) && !arg.startsWith('--')) {
@@ -50,6 +61,9 @@ export function parseBuildArgs(argv) {
       if (value === null || value === '') throw new ArgError(`--${key} needs a number, for example --${key}=${key === 'ski-zoom' ? 16 : 14}.`);
       const which = ZOOM_FLAGS[key];
       longZoom[which] = parseZoomValue(`--${key}`, value, ZOOM_RANGES[which]);
+    } else if (PATH_FLAGS.has(key)) {
+      if (value === null || value === '') throw new ArgError(`--${key} needs a path, for example --${key}=${key === 'region' ? 'region.json' : 'build/regions/my-region'}.`);
+      out[key] = value;
     } else if (FLAGS.has(key)) {
       if (key === 'only') {
         if (value !== 'ski') throw new ArgError('--only only supports --only=ski.');
