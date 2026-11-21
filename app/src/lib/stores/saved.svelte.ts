@@ -132,6 +132,18 @@ export class SavedState {
 
   /** Deletes without asking (spec §3.3); the toast offers Undo. */
   async delete(meta: Pick<SavedRouteMeta, 'id' | 'name'>): Promise<void> {
+    // one delete per route at a time: a second one could finish after the Undo of the first and remove it again
+    if (this.deleting.has(meta.id)) return;
+    this.deleting.add(meta.id);
+    try {
+      await this.deleteNow(meta);
+    } finally {
+      this.deleting.delete(meta.id);
+    }
+  }
+  private deleting = new Set<string>();
+
+  private async deleteNow(meta: Pick<SavedRouteMeta, 'id' | 'name'>): Promise<void> {
     const store = this.store;
     let full: SavedRoute | null = null;
     try {

@@ -232,3 +232,43 @@ wrong assumption. Format:
 - **Prevention:** the follow effect only moves the camera for a new fix, a new heading or an explicit centre request,
   never for a mode change alone; and while a "turn north" runs, follow moves keep `bearing: 0`. The e2e test checks
   the bearing after the compass tap.
+
+## 2026-11-21 · phase 7 · the medium sheet had no blur in Chromium
+- **What happened:** the new glass budget check in `design.spec.ts` found that the sheet's glass layer had
+  `backdrop-filter: none` in Chromium. The sheet looked fine in screenshots because its fill is 78 % opaque.
+- **Root cause:** the sheet CSS had `backdrop-filter` first and `-webkit-backdrop-filter` second. The CSS minifier
+  treats them as the same property and keeps only the last one; Chromium ignores the prefixed one. Safari would have
+  worked, so this was hidden until a test measured it.
+- **Prevention:** always write `-webkit-backdrop-filter` first and `backdrop-filter` right after it.
+  `app/test/css-lint.test.ts` checks every `.svelte`/`.css` file for this (mutation-checked: swapping the two lines
+  fails it). The e2e glass budget counts the blurred surfaces, so a lost blur shows up as a lower count.
+
+## 2026-11-21 · phase 7 · iOS system colours are not WCAG AA
+- **What happened:** the first axe run failed on 198 places: secondary text, blue buttons, red Clear, the "Ctrl K"
+  hint.
+- **Root cause:** the design tokens copied iOS values; iOS system blue on white is 4.0:1 and the 60 % secondary label
+  3.4:1, below 4.5:1.
+- **Prevention:** colours are checked twice: `app/test/contrast.test.ts` (token maths, glass over snow and the
+  darkest map) and axe on every main screen in light and dark (`design.spec.ts`). Change a text colour only with
+  both green. Text on glass uses `--glass-label`, `--glass-label-2` or `--glass-accent`, never `--label-3`.
+
+## 2026-11-21 · phase 7 · `height` with padding on a capsule
+- **What happened:** the tab capsule was 72 px high instead of 64 (seen while measuring the glass budget).
+- **Root cause:** there is no global `box-sizing: border-box`; `height: 64px` plus `padding: 4px` made 72.
+- **Prevention:** components that set both `height` and vertical `padding` also set `box-sizing: border-box`. The
+  design spec measures the glass surfaces, so such errors show in the `[glass]` log lines.
+
+## 2026-11-21 · phase 7 · Undo tap missed the toast under load (flaky e2e)
+- **What happened:** in 2 of 4 full e2e runs (two workers) the iPhone route test tapped Undo in the "Route deleted"
+  toast and the route did not come back. Repeating the test with 3 workers failed 1–2 times in 6.
+- **Root cause:** debug logs showed the toast's button was never clicked. The tap came while the toast was still
+  sliding in (250 ms entry animation); with slow frames (busy CPU, and now a real blur on the sheet) Playwright saw
+  the toast as "stable" between two slow frames and the touch landed off the button. A person taps a toast that has
+  settled, so this was a test problem.
+  While looking, a real app bug showed up: after a full swipe the red Delete button lies under the finger, and the
+  click that can follow the touch could call delete a second time.
+- **Prevention:** the test waits for `el.getAnimations()` of the toast to finish before tapping (9 of 9 green under 3
+  workers afterwards). Rule: before tapping something that animates in, wait for its animations. The app now deletes
+  once (`SwipeRow` guard + `SavedState.delete` ignores a second delete of the same route); unit test "a second delete
+  of the same route while the first runs is ignored" (fails without the guard). Failure screenshots are now kept
+  (`screenshot: 'only-on-failure'` in the Playwright config).

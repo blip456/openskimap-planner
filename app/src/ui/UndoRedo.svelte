@@ -9,13 +9,14 @@
     onundo,
     onredo,
     desktop = false,
-  }: { canUndo: boolean; canRedo: boolean; onundo: () => void; onredo: () => void; desktop?: boolean } = $props();
+    compact = false,
+  }: { canUndo: boolean; canRedo: boolean; onundo: () => void; onredo: () => void; desktop?: boolean; compact?: boolean } = $props();
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   const mod = isMac ? '⌘' : 'Ctrl+';
 </script>
 
 {#if canUndo || canRedo}
-  <div class="glass capsule" role="group" aria-label="Undo and redo" data-testid="undo-redo">
+  <div class="glass capsule" class:compact role="group" aria-label="Undo and redo" data-testid="undo-redo">
     <button
       type="button"
       class="seg"
@@ -26,12 +27,12 @@
       onclick={onundo}
       data-testid="undo"
     >
-      <span class="content"><Icon name="undo2" /></span>
+      <span class="content"><Icon name="undo2" size={compact ? 18 : 22} /></span>
     </button>
     {#if canRedo}
       <span class="divider" aria-hidden="true"></span>
       <button type="button" class="seg redo" aria-label="Redo" title={desktop ? `Redo (${mod}${isMac ? '⇧Z' : 'Y'})` : 'Redo'} onclick={onredo} data-testid="redo">
-        <span class="content"><Icon name="redo2" /></span>
+        <span class="content"><Icon name="redo2" size={compact ? 18 : 22} /></span>
       </button>
     {/if}
   </div>
@@ -45,6 +46,18 @@
     padding: 0 2px;
     border-radius: var(--r-pill);
     animation: cap-in var(--dur-fast) var(--ease-out);
+  }
+  /* desktop toolbar with a mouse: 36 px (spec §3.11) */
+  .capsule.compact {
+    height: 36px;
+  }
+  .compact .seg {
+    width: 34px;
+    height: 32px;
+    border-radius: 16px;
+  }
+  .compact .divider {
+    height: 18px;
   }
   .seg {
     position: relative;

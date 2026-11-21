@@ -29,8 +29,11 @@ export class UiState {
   profileCursor = $state.raw<[number, number] | null>(null);
   /** asks the map to show these coordinates (id changes every time) */
   fitRequest = $state.raw<{ id: number; coords: Line; maxZoom?: number; onlyIfHidden?: boolean; keepZoom?: boolean } | null>(null);
-  /** desktop layout (≥ 900 px wide): floating left panel instead of sheets and tab bar */
+  /** panel layout: floating left panel instead of sheets and tab bar. Desktop (≥ 900 px wide) and the landscape
+   * phone (height < 500, spec §3.10) */
   wide = $state(false);
+  /** landscape phone: panel layout with touch-sized map buttons (spec §3.10) */
+  landscape = $state(false);
   /** desktop: the left panel is hidden (panel button in the map toolbar) */
   panelHidden = $state(false);
   /** iPhone: the search field above the keyboard is open */
@@ -112,4 +115,14 @@ export class UiState {
 export function toastPlacement(s: { wide: boolean; menuOpen: boolean; sheetOpen: boolean; detent: Detent }): 'top' | 'low' {
   if (s.wide) return 'top';
   return s.menuOpen || (s.sheetOpen && s.detent === 'large') ? 'low' : 'top';
+}
+
+/**
+ * Which layout a window gets (spec §3.10, §3.11): desktop panel from 900 px wide; a phone on its side (height < 500,
+ * wider than high, any width) gets the left panel, with touch-sized map buttons; everything else the iPhone layout.
+ */
+export function layoutFor(width: number, height: number): { wide: boolean; landscape: boolean } {
+  // height first: a big iPhone on its side is 932 × 430 and must get the landscape layout too
+  const landscape = height < 500 && width > height;
+  return { wide: width >= 900 || landscape, landscape };
 }

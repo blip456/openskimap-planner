@@ -286,6 +286,10 @@
     will-change: auto;
     touch-action: none;
   }
+  /* at medium, text sits on glass: secondary text uses the glass variant (≥ 4.5:1 over the map, phase 7) */
+  .sheet:not(.large-look) {
+    --label-2: var(--glass-label-2);
+  }
   .sheet.dragging {
     transition: none;
     will-change: transform;
@@ -308,8 +312,9 @@
   }
   .glass-strong {
     background: var(--glass-fill-strong);
-    backdrop-filter: var(--glass-filter);
+    /* prefixed first: the CSS minifier drops an unprefixed declaration followed by the prefixed one (lessons.md) */
     -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
     box-shadow: var(--glass-rim);
   }
   .solid {

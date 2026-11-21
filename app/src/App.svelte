@@ -24,11 +24,10 @@
   import InfoFloat from './ui/info/InfoFloat.svelte';
   import SearchOverlay from './ui/search/SearchOverlay.svelte';
   import DesktopPanel from './ui/DesktopPanel.svelte';
-  import Menu from './ui/menu/Menu.svelte';
   import CreditLine from './ui/CreditLine.svelte';
   import Toast from './ui/Toast.svelte';
   import UpdatePrompt from './ui/UpdatePrompt.svelte';
-  import { toastPlacement } from './lib/stores/ui.svelte.ts';
+  import { layoutFor, toastPlacement } from './lib/stores/ui.svelte.ts';
   import { isTyping, shortcutFor } from './lib/keyboard.ts';
 
   const app = new AppState();
@@ -42,6 +41,12 @@
   const hoverDevice = typeof matchMedia === 'function' && matchMedia('(hover: hover)').matches;
 
   let DevOverlay = $state<Component<{ app: AppState }> | null>(null);
+  // the settings menu is opened rarely: its pages load on first use (phase 7, smaller start bundle; the service
+  // worker precaches the chunk, so it also opens offline)
+  let Menu = $state<Component<{ app: AppState; popover?: boolean }> | null>(null);
+  $effect(() => {
+    if (ui.menuOpen && !Menu) void import('./ui/menu/Menu.svelte').then((m) => (Menu = m.default));
+  });
   let innerHeight = $state(800);
   let innerWidth = $state(1280);
   let mapApi: MapApi | null = null;
@@ -60,10 +65,18 @@
     }
   });
 
-  // desktop layout from 900 px (spec §3.11); between 600 and 899 the iPhone layout is used
+  // desktop layout from 900 px (spec §3.11); between 600 and 899 the iPhone layout is used. A phone on its side
+  // (height < 500) gets the panel on the left too, with touch-sized map buttons (spec §3.10).
   $effect(() => {
-    ui.wide = innerWidth >= 900;
+    const l = layoutFor(innerWidth, innerHeight);
+    ui.landscape = l.landscape;
+    ui.wide = l.wide;
   });
+  /** desktop with a mouse: the smaller 36 px map toolbar of spec §3.11 (touch keeps 48 px buttons, 44 px targets) */
+  const finePointer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
+  const compact = $derived(ui.wide && !ui.landscape && finePointer);
+  /** right edge of the left panel (map padding, spec §3.10/§3.11) */
+  const panelRight = $derived(ui.landscape ? 8 + 360 : 12 + 380);
   // the panel always shows one tab
   $effect(() => {
     if (ui.wide && ui.sheet === null) ui.openSheet('route');
@@ -94,7 +107,7 @@
   // the sheet covers the map anyway; the padding stays at the medium value so the camera does not jump.
   // Desktop: the panel on the left.
   const padding = $derived.by<Padding>(() => {
-    if (ui.wide) return { top: 0, right: 0, bottom: 0, left: ui.panelHidden ? 0 : 12 + 380 };
+    if (ui.wide) return { top: 0, right: 0, bottom: 0, left: ui.panelHidden ? 0 : panelRight };
     if (!sheetContent) return { top: 0, right: 0, bottom: 0, left: 0 };
     // the medium top is always round(0.475 × H) (BottomSheet). Not ui.sheetTop: right after a large → medium change it
     // still holds the large top until the sheet settles, and the extra padding change would stop camera animations.
@@ -153,6 +166,12 @@
     }
     if (ui.sheet === id) closeSheet();
     else ui.openSheet(id);
+  }
+
+  /** panel layout: the panel always shows a tab; an open info card (landscape) gives way to it */
+  function selectPanelTab(id: 'route' | 'saved' | 'map') {
+    if (explore.card) closeInfo();
+    ui.openSheet(id);
   }
 
   function markerTap(i: number) {
@@ -253,37 +272,67 @@
     />
   {/key}
 
-  {#if ui.wide}
-    <!-- desktop: panel on the left, toolbar at the top of the map area, map buttons bottom right -->
+  {#if ui.wide && ui.landscape}
+    <!-- landscape phone (spec §3.10): panel on the left; map buttons as on the phone, 48 px for touch -->
+    {#if !ui.panelHidden}<DesktopPanel {app} landscape onselect={selectPanelTab} oncloseinfo={closeInfo} />{:else}<div class="top-left">{@render menuButton(48)}</div>{/if}
+    <div class="top-right">
+      <UndoRedo canUndo={route.canUndo} canRedo={route.canRedo} onundo={() => route.undo()} onredo={() => route.redo()} {desktop} />
+      <TerrainButton on={app.display.terrain3d} ontoggle={toggle3d} />
+    </div>
+    <div class="compass-slot">
+      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} force={myLocation.mode === 'heading'} onreset={resetNorth} />
+    </div>
+    {#if route.planMode}
+      <div class="mode-row landscape" class:full={ui.panelHidden}>
+        <ModePill points={route.points.length} {desktop} onstop={() => route.togglePlanMode(false)} />
+      </div>
+    {/if}
+    <div class="controls landscape" class:full={ui.panelHidden}>
+      <span class="group">
+        <GlassButton
+          icon="panelLeft"
+          label={ui.panelHidden ? 'Show the panel' : 'Hide the panel'}
+          active={!ui.panelHidden}
+          onclick={() => (ui.panelHidden = !ui.panelHidden)}
+          testid="panel-toggle"
+        />
+        <PlanButton on={route.planMode} {desktop} ontoggle={() => route.togglePlanMode()} />
+      </span>
+      <LocateButton mode={myLocation.mode} ontap={() => myLocation.tap()} />
+    </div>
+    {#if ui.panelHidden}<InfoFloat {app} onclose={closeInfo} />{/if}
+  {:else if ui.wide}
+    <!-- desktop: panel on the left, toolbar at the top of the map area, map buttons bottom right (36 px, spec §3.11) -->
     {#if !ui.panelHidden}<DesktopPanel {app} />{/if}
     <div class="toolbar" class:full={ui.panelHidden}>
       <GlassButton
         icon="panelLeft"
         label={ui.panelHidden ? 'Show the panel' : 'Hide the panel'}
         active={!ui.panelHidden}
+        size={compact ? 36 : 48}
         onclick={() => (ui.panelHidden = !ui.panelHidden)}
         testid="panel-toggle"
       />
-      {#if ui.panelHidden}{@render menuButton(48)}{/if}
-      <PlanButton on={route.planMode} {desktop} ontoggle={() => route.togglePlanMode()} />
-      <UndoRedo canUndo={route.canUndo} canRedo={route.canRedo} onundo={() => route.undo()} onredo={() => route.redo()} {desktop} />
-      <TerrainButton on={app.display.terrain3d} ontoggle={toggle3d} />
+      {#if ui.panelHidden}{@render menuButton(compact ? 36 : 48)}{/if}
+      <PlanButton on={route.planMode} {desktop} {compact} ontoggle={() => route.togglePlanMode()} />
+      <UndoRedo canUndo={route.canUndo} canRedo={route.canRedo} onundo={() => route.undo()} onredo={() => route.redo()} {desktop} {compact} />
+      <TerrainButton on={app.display.terrain3d} ontoggle={toggle3d} {compact} />
     </div>
     {#if route.planMode}
       <div class="mode-row wide" class:full={ui.panelHidden}>
         <ModePill points={route.points.length} desktop onstop={() => route.togglePlanMode(false)} />
       </div>
     {/if}
-    <div class="right-column">
-      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} force={myLocation.mode === 'heading'} onreset={resetNorth} />
+    <div class="right-column" class:compact>
+      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} size={compact ? 36 : 48} force={myLocation.mode === 'heading'} onreset={resetNorth} />
       <div class="glass zoom" role="group" aria-label="Zoom">
         <button type="button" aria-label="Zoom in" title="Zoom in" onclick={() => mapApi?.zoomIn()} data-testid="zoom-in">+</button>
         <span class="divider" aria-hidden="true"></span>
         <button type="button" aria-label="Zoom out" title="Zoom out" onclick={() => mapApi?.zoomOut()} data-testid="zoom-out">−</button>
       </div>
-      <LocateButton mode={myLocation.mode} ontap={() => myLocation.tap()} />
+      <LocateButton mode={myLocation.mode} size={compact ? 36 : 48} ontap={() => myLocation.tap()} />
     </div>
-    <InfoFloat {app} onclose={closeInfo} />
+    <InfoFloat {app} onclose={closeInfo} column={compact ? 36 : 48} />
     <CreditLine wide onopen={() => ui.openMenu('about')} />
   {:else}
     <div class="top-left">{@render menuButton(48)}</div>
@@ -349,7 +398,7 @@
     {/if}
   {/if}
 
-  {#if ui.menuOpen}<Menu {app} popover={ui.wide} />{/if}
+  {#if ui.menuOpen && Menu}<Menu {app} popover={ui.wide && !ui.landscape} />{/if}
 {/if}
 
 {#if showUpdate && app.status !== 'no-data'}<UpdatePrompt {placement} onreload={() => app.applyUpdate()} onlater={() => (updateLater = true)} />{/if}
@@ -433,6 +482,14 @@
   .mode-row.wide.full {
     left: 12px;
   }
+  .mode-row.landscape {
+    top: calc(var(--controls-top) + 4px);
+    left: calc(8px + 360px + 16px + var(--safe-left));
+    right: calc(var(--edge) + 160px + var(--safe-right));
+  }
+  .mode-row.landscape.full {
+    left: calc(var(--edge) + var(--ctl) + 8px + var(--safe-left));
+  }
   .mode-row > :global(*) {
     pointer-events: auto;
   }
@@ -459,6 +516,18 @@
   }
   .controls.under-large {
     visibility: hidden;
+  }
+  /* landscape phone: Plan (with the panel button) bottom left of the map area, Locate bottom right (spec §3.10) */
+  .controls.landscape {
+    left: calc(8px + 360px + 16px + var(--safe-left));
+    bottom: calc(16px + var(--safe-bottom));
+  }
+  .controls.landscape.full {
+    left: calc(var(--edge) + var(--safe-left));
+  }
+  .controls .group {
+    display: flex;
+    gap: 8px;
   }
   /* desktop map toolbar (spec §3.11) */
   .toolbar {
@@ -505,6 +574,22 @@
     .zoom button:hover {
       background: var(--glass-pill);
     }
+  }
+  .right-column.compact {
+    gap: 8px;
+  }
+  .compact .zoom {
+    width: 36px;
+    padding: 0;
+  }
+  .compact .zoom button {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    font-size: 20px;
+  }
+  .compact .zoom .divider {
+    width: 18px;
   }
   .zoom .divider {
     width: 24px;

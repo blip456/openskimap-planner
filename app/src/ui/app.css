@@ -47,3 +47,16 @@ nav,
   bottom: 0;
   height: var(--safe-bottom);
 }
+
+/* Keyboard focus (spec §2, phase 7): inside clipped groups (rounded cells with overflow hidden), the ring is drawn
+ * inside the row, so it is never cut off. Elsewhere the ring from tokens.css (3 px, 2 px outside) is used. */
+.grp :focus-visible,
+.grp:focus-visible {
+  outline-offset: -3px;
+}
+/* buttons in Windows high-contrast mode keep a visible ring */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight;
+  }
+}

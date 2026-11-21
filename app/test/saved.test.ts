@@ -252,4 +252,16 @@ describe('saved sheet logic', () => {
     expect(await browser.get(a.id)).toEqual(before);
     expect(route.savedId).toBe(a.id);
   });
+
+  test('a second delete of the same route while the first runs is ignored (Undo keeps the route)', async () => {
+    const { route, saved, toasts } = setup();
+    route.addPoint([10.27, 47.4]);
+    route.addPoint([10.29, 47.38]);
+    const a = (await saved.save())!;
+    await Promise.all([saved.delete(a), saved.delete(a)]); // full swipe + the click that can follow it
+    expect(toasts.filter((t) => t.text === 'Route deleted')).toHaveLength(1);
+    toasts.at(-1)!.action!.run();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(saved.count).toBe(1);
+  });
 });

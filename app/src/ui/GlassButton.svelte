@@ -52,7 +52,7 @@
     transition-duration: var(--dur-instant);
   }
   .active {
-    color: var(--accent);
+    color: var(--glass-accent);
   }
   @media (hover: hover) {
     .glass-button:hover {

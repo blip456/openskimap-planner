@@ -689,7 +689,7 @@
     background: rgba(0, 0, 0, 0.35);
   }
   .map :global(.maplibregl-ctrl-bottom-right .maplibregl-ctrl-scale) {
-    margin: 0 76px 26px 0;
+    margin: 0 64px 26px 0; /* left of the 36 px map button column (12 + 36 + 16) */
     font: 10px var(--font);
   }
   @media (max-width: 899px) {

@@ -17,15 +17,29 @@
     testid?: string;
   } = $props();
   const index = $derived(options.findIndex((o) => o.value === value));
+  let group: HTMLDivElement;
+
+  /** radio group keyboard: ←/→ (and ↑/↓) choose the next option and move the focus (one tab stop, WAI-ARIA) */
+  function onkeydown(e: KeyboardEvent) {
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const from = index >= 0 ? index : 0;
+    const next = (from + step + options.length) % options.length;
+    onchange(options[next].value);
+    (group.querySelectorAll('button')[next] as HTMLButtonElement | undefined)?.focus();
+  }
 </script>
 
-<div class="seg" class:compact role="radiogroup" aria-label={label} data-testid={testid} style:--n={options.length}>
+<!-- svelte-ignore a11y_interactive_supports_focus (one tab stop: the selected radio has tabindex 0, WAI-ARIA radio group) -->
+<div bind:this={group} class="seg" class:compact role="radiogroup" aria-label={label} data-testid={testid} style:--n={options.length} {onkeydown}>
   {#if index >= 0}<span class="thumb" style:transform={`translateX(${index * 100}%)`} aria-hidden="true"></span>{/if}
-  {#each options as o (o.value)}
+  {#each options as o, i (o.value)}
     <button
       type="button"
       role="radio"
       aria-checked={o.value === value}
+      tabindex={o.value === value || (index < 0 && i === 0) ? 0 : -1}
       class:on={o.value === value}
       title={o.title}
       onclick={() => onchange(o.value)}

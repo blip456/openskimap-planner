@@ -8,12 +8,16 @@
   color-scheme: light dark;
 
   /* ---------- System colours (light) ---------- */
-  --accent: #007aff;               /* system blue; the only tint colour of the UI */
-  --accent-pressed: #0062cc;
+  /* Phase 7: text colours are a little darker than the iOS system values (light) or lighter (dark) so all text
+   * reaches WCAG AA (4.5:1) on cells, grouped backgrounds and grey buttons (axe check in app/e2e/design.spec.ts,
+   * maths in app/test/contrast.test.ts). iOS: #007AFF / #FF3B30 / #FF9500 and 60 % secondary text are 3–4:1. */
+  --accent: #005ec4;               /* system blue (darker for text); the only tint colour of the UI */
+  --accent-fill: #005ec4;          /* filled buttons with white text */
+  --accent-pressed: #004a9c;
   --on-accent: #ffffff;
   --green: #34c759;                /* switches "on", success */
-  --red: #ff3b30;                  /* destructive */
-  --orange: #ff9500;               /* warnings, "changed since saved" */
+  --red: #c4000f;                  /* destructive (iOS #FF3B30 is 3.6:1 on white) */
+  --orange: #c93400;               /* warnings, "changed since saved" (iOS #FF9500 is 2.2:1) */
   --yellow: #ffcc00;
   --teal: #30b0c7;
   --indigo: #5856d6;
@@ -21,7 +25,7 @@
   --gray: #8e8e93;
 
   --label: #000000;
-  --label-2: rgba(60, 60, 67, 0.6);    /* secondary text */
+  --label-2: rgba(60, 60, 67, 0.78);   /* secondary text (iOS 0.6 is 3.4:1 on white) */
   --label-3: rgba(60, 60, 67, 0.3);    /* tertiary text, chevrons, placeholders */
   --label-4: rgba(60, 60, 67, 0.18);
   --separator: rgba(60, 60, 67, 0.29); /* 0.5px hairlines */
@@ -67,7 +71,7 @@
   --user-location-stale: #8e8e93;
 
   /* ---------- Glass (navigation layer only) ---------- */
-  --glass-fill: rgba(250, 250, 252, 0.6);
+  --glass-fill: rgba(250, 250, 252, 0.7);          /* phase 7: 0.6 → 0.7 so accent text passes 4.5:1 over the darkest map */
   --glass-fill-strong: rgba(250, 250, 252, 0.78);  /* sheets at medium: text sits on it */
   --glass-blur: 20px;
   --glass-saturate: 180%;
@@ -76,10 +80,14 @@
                inset 0 0 0 0.5px rgba(255, 255, 255, 0.5);   /* edge */
   --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
   --glass-label: #1c1c1e;              /* icon + text colour on glass */
+  /* text on glass must stay ≥ 4.5:1 over white snow and over the darkest (blurred) map, light and dark
+   * (app/test/contrast.test.ts). System blue and the 60 % secondary label do not, so glass has its own two: */
+  --glass-label-2: rgba(28, 28, 30, 0.7);  /* secondary text on glass (sheet subtitle at medium, kbd hints) */
+  --glass-accent: #004cb8;             /* accent text and icons on glass (selected tab, 3D on, locate) */
   --glass-pill: rgba(0, 0, 0, 0.08);   /* selected tab pill */
   --glass-pill-pressed: rgba(0, 0, 0, 0.16);
   --glass-fill-moving: rgba(246, 246, 248, 0.94); /* fallback without blur while the map moves (§5) */
-  --tint-fill: color-mix(in srgb, var(--accent) 88%, transparent); /* tinted glass: Plan route on */
+  --tint-fill: color-mix(in srgb, var(--accent-fill) 88%, transparent); /* tinted glass: Plan route on */
 
   /* ---------- Radii (concentric: inner = outer − padding) ---------- */
   --r-xs: 4px;     /* colour swatches */
@@ -185,10 +193,11 @@
 /* ---------- Dark ---------- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --accent: #0a84ff;
-    --accent-pressed: #409cff;
+    --accent: #6cb4ff;            /* iOS #0A84FF is 3.5:1 on grey buttons */
+    --accent-fill: #0a6fd8;       /* white text on iOS #0A84FF is 3.6:1 */
+    --accent-pressed: #78b8ff;
     --green: #30d158;
-    --red: #ff453a;
+    --red: #ff8a82;               /* iOS #FF453A is 3.4:1 on grey buttons */
     --orange: #ff9f0a;
     --yellow: #ffd60a;
     --teal: #40c8e0;
@@ -196,7 +205,7 @@
     --purple: #bf5af2;
 
     --label: #ffffff;
-    --label-2: rgba(235, 235, 245, 0.6);
+    --label-2: rgba(235, 235, 245, 0.7);
     --label-3: rgba(235, 235, 245, 0.3);
     --label-4: rgba(235, 235, 245, 0.16);
     --separator: rgba(84, 84, 88, 0.6);
@@ -217,12 +226,14 @@
     --toast-label: #000000;
     --swatch-border: rgba(255, 255, 255, 0.35);
 
-    --glass-fill: rgba(30, 30, 34, 0.7);
-    --glass-fill-strong: rgba(28, 28, 30, 0.84);
+    --glass-fill: rgba(30, 30, 34, 0.86);         /* phase 7: 0.7 → 0.86, the map stays light in dark mode */
+    --glass-fill-strong: rgba(28, 28, 30, 0.88);
     --glass-rim: inset 0 0.5px 0 rgba(255, 255, 255, 0.22),
                  inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
     --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
     --glass-label: #ffffff;
+    --glass-label-2: rgba(235, 235, 245, 0.7);
+    --glass-accent: #64adff;
     --glass-pill: rgba(255, 255, 255, 0.14);
     --glass-pill-pressed: rgba(255, 255, 255, 0.24);
     --glass-fill-moving: rgba(36, 36, 40, 0.94);
@@ -232,6 +243,7 @@
 /* ---------- Increase contrast (iOS: Settings › Accessibility › Display › Increase Contrast) ---------- */
 @media (prefers-contrast: more) {
   :root {
+    --glass-filter: none;              /* nearly opaque anyway: solid surfaces, no blur (phase 7) */
     --glass-fill: rgba(250, 250, 252, 0.92);
     --glass-fill-strong: rgba(250, 250, 252, 0.97);
     --glass-rim: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
@@ -268,10 +280,19 @@
 }
 /* the browser setting also triggers it where supported (Chrome, Firefox) */
 @media (prefers-reduced-transparency: reduce) {
-  :root { --glass-filter: none; --glass-fill: #f9f9f9; --glass-fill-strong: #f9f9f9; }
+  :root {
+    --glass-filter: none;
+    --glass-fill: #f9f9f9;
+    --glass-fill-strong: #f9f9f9;
+    --glass-rim: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+  }
 }
 @media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
-  :root { --glass-fill: #1c1c1e; --glass-fill-strong: #1c1c1e; }
+  :root {
+    --glass-fill: #1c1c1e;
+    --glass-fill-strong: #1c1c1e;
+    --glass-rim: inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+  }
 }
 
 /* ---------- Reduced motion ---------- */

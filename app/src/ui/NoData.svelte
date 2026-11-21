@@ -124,7 +124,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--accent-fill);
     color: var(--on-accent);
     font: 700 13px/24px var(--font-rounded);
     text-align: center;
@@ -161,7 +161,7 @@
     cursor: pointer;
   }
   .primary {
-    background: var(--accent);
+    background: var(--accent-fill);
     color: var(--on-accent);
   }
   .secondary {

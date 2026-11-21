@@ -129,10 +129,16 @@
   }
   kbd {
     font: var(--fw-medium) 12px var(--font);
-    color: var(--label-3);
+    color: var(--label-2);
     padding: 1px 5px;
     border-radius: var(--r-xs);
     border: 0.5px solid var(--separator);
+  }
+  /* no keyboard shortcut hint on touch screens (landscape phone) */
+  @media (pointer: coarse) {
+    kbd {
+      display: none;
+    }
   }
   .clear {
     border: 0;

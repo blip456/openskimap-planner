@@ -361,3 +361,56 @@ Full spec: `docs/design/spec.md`, tokens: `docs/design/tokens.css`, mockups: `do
   (no `user-scalable=no`, which iOS ignores anyway).
 - **Update prompt on the first-run screen** (phase 5 note): it is now part of the page flow above the logo
   (`placement="inline"`), so it never covers the logo.
+
+## 2026-11-21 · phase 7 · Liquid Glass polish, landscape, accessibility, performance
+
+- **Text colours for WCAG AA (deviation from the iOS system values in spec §1.1).** The task asks for 4.5:1. The
+  iOS values do not reach it: `#007AFF` on white is 4.0:1 (3.1:1 on the grey capsule buttons), white on `#007AFF`
+  4.0:1, `#FF3B30` 3.6:1, `#FF9500` 2.2:1, and the 60 % secondary label 3.4:1 (3.3:1 on the grouped background).
+  New values in `tokens.css` (light / dark): `--accent` `#005EC4` / `#6CB4FF`, new `--accent-fill` (filled buttons,
+  tinted Plan route) `#005EC4` / `#0A6FD8`, `--red` `#C4000F` / `#FF8A82`, `--orange` `#C93400` (light only),
+  `--label-2` 78 % / 70 %. They look very close to iOS; only next to each other you see the blue is a bit deeper.
+  Checked by `app/test/contrast.test.ts` (maths) and axe in `app/e2e/design.spec.ts` (the real page).
+- **Text on glass.** Glass mixes with the map. Worst cases: white snow, and a grey (rgb 90) darker than the darkest
+  blurred part of the Oberstdorf map (rgb 102, 110, 104, measured on screenshots). To pass 4.5:1 over both:
+  light `--glass-fill` 0.6 → 0.7; dark `--glass-fill` 0.7 → 0.86 and `--glass-fill-strong` 0.84 → 0.88 (the map stays
+  light in dark mode, so dark glass sits on white snow). New tokens `--glass-accent` (`#004CB8` / `#64ADFF`: selected
+  tab, 3D on, locate, active map buttons, mode pill icon) and `--glass-label-2` (secondary text on glass; the medium
+  sheet sets `--label-2` to it).
+- **Increase contrast and Reduce transparency are solid.** `prefers-contrast: more` now also sets
+  `--glass-filter: none` (its fills are 92–98 % opaque anyway, so the blur only cost time). `prefers-reduced-transparency`
+  gets the same hairline border as the Solid interface switch.
+- **Glass budget.** At rest on the iPhone: 6 blurred surfaces, 11 % of the screen (menu, 3D, Plan, Locate, tab bar,
+  search). Desktop at rest: 7 (the panel header + toolbar + right column), 5 % of the screen. **Deviation:** with the
+  sheet at medium the blurred area is about 53 % (the sheet alone is 41 %), more than the 30 % rule of spec §5.1.
+  The spec's own medium sheet geometry (top at 47.5 % of the height, strong glass) cannot meet 30 %; spec §5.1 names
+  the medium sheet as the one big blurred surface. Measured in Chromium (software rendering): panning with the
+  glass sheet 14 fps vs 17 fps with the Solid interface. Kept as designed; the owner checks smoothness on the iPhone
+  (`iphone-test-phase7.md`). If frames drop there, the next step is the `data-map-moving` fallback of spec §5.5
+  (already in `tokens.css`, not switched on).
+- **Bug found by the glass budget check:** the medium sheet had **no blur in Chromium**. The CSS minifier drops
+  `backdrop-filter` when `-webkit-backdrop-filter` follows it, and Chromium ignores the prefixed one. Safari was fine.
+  Fixed (prefixed first) + lint test (lessons.md).
+- **Landscape phone (spec §3.10).** Layout rule: height < 500 and wider than high → landscape, at any width (a big
+  iPhone on its side is 932 × 430, ≥ 900 wide). Panel left (`8 + safe-left`, top/bottom 8, 360 wide, radius 24)
+  with the same parts as the desktop panel: glass header with search field + menu + Route · Saved · Map segmented,
+  **solid body** (deviation: spec says strong glass; a 360 px glass panel would be 43 % of the screen, and the
+  solid body is easier to read). Map buttons are 48 px (touch): undo + 3D top right, compass under them, Plan route
+  bottom left of the map area with a panel button next to it (hides the panel; the menu button then moves to the top
+  left of the map), Locate bottom right. No zoom buttons (pinch). The info card shows **in the panel** (no tab
+  selected, like the iPhone sheet); a tab tap closes it. The Menu is the iPhone modal sheet (640 wide, centred).
+  The "Ctrl K" hint is hidden on touch screens. Map padding left = panel right edge (368).
+- **Desktop toolbar 36 px (spec §3.11),** only with a mouse (`pointer: fine`): panel button, Plan route, undo/redo,
+  3D, compass, zoom group, locate. A wide touch screen keeps 48 px buttons.
+- **Tab bar height:** the capsule was 72 px high (content-box + 4 px padding); now 64 as in spec §2.3.
+- **Segmented control keyboard:** one tab stop, ←/→ (and ↑/↓) choose and move the focus (WAI-ARIA radio group).
+- **Focus rings inside groups** are drawn inside the row (`outline-offset: -3px`), because the rounded groups clip
+  everything outside.
+- **Chips row** (route summary) is focusable (`tabindex=0`, `role=group`, label "More route details"): it scrolls
+  sideways and must be reachable with the keyboard (axe `scrollable-region-focusable`).
+- **Menu loads on first use** (dynamic import; −5 KB gzip at start). The service worker precaches the chunk, so it
+  also opens offline.
+- **E2E speed:** two Playwright workers (`E2E_WORKERS`, default 2); older phase screenshot folders are only rewritten
+  with `E2E_ALL_SHOTS=1` (they are a record of how the app looked then, and rewriting them made git noisy). A shared
+  imported-data fixture was not done: an import takes about 1 s, and OPFS belongs to one browser context.
+- **Removed** the unused `app/src/ui/RouteSheet.svelte` (phase 3 leftover, not imported anywhere).

@@ -211,7 +211,7 @@
     color: transparent;
   }
   .check input:checked + .box {
-    background: var(--accent);
+    background: var(--accent-fill);
     border-color: var(--accent);
     color: #fff;
   }

@@ -302,6 +302,8 @@ test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, 
     await touchDrag(page, { x: rb.x + rb.width - 30, y: rb.y + rb.height / 2 }, { x: rb.x + 10, y: rb.y + rb.height / 2 }, { steps: 10 });
     await expect(page.getByTestId('saved-empty')).toBeVisible();
     await expect(page.getByTestId('toast')).toContainText('Route deleted');
+    // tap only after the toast has slid in: with slow frames a tap during its entry animation can miss the button
+    await page.getByTestId('toast').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
     await page.getByTestId('toast').getByRole('button', { name: 'Undo' }).tap();
     await expect(page.getByTestId('folder-Tests')).toContainText('E2E route');
   } else {

@@ -4,11 +4,12 @@
   import InfoBody from './InfoBody.svelte';
   import type { AppState } from '../../lib/app.svelte.ts';
 
-  let { app, onclose }: { app: AppState; onclose: () => void } = $props();
+  /** `column`: width of the map button column on the right (36 desktop with a mouse, 48 touch) */
+  let { app, onclose, column = 48 }: { app: AppState; onclose: () => void; column?: number } = $props();
 </script>
 
 {#if app.explore.card}
-  <div class="float" role="dialog" aria-modal="false" aria-labelledby="info-title" data-testid="info-float">
+  <div class="float" style:--column={`${column}px`} role="dialog" aria-modal="false" aria-labelledby="info-title" data-testid="info-float">
     <header class="glass head"><InfoHeader card={app.explore.card} {onclose} titleId="info-title" /></header>
     <div class="body"><InfoBody {app} tall /></div>
   </div>
@@ -19,7 +20,7 @@
     position: fixed;
     z-index: var(--z-sheet);
     top: 72px;
-    right: calc(12px + 48px + 12px + var(--safe-right));
+    right: calc(12px + var(--column) + 12px + var(--safe-right));
     width: 340px;
     max-height: 60vh;
     display: flex;

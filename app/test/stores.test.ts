@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { RouteState, pointLetter, pointRole, MAX_POINTS, type Router } from '../src/lib/stores/route.svelte.ts';
 import { Settings } from '../src/lib/stores/settings.svelte.ts';
-import { UiState } from '../src/lib/stores/ui.svelte.ts';
+import { UiState, layoutFor } from '../src/lib/stores/ui.svelte.ts';
 import { DevState } from '../src/lib/stores/dev.svelte.ts';
 import type { RouteResponse } from '../src/lib/worker/engine.ts';
 
@@ -246,5 +246,16 @@ describe('dev overlay state', () => {
     expect(d.setFakePosition('north', '')).toMatch(/lat, lon/);
     expect(d.setFakePosition('95, 10', '')).toBe('Out of range');
     expect(d.setFakePosition('47, 10', '400')).toMatch(/Heading/);
+  });
+});
+
+describe('layout (spec §3.10, §3.11)', () => {
+  test('iPhone portrait, landscape phone, tablet, desktop', () => {
+    expect(layoutFor(390, 844)).toEqual({ wide: false, landscape: false });
+    expect(layoutFor(844, 390)).toEqual({ wide: true, landscape: true }); // iPhone on its side
+    expect(layoutFor(932, 430)).toEqual({ wide: true, landscape: true }); // big iPhone on its side (≥ 900 wide)
+    expect(layoutFor(768, 1024)).toEqual({ wide: false, landscape: false }); // tablet: phone layout
+    expect(layoutFor(700, 480)).toEqual({ wide: true, landscape: true }); // small window, wider than high
+    expect(layoutFor(1280, 800)).toEqual({ wide: true, landscape: false });
   });
 });

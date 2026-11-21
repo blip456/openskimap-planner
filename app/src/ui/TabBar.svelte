@@ -63,6 +63,7 @@
     flex: 1;
     max-width: 440px;
     height: var(--tabbar-h);
+    box-sizing: border-box; /* 64 high including the 4 px padding (spec §2.3) */
     padding: 4px;
     border-radius: var(--r-pill);
     display: grid;
@@ -106,7 +107,7 @@
     font-weight: var(--fw-semibold);
   }
   .selected {
-    color: var(--accent);
+    color: var(--glass-accent);
   }
   .search {
     flex: none;

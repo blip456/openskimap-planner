@@ -9,7 +9,7 @@
 | 4 Feature parity | done (4a + 4b), waiting for commit; `planner/` removed |
 | 5 PWA + import | done, waiting for commit and the owner's iPhone test (`docs/agents/iphone-test-phase5.md`) |
 | 6 iPhone features | done, waiting for commit and the owner's iPhone test (`docs/agents/iphone-test-phase6.md`) |
-| 7 Liquid Glass UI + responsive | to do |
+| 7 Liquid Glass UI + responsive | done, waiting for commit and the owner's iPhone review (`docs/agents/iphone-test-phase7.md`) |
 | 8 Docs | to do |
 | Design | spec done (`docs/design/`) |
 
@@ -465,3 +465,71 @@ the tab bar at the large detent — content needs bottom padding = tab bar heigh
 
 **Questions for the owner:** none blocking. Is "insert the new start in front of the route" the behaviour you want,
 or should "Start from my location" replace the current start?
+
+### 2026-11-21 · phase 7 · product designer + front-end engineer · Liquid Glass polish, landscape, accessibility, performance
+**Design audit (screens of 4a–6 vs spec + mockups) — gaps found and fixed**
+1. The medium sheet had **no blur in Chromium** (CSS minifier dropped `backdrop-filter`; Safari was fine) → fixed + lint test.
+2. Tab capsule was 72 px high, not 64 (padding added to the height) → `box-sizing: border-box`.
+3. Text contrast: iOS system blue, red, orange and the 60 % secondary label are below 4.5:1 (axe: ~200 findings) →
+   adjusted tokens (see decisions.md, phase 7), glass-specific text tokens, slightly more opaque glass fills.
+4. No landscape layout (spec §3.10) → done.
+5. Desktop toolbar used 48 px buttons → 36 px with a mouse (spec §3.11); info card and scale bar follow the narrower column.
+6. "Ctrl K" and "P" hints were too light (`--label-3` on glass) → secondary glass text; Ctrl K hidden on touch screens.
+7. Segmented controls had no arrow keys; focus rings inside the rounded groups were clipped; the scrolling chips row
+   was not reachable by keyboard → fixed.
+8. Glass budget at rest: iPhone 6 surfaces / 11 % of the screen, desktop 7 / 5 % (checked in e2e). With the sheet at
+   medium: 8 surfaces / 53 % (the spec's own medium sheet is 41 %) — kept as designed, recorded as a deviation.
+   No glass on glass; large sheet, panel bodies, menu, toasts and alerts are solid; no animated blur.
+- Unused `app/src/ui/RouteSheet.svelte` removed.
+
+**Done**
+- **Landscape phone** (height < 500 and wider than high, any width): left panel 360 wide (glass header with search,
+  menu, Route · Saved · Map; solid body), info card inside the panel, 48 px map buttons (undo + 3D top right, compass,
+  panel button + Plan route bottom left of the map area, Locate bottom right), Menu as the modal sheet, map padding =
+  panel edge. Rule in `layoutFor()` (`lib/stores/ui.svelte.ts`).
+- **Accessibility:** Solid interface switch, `prefers-reduced-transparency` and now also `prefers-contrast: more` →
+  no blur; `prefers-reduced-motion` → sheets fade, map camera jumps (was already in place; now tested); visible focus
+  rings (inside groups too); radio-group keyboard on segmented controls; chips row focusable; profile chart is a
+  `slider` with a text value (unchanged, checked). WCAG AA text contrast in light and dark.
+- **Performance:** the Menu loads on first use (dynamic import, precached by the service worker).
+  `scripts/measure-perf.mjs` measures bundle sizes, first map, worker start and pan frame rate. Code check: no work on
+  every map move (only `moveend`, `rotate`, `pitch` handlers); nothing else worth removing.
+- **E2E:** 2 workers by default (`E2E_WORKERS`), old phase screenshot folders only rewritten with
+  `E2E_ALL_SHOTS=1`, failure screenshots kept. New `app/e2e/design.spec.ts` (8 runs): all main screens in light and
+  dark with **axe** (serious/critical fail), 1440 px, glass budget, 36 px toolbar, landscape layout, reduced motion,
+  reduced transparency / increased contrast, keyboard focus and arrow keys. `@axe-core/playwright` 4.14.0 added.
+- Fixes found by the test runs: swipe-delete could delete twice (guard + unit test); a flaky Undo tap in the route
+  test (tapped while the toast was still sliding in).
+
+**Measured** (Chromium headless, software WebGL, no GPU: only compare numbers with each other; before → after)
+| | before | after |
+| --- | --- | --- |
+| Main JS (desktop/PWA build) | 1409 KB, 399 KB gzip | 1393 KB, 394 KB gzip (+ Menu chunk 21 KB / 7 KB gzip, loaded on first use) |
+| CSS | 128 KB, 22 KB gzip | 126 KB, 21 KB gzip |
+| First map picture (iPhone size / 1280 wide) | 1.7 s / 3.3 s | 1.7–1.9 s / 2.8–3.4 s (same within noise) |
+| Routing worker ready | 370–480 ms | 290–400 ms (same within noise) |
+| Pan frame rate, iPhone size: no sheet / medium sheet glass / medium sheet solid | 13 / 15* / 18 fps | 12–13 / 14 / 17 fps |
+| Full e2e suite | 9.7 min, 36 tests, 1 worker | 7.6 min, 43 tests, 2 workers (6.6 min with `E2E_WORKERS=3`) |
+
+\* before, the sheet had no blur in Chromium (bug above), so "glass" was really solid there.
+
+**How to verify**
+- `npm test` (184 app tests; new `contrast.test.ts`, `css-lint.test.ts`, layout and double-delete tests).
+- `npm run test:e2e -- --trace off` → 43 passed. Screenshots: `docs/agents/screenshots/phase7/` (iPhone portrait +
+  landscape, wide 1280 + 1440, light + dark: map, route medium/large, info card, search, Map sheet, menu, data screen).
+- `npm run build:desktop && node scripts/measure-perf.mjs` for the numbers above.
+- Landscape on the desktop: Chrome DevTools device mode, iPhone, rotate.
+- Owner on the iPhone: `docs/agents/iphone-test-phase7.md` (**owner review**).
+
+**Open issues / notes**
+- Blur cost on the real iPhone is unknown (no GPU here). If panning with the sheet open stutters, switch on the
+  `data-map-moving` fallback of spec §5.5 (CSS is ready in `tokens.css`; set the attribute on `movestart`).
+- Safari does not support `prefers-reduced-transparency` (as far as known); iPhone users use Solid interface.
+- Dynamic Type in standalone mode and the search field above the keyboard are still only checkable on the iPhone
+  (in the checklist).
+- The colour tokens differ a little from iOS (darker blue / red in light mode) for WCAG AA; the owner may prefer the
+  iOS look — easy to change in `tokens.css`, but the contrast tests will then fail on purpose.
+
+**Questions for the owner:** none blocking. Is the slightly deeper blue (for readability) fine, or do you prefer the
+exact iOS blue even if it is a bit harder to read?
+

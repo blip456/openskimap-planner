@@ -15,6 +15,14 @@
   let dx = $state(0);
   let drag = $state<{ id: number; x: number; y: number; base: number; active: boolean } | null>(null);
   let swiped = false;
+  /** a full swipe deletes once: the click that can follow the touch (the red action is under the finger by then)
+   * must not delete again (phase 7: a second delete raced the Undo of the first) */
+  let fired = false;
+  function fire() {
+    if (fired) return;
+    fired = true;
+    ondelete();
+  }
 
   $effect(() => {
     if (!drag) dx = open ? -ACTION : 0;
@@ -50,7 +58,7 @@
     setTimeout(() => (swiped = false), 50);
     if (dx < -width * 0.6) {
       dx = -width;
-      setTimeout(ondelete, 150);
+      setTimeout(fire, 150);
     } else {
       open = dx < -ACTION / 2;
       dx = open ? -ACTION : 0;
@@ -59,7 +67,7 @@
 </script>
 
 <div class="swipe" bind:clientWidth={width} data-testid={testid}>
-  <button type="button" class="action" style:width={`${Math.max(ACTION, -dx)}px`} onclick={ondelete} tabindex={open ? 0 : -1} aria-hidden={!open}>
+  <button type="button" class="action" style:width={`${Math.max(ACTION, -dx)}px`} onclick={() => !swiped && fire()} tabindex={open ? 0 : -1} aria-hidden={!open}>
     Delete
   </button>
   <div

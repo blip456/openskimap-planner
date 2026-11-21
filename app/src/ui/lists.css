@@ -166,7 +166,7 @@ label.row:active,
   inset: -4px 0;
 }
 .cap-btn.primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
 }
 .cap-btn.destructive {

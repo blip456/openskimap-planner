@@ -22,7 +22,12 @@ export function collectErrors(page: Page): { errors: string[]; infos: string[] }
   return out;
 }
 
+/** Screenshots of the current phase are always written. Older phases are a record of how the app looked then:
+ * they are only rewritten with E2E_ALL_SHOTS=1 (saves time and keeps git quiet). */
+export const CURRENT_SHOTS = 'phase7';
+
 export async function shot(page: Page, info: TestInfo, step: string, dir = SHOTS): Promise<void> {
+  if (path.basename(dir) !== CURRENT_SHOTS && !process.env.E2E_ALL_SHOTS) return;
   fs.mkdirSync(dir, { recursive: true });
   await page.screenshot({ path: path.join(dir, `${info.project.name}-${step}.png`) });
 }

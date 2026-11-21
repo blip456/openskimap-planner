@@ -52,7 +52,8 @@
       </div>
     {/each}
   </div>
-  <div class="chips" class:fade-end={more} bind:this={chipRow} onscroll={measure} data-testid="route-chips">
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex (a scrolling row must be reachable with the keyboard, WCAG 2.1.1) -->
+  <div class="chips" class:fade-end={more} bind:this={chipRow} onscroll={measure} tabindex="0" role="group" aria-label="More route details" data-testid="route-chips">
     {#each chips as c (c.text)}<span class="chip" title={desktop ? c.title : undefined} data-testid="route-chip">{c.text}</span>{/each}
   </div>
 </div>

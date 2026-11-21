@@ -28,7 +28,7 @@
     animation: pill-in var(--dur-base) var(--ease-out);
   }
   .icon {
-    color: var(--accent);
+    color: var(--glass-accent);
     display: grid;
   }
   .text {
@@ -40,7 +40,7 @@
     min-width: 0;
   }
   .kbd {
-    color: var(--label-3);
+    color: var(--glass-label-2);
   }
   .long {
     display: none;

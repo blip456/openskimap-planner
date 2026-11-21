@@ -46,6 +46,12 @@ iOS 26 system colours. Light / dark values are switched by `prefers-color-scheme
 | `--bg-cell` | `#FFFFFF` | `#2C2C2E` | Inset group cells (dark values match the owner's screenshot of the native app) |
 | `--toast-bg` | `rgba(28,28,30,.92)` | `rgba(242,242,247,.94)` | Toasts (inverted, solid) |
 
+**Phase 7 change (WCAG AA):** text colours were adjusted so all text reaches 4.5:1: `--accent` `#005EC4` / `#6CB4FF`,
+new `--accent-fill` for filled buttons `#005EC4` / `#0A6FD8`, `--red` `#C4000F` / `#FF8A82`, `--orange` `#C93400`
+(light), `--label-2` 78 % / 70 %. Text on glass uses `--glass-label`, `--glass-label-2` and `--glass-accent`
+(`#004CB8` / `#64ADFF`); the glass fills are a bit more opaque (light 0.7, dark 0.86). `tokens.css` is the source;
+reasons in `docs/agents/decisions.md` (phase 7).
+
 **Map colours never change with the theme.** The map style stays light in dark mode (there is no dark map style in
 scope). Copied from `packages/core/src/ski.ts` (`RUN_COLORS`, `LIFT_COLOR`, `NORDIC_COLOR`, `CONNECTION_COLOR`), `packages/core/src/slope.ts` and today's `planner/public/app.js` (markers, route layers; these were in `scripts/lib/styles.mjs` before phase 1):
 

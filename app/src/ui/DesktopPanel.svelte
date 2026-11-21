@@ -11,23 +11,38 @@
   import SavedBody from './saved/SavedBody.svelte';
   import SheetHeader from './SheetHeader.svelte';
   import MapBody from './map/MapBody.svelte';
+  import InfoHeader from './info/InfoHeader.svelte';
+  import InfoBody from './info/InfoBody.svelte';
   import type { AppState } from '../lib/app.svelte.ts';
   import type { SheetId } from '../lib/stores/ui.svelte.ts';
 
-  let { app }: { app: AppState } = $props();
+  let {
+    app,
+    landscape = false,
+    onselect,
+    oncloseinfo,
+  }: {
+    app: AppState;
+    /** landscape phone (spec §3.10): narrower panel, and the info card shows in the panel (no tab selected) */
+    landscape?: boolean;
+    onselect?: (id: SheetId) => void;
+    oncloseinfo?: () => void;
+  } = $props();
   const ui = $derived(app.ui);
   const tab = $derived<SheetId>(ui.sheet ?? 'route');
+  const card = $derived(landscape ? app.explore.card : null);
   let body = $state<HTMLDivElement>();
 
   // another tab or sub-page starts at the top
   $effect(() => {
     void tab;
     void ui.routePage;
+    void card;
     if (body) body.scrollTop = 0;
   });
 </script>
 
-<aside class="panel" aria-label="Planner" data-testid="panel">
+<aside class="panel" class:landscape aria-label="Planner" data-testid="panel">
   <header class="head glass">
     <div class="top">
       <PanelSearch search={app.search} focus={ui.focusSearch} />
@@ -35,8 +50,8 @@
     </div>
     <Segmented
       label="Panel"
-      value={tab}
-      onchange={(id) => ui.openSheet(id)}
+      value={card ? null : tab}
+      onchange={(id) => (onselect ? onselect(id) : ui.openSheet(id))}
       testid="panel-tabs"
       options={[
         { value: 'route', label: 'Route', testid: 'tab-route' },
@@ -47,7 +62,9 @@
   </header>
   <div class="body" bind:this={body} data-testid="sheet-body">
     <div class="sheet-head-wrap">
-      {#if tab === 'route'}
+      {#if card}
+        <InfoHeader {card} onclose={() => oncloseinfo?.()} />
+      {:else if tab === 'route'}
         <RouteHeader {app} />
       {:else if tab === 'saved'}
         <SavedHeader {app} />
@@ -55,8 +72,10 @@
         <SheetHeader title="Map" />
       {/if}
     </div>
-    <div class="content">
-      {#if tab === 'route'}
+    <div class="content" data-testid={card ? 'info-panel' : undefined}>
+      {#if card}
+        <InfoBody {app} tall />
+      {:else if tab === 'route'}
         {#key ui.routePage}<RouteBody {app} />{/key}
       {:else if tab === 'saved'}
         <SavedBody {app} />
@@ -84,6 +103,13 @@
     color: var(--label);
     /* inner radius = panel radius − padding (spec §1.3) */
     --r-cell: 12px;
+  }
+  /* landscape phone (spec §3.10) */
+  .panel.landscape {
+    top: calc(8px + var(--safe-top));
+    left: calc(8px + var(--safe-left));
+    bottom: calc(8px + var(--safe-bottom));
+    width: 360px;
   }
   .head {
     position: relative;

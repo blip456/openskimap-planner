@@ -62,7 +62,7 @@
     transition-duration: var(--dur-instant);
   }
   .accent {
-    color: var(--accent);
+    color: var(--glass-accent);
   }
   .off {
     color: var(--label-3);

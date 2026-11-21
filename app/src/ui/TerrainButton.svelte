@@ -49,7 +49,7 @@
     font-size: 13px;
   }
   .on {
-    color: var(--accent);
+    color: var(--glass-accent);
   }
   @media (hover: hover) {
     .capsule:hover {
