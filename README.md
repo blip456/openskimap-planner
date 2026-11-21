@@ -58,7 +58,7 @@ reload on <http://localhost:5173>.
 
 ```sh
 npm run build                 # once, if build/ does not exist yet
-npm run build:pwa-map-data        # packs build/regions/default/ into one ZIP: build/pwa-map-data/openskimap-data-YYYY-MM-DD-z14.zip
+npm run build:pwa-map-data        # packs the resorts.json map (build/regions/oberstdorf-kleinwalsertal/) into one ZIP: build/pwa-map-data/openskimap-data-YYYY-MM-DD-z14.zip
 npm run build:pwa-map-data z12    # or: smaller ZIP at zoom 12 (builds the data first if needed)
 npm run dev:pwa               # app on http://localhost:5174, no service worker (hot reload)
 npm run preview:pwa           # builds the real PWA and serves it on http://localhost:4174 with the service worker
@@ -147,9 +147,9 @@ The scripts are grouped by topic. The order in `package.json` follows the same g
 
 | Script | What it does |
 | --- | --- |
-| `npm run build` | Builds the map data in `build/regions/default/` for the desktop and the phone. Accepts `z<N>` and the `--terrain-zoom`, `--basemap-zoom`, `--ski-zoom`, `--yes`, `--only=ski`, `--refresh`, `--refresh-basemap` options. |
+| `npm run build` | Builds the map data for the desktop and the phone in `build/regions/<resort id>/` (the id of the first resort in `resorts.json`, today `oberstdorf-kleinwalsertal`). Accepts `z<N>` and the `--terrain-zoom`, `--basemap-zoom`, `--ski-zoom`, `--yes`, `--only=ski`, `--refresh`, `--refresh-basemap` options. |
 | `npm run build:ski` | Only rebuilds ski tiles, styles and planner data from the local download (seconds). Same as `build -- --only=ski`. |
-| `npm run build:pwa-map-data` | Packs `build/regions/default/` into the data ZIP for the iPhone. Accepts `z<N>`. Offline, no download. |
+| `npm run build:pwa-map-data` | Packs the resorts.json map (`build/regions/<resort id>/`) into the data ZIP for the iPhone. Accepts `z<N>`. Offline, no download. |
 
 **2. Development** (hot reload, for changing the code)
 
@@ -510,9 +510,9 @@ docs/                     guides (iphone-guide.md, vercel.md), the plan, design 
 vercel.json               settings for hosting the PWA on Vercel
 saved-routes/             routes saved to the "Project folder" (desktop, not in git)
 build/                    everything the builds create (not in git)
-  regions/                one folder per map build. The resorts.json build is regions/default/, and every
+  regions/                one folder per map build. The resorts.json build is regions/<resort id>/ (named after the first resort in resorts.json), and every
                           "Build region" build is regions/<id>/. Each holds the same things:
-    default/              planner/ (runs, lifts, places per resort, for routing and search), tileserver/
+    oberstdorf-kleinwalsertal/  (the resorts.json map) planner/ (runs, lifts, places per resort, for routing and search), tileserver/
                           (PMTiles data, styles, config for TileServer GL), build-info.json
   tileserver/fonts, sprites/  fonts and sprites, shared by every map build
   downloads/              OpenSkiData downloads (kept to respect the once-per-day download rule)

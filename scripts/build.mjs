@@ -9,7 +9,7 @@
 //   npm run build -- --terrain-zoom=16 --basemap-zoom=14 --ski-zoom=16   each zoom on its own (overrides z<N>)
 //   npm run build z17 -- --yes        skip the question above zoom 16
 //   Zoom order: long flags > z<N> > resorts.json settings. Extracts are cached per zoom in build/work/.
-//   npm run build                     the resorts.json build goes to build/regions/default/
+//   npm run build                     the resorts.json build goes to build/regions/<resort id>/
 //   npm run build -- --region=region.json --out=build/regions/x   one region (scripts/lib/region.mjs) instead of
 //                                     resorts.json, written to its own folder. Downloads, caches, fonts and sprites
 //                                     stay shared in build/. A resort or region with a `bbox` is built exactly as
@@ -53,6 +53,7 @@ import {
   resolveZoom,
 } from './lib/build-args.mjs';
 import { RegionError, checkBbox, regionToResort, validateRegion } from './lib/region.mjs';
+import { defaultMapDir } from './lib/map-folder.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 // everything the build creates lives in build/ (safe to delete; `npm run build` recreates it)
@@ -68,9 +69,9 @@ try {
 }
 const onlySki = args.only === 'ski';
 
-// output of this build: build/regions/default (resorts.json), or the folder of --out (region builds). Downloads, the
+// output of this build: build/regions/<resort id> (resorts.json), or the folder of --out (region builds). Downloads, the
 // extract caches, fonts and sprites are always shared in build/.
-const DEFAULT_OUT = path.join(BUILD, 'regions', 'default');
+const DEFAULT_OUT = defaultMapDir(BUILD, ROOT);
 const OUT = args.out ? path.resolve(args.out) : DEFAULT_OUT;
 const DIR = {
   raw: path.join(BUILD, 'downloads'),

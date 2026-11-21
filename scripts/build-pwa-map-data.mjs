@@ -26,12 +26,13 @@ import { buildSkiAreas } from '../packages/core/src/ski-areas.ts';
 import { tileRange } from '../packages/core/src/geo.ts';
 import { buildBasemapStyle, buildOverlayStyle } from '../packages/core/src/styles/index.ts';
 import { RegionError, regionZipPrefix, validateRegion } from './lib/region.mjs';
+import { defaultMapDir } from './lib/map-folder.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const BUILD = path.join(ROOT, 'build');
-// the default build is in build/regions/default (like a region); --out replaces it in main(). Fonts and sprites are
+// the resorts.json build is in build/regions/<resort id> (like a region); --out replaces it in main(). Fonts and sprites are
 // always shared in build/.
-let OUT = path.join(BUILD, 'regions', 'default');
+let OUT = defaultMapDir(BUILD, ROOT);
 let PLANNER = path.join(OUT, 'planner');
 let TILES = path.join(OUT, 'tileserver/data');
 let INFO = path.join(OUT, 'build-info.json');
@@ -61,7 +62,7 @@ function runBuild(argv) {
 function buildNeeded(args, settings) {
   const info = readJson(INFO);
   if (!info || !fs.existsSync(path.join(PLANNER, 'resorts.json')) || !fs.existsSync(path.join(TILES, 'ski.pmtiles'))) {
-    return 'build/regions/default is missing or incomplete';
+    return `${path.relative(ROOT, OUT)} is missing or incomplete`;
   }
   const given = Object.values(args.zoom).some((v) => v !== null);
   if (!given && !args.refresh && !args.refreshBasemap) return null;
@@ -148,11 +149,11 @@ async function main() {
   }
 
   const info = readJson(INFO);
-  if (!info) throw new Error('build/regions/default/build-info.json is missing. Run `npm run build` first.');
+  if (!info) throw new Error(`${path.relative(ROOT, INFO)} is missing. Run \`npm run build\` first.`);
   const resortInfos = readJson(path.join(PLANNER, 'resorts.json'));
-  if (!resortInfos?.length) throw new Error('build/regions/default/planner/resorts.json is missing. Run `npm run build` first.');
+  if (!resortInfos?.length) throw new Error(`${path.relative(ROOT, PLANNER)}/resorts.json is missing. Run \`npm run build\` first.`);
   for (const name of ['ski', 'basemap', 'terrain', 'contours']) {
-    if (!fs.existsSync(path.join(TILES, `${name}.pmtiles`))) throw new Error(`build/regions/default/tileserver/data/${name}.pmtiles is missing. Run \`npm run build\` first.`);
+    if (!fs.existsSync(path.join(TILES, `${name}.pmtiles`))) throw new Error(`${path.relative(ROOT, TILES)}/${name}.pmtiles is missing. Run \`npm run build\` first.`);
   }
 
   // planner data + precomputed search index and ski areas
@@ -162,7 +163,7 @@ async function main() {
   sources.push({ name: 'planner/resorts.json', file: path.join(PLANNER, 'resorts.json') });
   for (const r of resortInfos) {
     const data = readJson(path.join(PLANNER, `${r.id}.json`));
-    if (!data) throw new Error(`build/regions/default/planner/${r.id}.json is missing. Run \`npm run build\` first.`);
+    if (!data) throw new Error(`${path.relative(ROOT, PLANNER)}/${r.id}.json is missing. Run \`npm run build\` first.`);
     plannerData.push(data);
     log(`Precomputing search index and ski areas for ${r.id}…`);
     const full = { ...data, searchIndex: buildSearchIndex(data), skiAreas: buildSkiAreas(data) };

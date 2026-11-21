@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { defaultMapId } from '../scripts/lib/map-folder.mjs';
 import { parseBuildArgs, resolveZoom, BASEMAP_ZOOM_RANGE, SKI_ZOOM_RANGE, TERRAIN_ZOOM_RANGE, CONFIRM_ABOVE_ZOOM } from '../scripts/lib/build-args.mjs';
 import {
   MAX_MARGIN_KM,
@@ -21,8 +22,6 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const MAX_LINES = 3000;
 const ZIP_RE = /^[\w.-]+\.zip$/;
 const REGION_ID_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
-/** build/regions/default is the resorts.json build, not a region: never listed or deleted as one. */
-const DEFAULT_MAP = 'default';
 /** build/pwa-map-data/<region id>-YYYY-MM-DD-z<N>.zip; the main data ZIP is openskimap-data-… and is never a region ZIP. */
 const REGION_ZIP_RE = /^(?!openskimap-data-)[a-z0-9][a-z0-9-]*-\d{4}-\d{2}-\d{2}-z\d+\.zip$/;
 
@@ -34,10 +33,10 @@ export class BuildError extends Error {
 }
 
 /** The region id of a region ZIP name (`<id>-YYYY-MM-DD-zN.zip`), or null for any other file (also the main ZIP). */
-function regionIdOfZip(name) {
+function regionIdOfZip(name, reserved) {
   if (typeof name !== 'string' || !REGION_ZIP_RE.test(name)) return null;
   const id = name.replace(/-\d{4}-\d{2}-\d{2}-z\d+\.zip$/, '');
-  return REGION_ID_RE.test(id) && id !== DEFAULT_MAP ? id : null;
+  return REGION_ID_RE.test(id) && id !== reserved ? id : null;
 }
 
 /** Bytes used by a file or folder (symbolic links are not followed). */
@@ -68,6 +67,8 @@ export class RegionBuilds {
     log = console,
   } = {}) {
     Object.assign(this, { root, buildDir, regionsFile, command, log });
+    /** the folder name of the resorts.json map (build/regions/<id>): never a region, never listed or deleted as one */
+    this.reserved = defaultMapId(root);
     this.skiAreaCache = null;
     this.job = null;
     this.listeners = new Set();
@@ -131,12 +132,15 @@ export class RegionBuilds {
   }
 
   validate(input) {
+    let region;
     try {
-      return validateRegion(input);
+      region = validateRegion(input);
     } catch (err) {
       if (err instanceof RegionError) throw new BuildError(400, err.message);
       throw err;
     }
+    if (region.id === this.reserved) throw new BuildError(400, `The id "${this.reserved}" is reserved for the resorts.json map.`);
+    return region;
   }
 
   // --- saved regions (regions.json) ---
@@ -195,7 +199,7 @@ export class RegionBuilds {
    */
   deleteRegionZip(name) {
     if (this.job?.state === 'running') throw new BuildError(409, 'A build is running. Wait for it or cancel it first.');
-    const regionId = regionIdOfZip(name);
+    const regionId = regionIdOfZip(name, this.reserved);
     if (!regionId) throw new BuildError(400, 'Only region ZIP files can be deleted here.');
     const file = this.zipFile(name);
     if (!file) throw new BuildError(404, 'No such ZIP file.');
@@ -203,7 +207,7 @@ export class RegionBuilds {
     let bytes = measure(file);
     fs.rmSync(file, { force: true });
     // the folder is shared by every ZIP of this region: keep it while another ZIP of the region is left
-    const stillUsed = this.zips().some((z) => regionIdOfZip(z.name) === regionId);
+    const stillUsed = this.zips().some((z) => regionIdOfZip(z.name, this.reserved) === regionId);
     const folder = path.join(this.buildDir, 'regions', regionId);
     const folderRemoved = !stillUsed && fs.existsSync(folder);
     if (folderRemoved) {
@@ -216,7 +220,7 @@ export class RegionBuilds {
 
   // --- clean up: what region builds leave in build/ ---
   // The page only sends group keys (never paths). Each group's paths are computed here from a fixed list.
-  // Not touched: build/regions/default (the resorts.json map), build/pwa-map-data main ZIP, regions.json (saved regions).
+  // Not touched: build/regions/<resort id> (the resorts.json map), build/pwa-map-data main ZIP, regions.json (saved regions).
 
   cleanupGroups() {
     const entries = (dir, test) => {
@@ -233,7 +237,7 @@ export class RegionBuilds {
         label: 'Region build folders',
         note: 'Built regions in build/regions. Saved regions (regions.json) stay, Rebuild builds them again.',
         optional: false,
-        paths: entries(path.join(this.buildDir, 'regions'), (n) => REGION_ID_RE.test(n) && n !== DEFAULT_MAP),
+        paths: entries(path.join(this.buildDir, 'regions'), (n) => REGION_ID_RE.test(n) && n !== this.reserved),
       },
       {
         key: 'region-zips',

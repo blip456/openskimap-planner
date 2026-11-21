@@ -15,7 +15,7 @@ import { applyPinAction, crumbsFor, liftRows, pinActions } from '../src/lib/expl
 import * as legacyModule from '../../packages/core/test/reference/app-route.legacy.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const REAL = path.join(ROOT, 'build/regions/default/planner/oberstdorf-kleinwalsertal.json');
+const REAL = path.join(ROOT, 'build/regions/oberstdorf-kleinwalsertal/planner/oberstdorf-kleinwalsertal.json');
 
 type LngLat = [number, number];
 type Legacy = {

@@ -4,15 +4,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { launch, npmRun } from './lib/launch.mjs';
+import { defaultMapDir } from './lib/map-folder.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const commands = [
   { name: 'vite', color: 32, cmd: 'npx', args: ['vite', '--config', 'app/vite.config.ts', '--mode', 'desktop'] },
   { name: 'server', color: 35, ...npmRun('server') },
 ];
-if (fs.existsSync(path.join(ROOT, 'build/regions/default/tileserver/config.json'))) {
+if (fs.existsSync(path.join(defaultMapDir(path.join(ROOT, 'build'), ROOT), 'tileserver/config.json'))) {
   commands.push({ name: 'tiles', color: 36, ...npmRun('tiles'), optional: true, hint: 'TileServer GL stopped: the app works, only the gpx.studio links need it.' });
 } else {
-  console.warn('No build/regions/default/tileserver/config.json: TileServer GL is not started. Run "npm run build" for map data.');
+  console.warn('No map data (tileserver/config.json): TileServer GL is not started. Run "npm run build" for map data.');
 }
 launch(commands, { cwd: ROOT });

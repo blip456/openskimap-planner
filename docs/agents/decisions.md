@@ -550,3 +550,13 @@ support on the phone — out of scope, as agreed).
   build/" button, and the Build region page. The e2e text checks follow.
 - Historical entries in `docs/agents/` keep the old names on purpose.
 - The default map folder stays `build/regions/default/` for now. Naming it after the resort is an open question.
+
+## 2026-11-21 · after phase 8 · The resorts.json map is named after its resort
+
+- **Replaces** "build/regions/default" (see the entry above). The folder is `build/regions/<id>`, where `<id>` is the id
+  of the first resort in `resorts.json`. Today that is `oberstdorf-kleinwalsertal`.
+- One helper, `scripts/lib/map-folder.mjs` (`defaultMapId`, `defaultMapDir`), is used by the build, the data ZIP packer,
+  the desktop server, `npm run tiles` (`scripts/tiles.mjs`), `npm start` and `npm run dev:desktop`.
+- A region cannot use that id: the server refuses it (400), the region cleanup and region ZIP delete never treat that
+  folder as a region. The id `default` is no longer special.
+- With more than one resort, the folder follows the first resort. Tell the owner if that is not wanted.

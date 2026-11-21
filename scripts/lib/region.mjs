@@ -57,7 +57,6 @@ export function validateRegion(input) {
   if (name.length > 100) throw new RegionError('The name is too long (at most 100 characters).');
   const id = String(input.id ?? '').trim() || slugify(name);
   if (!ID_RE.test(id)) throw new RegionError('The id may only have lowercase letters, digits and dashes (for example "lech-zurs").');
-  if (id === 'default') throw new RegionError('The id "default" is reserved for the resorts.json build (build/regions/default).');
 
   const hasBbox = input.bbox !== undefined && input.bbox !== null;
   const hasAreas = Array.isArray(input.skiAreas) && input.skiAreas.length > 0;

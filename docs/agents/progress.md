@@ -722,3 +722,15 @@ The existing ZIPs were moved, not rebuilt. `npm run build:pwa-map-data` writes t
 **Open issues:**
 - The default folder name `build/regions/default/` is still open (the owner was asked whether to name it after the resort).
 - A first run of the browser suite was stopped mid-way, because the folder move would have broken it. Rerun needed (in progress).
+
+### 2026-11-21 · after phase 8 · Map folder named after the resort (owner request)
+
+**Done:** `build/regions/default` → `build/regions/oberstdorf-kleinwalsertal`. The name comes from resorts.json through
+`scripts/lib/map-folder.mjs`. `npm run tiles` is now `scripts/tiles.mjs`. See decisions.md.
+
+**How to verify:** `npm run build -- --only=ski`, `npm run tiles`, `npm start`. `npm test` green (78 core, 37 scripts,
+41 server, 194 app; one app test, `saved.test.ts` delete/undo, failed once under load and passed on reruns).
+
+**Open issues:**
+- `saved.test.ts` delete/undo timing: flaky under load. Not investigated yet.
+- Dev servers started before the move must be restarted (they still read the old folder).

@@ -16,7 +16,7 @@
     "start": "node scripts/start.mjs",
     "preview:pwa": "npm run build:pwa && node scripts/dev-pwa.mjs --preview",
     "server": "node server/server.mjs",
-    "tiles": "tileserver-gl --config build/regions/default/tileserver/config.json --bind 127.0.0.1 --port 8080",
+    "tiles": "node scripts/tiles.mjs",
     "build:desktop": "vite build --config app/vite.config.ts --mode desktop",
     "build:pwa": "vite build --config app/vite.config.ts --mode pwa",
     "icons": "node scripts/icons.mjs",

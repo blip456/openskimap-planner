@@ -56,8 +56,8 @@ export async function expectMapNotBlank(page: Page): Promise<void> {
 
 /** A lift top → bottom pair that has a real ski route (computed with the core on the real data). */
 export function routePoints(): [LngLat, LngLat] {
-  const resorts = JSON.parse(fs.readFileSync(path.join(ROOT, 'build/regions/default/planner/resorts.json'), 'utf8')) as { id: string }[];
-  const data = JSON.parse(fs.readFileSync(path.join(ROOT, `build/regions/default/planner/${resorts[0].id}.json`), 'utf8')) as ResortData;
+  const resorts = JSON.parse(fs.readFileSync(path.join(ROOT, 'build/regions/oberstdorf-kleinwalsertal/planner/resorts.json'), 'utf8')) as { id: string }[];
+  const data = JSON.parse(fs.readFileSync(path.join(ROOT, `build/regions/oberstdorf-kleinwalsertal/planner/${resorts[0].id}.json`), 'utf8')) as ResortData;
   const net = new SkiNetwork(data);
   for (const lift of data.lifts) {
     if (!['gondola', 'chair_lift'].includes(String(lift.properties.liftType))) continue;
@@ -77,8 +77,8 @@ export function routePoints(): [LngLat, LngLat] {
 /** Three points on a real route: a lift top, a point in the middle of the run down, the lift bottom. */
 export function threePoints(): [LngLat, LngLat, LngLat] {
   const [top, bottom] = routePoints();
-  const resorts = JSON.parse(fs.readFileSync(path.join(ROOT, 'build/regions/default/planner/resorts.json'), 'utf8')) as { id: string }[];
-  const data = JSON.parse(fs.readFileSync(path.join(ROOT, `build/regions/default/planner/${resorts[0].id}.json`), 'utf8')) as ResortData;
+  const resorts = JSON.parse(fs.readFileSync(path.join(ROOT, 'build/regions/oberstdorf-kleinwalsertal/planner/resorts.json'), 'utf8')) as { id: string }[];
+  const data = JSON.parse(fs.readFileSync(path.join(ROOT, `build/regions/oberstdorf-kleinwalsertal/planner/${resorts[0].id}.json`), 'utf8')) as ResortData;
   const r = new SkiNetwork(data).route([top, bottom]);
   const mid = r.coordinates[Math.floor(r.coordinates.length / 2)];
   return [top, [mid[0], mid[1]], bottom];
@@ -146,8 +146,8 @@ export function newestZip(): string {
 }
 
 function realData(): ResortData {
-  const resorts = JSON.parse(fs.readFileSync(path.join(ROOT, 'build/regions/default/planner/resorts.json'), 'utf8')) as { id: string }[];
-  return JSON.parse(fs.readFileSync(path.join(ROOT, `build/regions/default/planner/${resorts[0].id}.json`), 'utf8')) as ResortData;
+  const resorts = JSON.parse(fs.readFileSync(path.join(ROOT, 'build/regions/oberstdorf-kleinwalsertal/planner/resorts.json'), 'utf8')) as { id: string }[];
+  return JSON.parse(fs.readFileSync(path.join(ROOT, `build/regions/oberstdorf-kleinwalsertal/planner/${resorts[0].id}.json`), 'utf8')) as ResortData;
 }
 
 const metres = (a: readonly (number | undefined)[], b: readonly (number | undefined)[]) => {

@@ -11,7 +11,7 @@ const run = (cmd, args) => {
   if (r.status !== 0) process.exit(r.status ?? 1);
 };
 
-if (!fs.existsSync(path.join(ROOT, 'build/regions/default/planner/resorts.json')) || !fs.readdirSync(path.join(ROOT, 'build/pwa-map-data')).some((n) => n.endsWith('.zip'))) {
+if (!fs.existsSync(path.join(ROOT, 'build/regions/oberstdorf-kleinwalsertal/planner/resorts.json')) || !fs.readdirSync(path.join(ROOT, 'build/pwa-map-data')).some((n) => n.endsWith('.zip'))) {
   console.error('The smoke tests need real data: run npm run build and npm run build:pwa-map-data first.');
   process.exit(1);
 }

@@ -12,6 +12,7 @@ import { MIME, safeJoin, sendFile } from './files.mjs';
 import { DEFAULT_FOLDER, RouteStore, StoreError, slug } from './routes-store.mjs';
 import { resolveGoogleLink } from './google-links.mjs';
 import { BuildError, RegionBuilds } from './region-builds.mjs';
+import { defaultMapDir, defaultMapId } from '../scripts/lib/map-folder.mjs';
 import { SearchError } from '../packages/core/src/search.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -54,7 +55,7 @@ export function capabilities({ mapDir, tileServerUrl, serverRoutes, regionBuilds
           builtAt: info?.builtAt ?? null,
         }
       : null,
-    ...(ok ? {} : { dataError: 'No map data found in build/regions/default. Run npm run build first.' }),
+    ...(ok ? {} : { dataError: `No map data found in build/regions/${defaultMapId(projectRoot)}. Run npm run build first.` }),
   };
 }
 
@@ -126,8 +127,8 @@ export function dataFile({ buildDir, mapDir }, pathname) {
 export function createServer({
   appDir = path.join(ROOT, 'app/dist-desktop'),
   buildDir = path.join(ROOT, 'build'),
-  /** the default map (planner data, tiles, build-info.json): build/regions/default; fonts and sprites stay in buildDir */
-  mapDir = path.join(buildDir, 'regions', 'default'),
+  /** the resorts.json map (planner data, tiles, build-info.json): build/regions/<resort id>; fonts and sprites stay in buildDir */
+  mapDir = defaultMapDir(buildDir, ROOT),
   tileServerUrl = 'http://localhost:8080',
   serverRoutes = true,
   routesDir = path.join(ROOT, 'saved-routes'),
@@ -316,6 +317,6 @@ if (import.meta.main) {
   }
   server.listen(port, host, () => {
     console.log(`Desktop server: http://localhost:${port}`);
-    if (!fs.existsSync(path.join(ROOT, 'build/regions/default/planner/resorts.json'))) console.log('No map data yet: run npm run build first.');
+    if (!fs.existsSync(path.join(defaultMapDir(path.join(ROOT, 'build'), ROOT), 'planner/resorts.json'))) console.log('No map data yet: run npm run build first.');
   });
 }

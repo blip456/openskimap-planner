@@ -7,6 +7,7 @@ import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import { parseRange, safeJoin } from '../files.mjs';
 import { createServer, dataFile } from '../server.mjs';
+import { defaultMapId } from '../../scripts/lib/map-folder.mjs';
 
 describe('parseRange', () => {
   test('normal, open and suffix ranges', () => {
@@ -40,14 +41,16 @@ describe('safeJoin', () => {
   });
 });
 
-/** The desktop server's paths: the default map in build/regions/default, fonts and sprites in build/. */
-const paths = (build) => ({ buildDir: build, mapDir: path.join(build, 'regions', 'default') });
+/** The desktop server's folder of the resorts.json map: build/regions/<resort id> (read from resorts.json). */
+const MAP = defaultMapId(path.resolve(import.meta.dirname, '../..'));
+/** The desktop server's paths: the map in build/regions/<resort id>, fonts and sprites in build/. */
+const paths = (build) => ({ buildDir: build, mapDir: path.join(build, 'regions', MAP) });
 
 describe('dataFile', () => {
   const build = path.resolve('/b');
   test('maps the four kinds of data files', () => {
-    assert.equal(dataFile(paths(build), '/data/planner/oberstdorf.json'), path.join(build, 'regions/default/planner/oberstdorf.json'));
-    assert.equal(dataFile(paths(build), '/data/tiles/basemap.pmtiles'), path.join(build, 'regions/default/tileserver/data/basemap.pmtiles'));
+    assert.equal(dataFile(paths(build), '/data/planner/oberstdorf.json'), path.join(build, `regions/${MAP}/planner/oberstdorf.json`));
+    assert.equal(dataFile(paths(build), '/data/tiles/basemap.pmtiles'), path.join(build, `regions/${MAP}/tileserver/data/basemap.pmtiles`));
     assert.equal(dataFile(paths(build), '/data/fonts/Noto%20Sans%20Medium/0-255.pbf'), path.join(build, 'tileserver/fonts/Noto Sans Medium/0-255.pbf'));
     assert.equal(dataFile(paths(build), '/data/sprites/light@2x.png'), path.join(build, 'tileserver/sprites/light@2x.png'));
   });
@@ -92,13 +95,13 @@ function raw(pathname, headers = {}) {
 before(async () => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-server-'));
   const build = path.join(tmp, 'build');
-  fs.mkdirSync(path.join(build, 'regions/default/planner'), { recursive: true });
-  fs.mkdirSync(path.join(build, 'regions/default/tileserver/data'), { recursive: true });
+  fs.mkdirSync(path.join(build, `regions/${MAP}/planner`), { recursive: true });
+  fs.mkdirSync(path.join(build, `regions/${MAP}/tileserver/data`), { recursive: true });
   fs.mkdirSync(path.join(build, 'tileserver/fonts/Noto Sans Regular'), { recursive: true });
-  fs.writeFileSync(path.join(build, 'regions/default/planner/resorts.json'), JSON.stringify([{ id: 'r', name: 'R', bbox: [1, 2, 3, 4], center: [2, 3] }]));
-  fs.writeFileSync(path.join(build, 'regions/default/planner/r.json'), '{"name":"R","runs":[],"lifts":[]}');
-  fs.writeFileSync(path.join(build, 'regions/default/tileserver/data/ski.pmtiles'), tileBytes);
-  fs.writeFileSync(path.join(build, 'regions/default/tileserver/data/basemap.pmtiles'), tileBytes);
+  fs.writeFileSync(path.join(build, `regions/${MAP}/planner/resorts.json`), JSON.stringify([{ id: 'r', name: 'R', bbox: [1, 2, 3, 4], center: [2, 3] }]));
+  fs.writeFileSync(path.join(build, `regions/${MAP}/planner/r.json`), '{"name":"R","runs":[],"lifts":[]}');
+  fs.writeFileSync(path.join(build, `regions/${MAP}/tileserver/data/ski.pmtiles`), tileBytes);
+  fs.writeFileSync(path.join(build, `regions/${MAP}/tileserver/data/basemap.pmtiles`), tileBytes);
   fs.writeFileSync(path.join(build, 'tileserver/fonts/Noto Sans Regular/0-255.pbf'), 'glyphs');
   fs.writeFileSync(path.join(build, 'secret.txt'), 'secret');
   fs.mkdirSync(path.join(tmp, 'app/assets'), { recursive: true });
