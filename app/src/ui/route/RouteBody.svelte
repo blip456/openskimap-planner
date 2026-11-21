@@ -39,11 +39,16 @@
     <span class="icon"><Icon name="route" size={40} strokeWidth={1.75} /></span>
     <h3>Plan a route</h3>
     <p>{desktop ? 'Click' : 'Tap'} <b>Plan route</b>, then {desktop ? 'click' : 'tap'} the map: first the start, then the destination.</p>
-    {#if !route.planMode}
-      <button type="button" class="cap-btn primary" onclick={() => route.togglePlanMode(true)}>
-        <Icon name="pencil" size={17} /> Plan route
+    <div class="empty-buttons">
+      <button type="button" class="cap-btn primary" disabled={app.locating} onclick={() => void app.startFromMyLocation()} data-testid="start-from-location">
+        <Icon name={app.locating ? 'loader' : 'locateFixed'} size={17} /> {app.locating ? 'Finding your location…' : 'Start from my location'}
       </button>
-    {/if}
+      {#if !route.planMode}
+        <button type="button" class="cap-btn" onclick={() => route.togglePlanMode(true)}>
+          <Icon name="pencil" size={17} /> Plan route
+        </button>
+      {/if}
+    </div>
   </div>
   {@render settingsRow()}
 {:else}
@@ -64,7 +69,7 @@
     <p class="busy" data-testid="route-busy">Finding the route…</p>
   {/if}
 
-  <PointList {route} {ui} {desktop} />
+  <PointList {route} {ui} {desktop} locating={app.locating} onstart={() => void app.startFromMyLocation()} />
 
   {#if result && !route.error}
     {#if result.warnings.length}
@@ -88,6 +93,12 @@
 {/if}
 
 <style>
+  .empty-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
   .stale {
     opacity: 0.6;
     transition: opacity var(--dur-fast);

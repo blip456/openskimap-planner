@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { DEFAULT_OPTIONS, RouteError, SkiNetwork, normalizeOptions, pointLetter } from '../src/index.ts';
+import { DEFAULT_OPTIONS, RouteError, SNAP_DISTANCE, SkiNetwork, normalizeOptions, pointLetter } from '../src/index.ts';
 import { loadFixture } from './helpers.mjs';
 
 const data = loadFixture();
@@ -202,5 +202,50 @@ describe('short runs without difficulty', () => {
     const r = tiny.route([[10, 47.001], [10, 47.0]], { difficulties: ['novice'] });
     assert.deepEqual(labels(r), ['run:Short connection']);
     assert.deepEqual(r.warnings, []); // connectors are allowed with any difficulty
+  });
+});
+
+describe('nearest place (start from my location)', () => {
+  test('finds the lift station and names the lift and the runs there', () => {
+    const hit = net.nearest([10.0001, 47.0101]);
+    assert.ok(hit);
+    assert.deepEqual(hit.position.slice(0, 2), [10, 47.01]);
+    assert.ok(hit.distance > 5 && hit.distance < 20, `distance ${hit.distance}`);
+    assert.ok(hit.station);
+    assert.ok(hit.names.includes('Valley Gondola'));
+    assert.ok(hit.names.includes('Blue Valley'));
+    assert.equal(new Set(hit.names).size, hit.names.length, 'no repeated names');
+  });
+
+  test('a point on a run is not a station', () => {
+    const hit = net.nearest([10.022, 47.005]);
+    assert.equal(hit.distance, 0);
+    assert.equal(hit.station, false);
+    assert.deepEqual(hit.names, ['Black Wall']);
+  });
+
+  test('the distance is in metres and grows with the distance', () => {
+    const near = net.nearest([10.05, 47.005]);
+    const far = net.nearest([10.05, 47.05]);
+    // Black Wall at 10.022 E: 0.028° of longitude at 47° N ≈ 2.1 km; the cable car top is ≈ 5 km away
+    assert.ok(near.distance > 2000 && near.distance < 2250, `near ${near.distance}`);
+    assert.ok(far.distance > 4800 && far.distance < 5200, `far ${far.distance}`);
+    assert.ok(far.distance > SNAP_DISTANCE);
+  });
+
+  test('with start, only places a route can leave are used', () => {
+    // the bottom of the Black Wall is a dead end (no lift there): a start snaps to a node with a way out
+    const end = [10.0202, 47.0002];
+    const any = net.nearest(end);
+    const start = net.nearest(end, { start: true });
+    assert.equal(any.distance, 0);
+    assert.ok(net.out[start.node].length > 0);
+    assert.ok(net.out[any.node].length === 0 || start.node === any.node);
+    // the start point must be usable by route()
+    assert.doesNotThrow(() => net.route([start.position, CABLE_TOP]));
+  });
+
+  test('an empty network has no nearest place', () => {
+    assert.equal(new SkiNetwork({ name: 'empty', runs: [], lifts: [] }).nearest([10, 47]), null);
   });
 });

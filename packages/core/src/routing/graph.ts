@@ -26,7 +26,8 @@ import {
 import { legName, pointLetter, summarize, tidySteps, type RawStep, type RouteStep, type RouteSummary } from './steps.ts';
 
 const MAX_SEGMENT = 25; // m, runs are densified so gap links can attach anywhere
-const SNAP_DISTANCE = 400; // m, max distance between a clicked point and the network
+/** m, max distance between a route point and the network (farther points are an error) */
+export const SNAP_DISTANCE = 400;
 const SHORT_UNKNOWN_RUN = 150; // m
 
 function densify(coords: Position[]): Position[] {
@@ -59,6 +60,19 @@ export interface NodeSnap {
   node: number;
   /** m */
   distance: number;
+}
+
+/** The nearest place on the network to a position (worker `nearest`, "Start from my location"). */
+export interface NearestPlace {
+  node: number;
+  /** [lon, lat, ele] of the network node */
+  position: [number, number, number];
+  /** m, straight line from the asked position */
+  distance: number;
+  /** names (or refs) of the runs and lifts at the node, without repeats */
+  names: string[];
+  /** the node is a lift station (bottom, top or middle station) */
+  station: boolean;
 }
 
 export interface LegInfo {
@@ -335,6 +349,28 @@ export class SkiNetwork {
       }
     }
     return { node: best, distance: bestD };
+  }
+
+  /**
+   * Nearest run, lift or lift station to a position. With `start` only nodes you can leave are used, so the place is
+   * a good start point (as `route()` does for every point but the last). Null when the network is empty.
+   */
+  nearest(lonlat: readonly number[], options: { start?: boolean } = {}): NearestPlace | null {
+    const snap = this.nearestNode(lonlat, options.start ?? false);
+    if (snap.node < 0) return null;
+    const ids = [...this.nodeFeatures[snap.node]];
+    const names = ids
+      .map((id) => this.features.get(id)?.props)
+      .map((p) => (p ? String(p.name ?? p.ref ?? '').trim() : ''))
+      .filter(Boolean);
+    const pos = this.nodes[snap.node];
+    return {
+      node: snap.node,
+      position: [pos[0], pos[1], pos[2]],
+      distance: Math.round(snap.distance),
+      names: [...new Set(names)],
+      station: ids.some((id) => this.features.get(id)?.kind === 'lift'),
+    };
   }
 
   /** Cheapest path as a list of edges, or null when the target cannot be reached. */

@@ -217,3 +217,18 @@ wrong assumption. Format:
   and a network, plan §6). Not a code bug.
 - **Prevention:** when a rule changes on purpose, update the old test in the same change and say so in
   decisions.md, so the next agent does not "fix" the code back.
+
+## 2026-11-21 · phase 6 · expectation from memory (fourth time)
+- **What happened:** a new core test expected the far point to be 3 km farther than the near one; it is 2.9 km.
+- **Root cause:** the distances were estimated in the head, not computed.
+- **Prevention:** print the real value once (`node -e` / a scratch script) before writing a number into a test; then
+  assert a narrow range around it with a comment that says where it comes from.
+
+## 2026-11-21 · phase 6 · a camera move on a mode change stopped the turn to north
+- **What happened:** the e2e test tapped the compass in "follow with heading"; the map stayed at a 10° bearing.
+- **Root cause:** the compass tap changed the Locate mode to "follow" and started `easeTo({ bearing: 0 })`. The
+  follow effect re-ran because the mode changed and called `easeTo({ center })`, which cancels the running rotation.
+  Same family as the phase 3/4b `setPadding` lessons: any camera call stops a running animation.
+- **Prevention:** the follow effect only moves the camera for a new fix, a new heading or an explicit centre request,
+  never for a mode change alone; and while a "turn north" runs, follow moves keep `bearing: 0`. The e2e test checks
+  the bearing after the compass tap.

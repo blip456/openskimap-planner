@@ -11,6 +11,7 @@
   import UndoRedo from './ui/UndoRedo.svelte';
   import TerrainButton from './ui/TerrainButton.svelte';
   import Compass from './ui/Compass.svelte';
+  import LocateButton from './ui/LocateButton.svelte';
   import BottomSheet from './ui/BottomSheet.svelte';
   import SheetHeader from './ui/SheetHeader.svelte';
   import RouteHeader from './ui/route/RouteHeader.svelte';
@@ -178,7 +179,18 @@
     app.display.terrain3d = !app.display.terrain3d;
   }
 
-  const soon = (what: string) => ui.showToast(`${what} comes in a later update.`);
+  const myLocation = app.location;
+  /** compass button: points the map north; in "follow with heading" the map keeps following without turning */
+  function resetNorth() {
+    myLocation.northPressed();
+    mapApi?.resetNorth();
+  }
+
+  // "Keep screen on while planning": while the setting is on and the map is open (released when hidden, asked again
+  // when the app comes back; silent where not supported)
+  $effect(() => {
+    void app.wakeLock.setWanted(app.settings.keepAwake && app.status === 'ready');
+  });
 </script>
 
 <svelte:window bind:innerHeight bind:innerWidth {onkeydown} />
@@ -190,6 +202,11 @@
   </span>
 {/snippet}
 
+<!-- first-run screen: the update prompt is part of the page, so it never covers the logo (phase 5 handover) -->
+{#snippet inlineUpdate()}
+  <UpdatePrompt placement="inline" onreload={() => app.applyUpdate()} onlater={() => (updateLater = true)} />
+{/snippet}
+
 {#if app.status === 'starting'}
   <div class="splash" aria-busy="true"></div>
 {:else if app.status === 'error'}
@@ -198,7 +215,7 @@
     <p>{app.error}</p>
   </main>
 {:else if app.status === 'no-data'}
-  <NoData {app} />
+  <NoData {app} top={showUpdate ? inlineUpdate : undefined} />
 {:else if app.data && app.resort}
   {#key app.dataVersion}
     <MapView
@@ -207,6 +224,7 @@
       {route}
       {ui}
       {explore}
+      {myLocation}
       display={app.display}
       basemap={app.basemap}
       online={app.onlineUsable}
@@ -257,13 +275,13 @@
       </div>
     {/if}
     <div class="right-column">
-      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} onreset={() => mapApi?.resetNorth()} />
+      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} force={myLocation.mode === 'heading'} onreset={resetNorth} />
       <div class="glass zoom" role="group" aria-label="Zoom">
         <button type="button" aria-label="Zoom in" title="Zoom in" onclick={() => mapApi?.zoomIn()} data-testid="zoom-in">+</button>
         <span class="divider" aria-hidden="true"></span>
         <button type="button" aria-label="Zoom out" title="Zoom out" onclick={() => mapApi?.zoomOut()} data-testid="zoom-out">−</button>
       </div>
-      <GlassButton icon="navigation" label="Show my location" onclick={() => soon('My location')} />
+      <LocateButton mode={myLocation.mode} ontap={() => myLocation.tap()} />
     </div>
     <InfoFloat {app} onclose={closeInfo} />
     <CreditLine wide onopen={() => ui.openMenu('about')} />
@@ -274,7 +292,7 @@
       <TerrainButton on={app.display.terrain3d} ontoggle={toggle3d} />
     </div>
     <div class="compass-slot">
-      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} onreset={() => mapApi?.resetNorth()} />
+      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} force={myLocation.mode === 'heading'} onreset={resetNorth} />
     </div>
 
     {#if route.planMode}
@@ -285,7 +303,7 @@
 
     <div class="controls" class:on-sheet={sheetContent !== null} class:under-large={sheetContent !== null && ui.detent === 'large'}>
       <PlanButton on={route.planMode} {desktop} ontoggle={() => route.togglePlanMode()} />
-      <GlassButton icon="navigation" label="Show my location" onclick={() => soon('My location')} />
+      <LocateButton mode={myLocation.mode} ontap={() => myLocation.tap()} />
     </div>
 
     {#if !sheetContent && !ui.searchOpen}<CreditLine onopen={() => ui.openMenu('about')} />{/if}
@@ -334,8 +352,8 @@
   {#if ui.menuOpen}<Menu {app} popover={ui.wide} />{/if}
 {/if}
 
-{#if showUpdate}<UpdatePrompt {placement} onreload={() => app.applyUpdate()} onlater={() => (updateLater = true)} />{/if}
-{#if ui.toast}<Toast toast={ui.toast} ondone={() => ui.hideToast()} {placement} shift={showUpdate ? 52 : 0} />{/if}
+{#if showUpdate && app.status !== 'no-data'}<UpdatePrompt {placement} onreload={() => app.applyUpdate()} onlater={() => (updateLater = true)} />{/if}
+{#if ui.toast}<Toast toast={ui.toast} ondone={() => ui.hideToast()} {placement} shift={showUpdate && app.status !== 'no-data' ? 52 : 0} />{/if}
 {#if DevOverlay}<DevOverlay {app} />{/if}
 
 <style>

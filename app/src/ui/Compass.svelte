@@ -1,8 +1,9 @@
 <script lang="ts">
   // Compass button (spec §2.7): only while the map is turned or tilted; the needle follows the bearing. A tap turns
   // the map back to north (and flat, unless 3D is on). After the reset it stays 1 s, then fades out.
-  let { bearing, pitch, size = 48, onreset }: { bearing: number; pitch: number; size?: number; onreset: () => void } = $props();
-  const turned = $derived(Math.abs(bearing) > 1 || pitch > 1);
+  // `force`: always shown (in "follow with heading", spec §2.7)
+  let { bearing, pitch, size = 48, force = false, onreset }: { bearing: number; pitch: number; size?: number; force?: boolean; onreset: () => void } = $props();
+  const turned = $derived(force || Math.abs(bearing) > 1 || pitch > 1);
   let visible = $state(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
   $effect(() => {

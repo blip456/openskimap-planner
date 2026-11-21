@@ -1,6 +1,6 @@
 <script lang="ts">
   // Development overlay (dev builds only; loaded with a dynamic import that production builds drop).
-  // Simulated iPhone safe areas, online/offline switch, fake GPS position + heading (used in phase 6).
+  // Simulated iPhone safe areas, online/offline switch, fake GPS position + heading (replaces the GPS for My location).
   import Icon from './Icon.svelte';
   import type { AppState } from '../lib/app.svelte.ts';
   import { DevState } from '../lib/stores/dev.svelte.ts';
@@ -21,7 +21,8 @@
   });
 
   function setPosition() {
-    message = dev.setFakePosition(position, heading) ?? 'Fake position set (used from phase 6)';
+    message = dev.setFakePosition(position, heading) ?? 'Fake position set: tap the Locate button';
+    if (dev.fakePosition) app.location.setFake(dev.fakePosition);
   }
 </script>
 
@@ -39,7 +40,10 @@
         <input type="text" bind:value={position} aria-label="Latitude, longitude" />
         <input type="number" bind:value={heading} placeholder="Heading °" aria-label="Heading" min="0" max="359" />
         <button type="button" onclick={setPosition}>Set</button>
-        {#if dev.fakePosition}<button type="button" onclick={() => (dev.fakePosition = null)}>Clear</button>{/if}
+        {#if dev.fakePosition}<button type="button" onclick={() => {
+          dev.fakePosition = null;
+          app.location.setFake(null);
+        }}>Clear</button>{/if}
       </fieldset>
       {#if message}<small>{message}</small>{/if}
       {#if app.caps.importData}

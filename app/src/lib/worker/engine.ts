@@ -6,7 +6,6 @@ import { toGpx } from '@core/gpx.ts';
 import { buildSearchIndex, prepareSearchIndex, searchLocal, type IndexedEntry, type SearchEntry } from '@core/search.ts';
 import { featureDetails, type FeatureDetails } from '@core/feature-info.ts';
 import { buildSkiAreas, type SkiAreas } from '@core/ski-areas.ts';
-import { haversine } from '@core/geo.ts';
 import type { ResortData } from '@core/types.ts';
 import type { PlannerInput } from '../data/types.ts';
 
@@ -41,6 +40,8 @@ export interface NearestHit {
   distance: number;
   /** names of the runs/lifts at that node */
   names: string[];
+  /** the node is a lift station */
+  station: boolean;
 }
 
 export interface RoutingApi {
@@ -49,7 +50,7 @@ export interface RoutingApi {
   search(query: string, limit?: number): SearchEntry[];
   feature(id: string): FeatureDetails | null;
   skiAreas(): SkiAreas;
-  nearest(point: [number, number]): NearestHit | null;
+  nearest(point: [number, number], options?: { start?: boolean }): NearestHit | null;
 }
 
 type Clock = () => number;
@@ -129,16 +130,11 @@ export class RoutingEngine implements RoutingApi {
     return this.areas;
   }
 
-  nearest(point: [number, number]): NearestHit | null {
-    const net = this.network();
-    const snap = net.nearestNode(point, false);
-    if (snap.node < 0) return null;
-    const names = [...net.nodeFeatures[snap.node]]
-      .map((id) => net.features.get(id)?.props)
-      .map((p) => (p ? String(p.name ?? p.ref ?? '').trim() : ''))
-      .filter(Boolean);
-    const pos = net.nodes[snap.node];
-    return { position: [pos[0], pos[1], pos[2]], distance: Math.round(haversine(point, pos)), names: [...new Set(names)] };
+  /** Nearest run, lift or station (core `SkiNetwork.nearest`); `start`: only places a route can start from. */
+  nearest(point: [number, number], options: { start?: boolean } = {}): NearestHit | null {
+    const hit = this.network().nearest(point, options);
+    if (!hit) return null;
+    return { position: hit.position, distance: hit.distance, names: hit.names, station: hit.station };
   }
 }
 

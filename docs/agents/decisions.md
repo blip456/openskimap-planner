@@ -305,3 +305,59 @@ Full spec: `docs/design/spec.md`, tokens: `docs/design/tokens.css`, mockups: `do
   cache for `/assets/*` and `workbox-*.js`, `application/manifest+json` for the manifest.
 - **Toast overlap (4b review):** `toastPlacement()` puts toasts (and the update prompt) above the tab bar while the
   menu or a large sheet is open on the phone; the desktop layout keeps them at the top.
+
+## 2026-11-21 · phase 6 · iPhone features (senior engineer)
+- **Where the code is:** pure logic in `app/src/lib/location/` (`locate.ts` button state machine, `heading.ts`
+  compass maths, `start.ts` Start-from-my-location limits), the store `lib/stores/location.svelte.ts` (GPS watch,
+  visibility, compass events, injectable browser APIs for the unit tests), the map layers
+  `lib/map/location-layers.ts`, `lib/wake-lock.ts`, `lib/touch.ts`, `ui/LocateButton.svelte`.
+- **GPS only while visible:** `watchPosition` (high accuracy, `maximumAge` 5 s, `timeout` 20 s) runs while the user
+  has turned location on AND the page is visible. `visibilitychange` hidden → `clearWatch` and the compass listeners
+  are removed; visible → started again. No background tracking. After the first use the GPS keeps running while the
+  app is on screen (the dot stays), also in the "off" state after "Stop following". A tap while "Finding your
+  location" cancels and stops the GPS.
+- **Locate states** follow spec §2.6 with two small changes: (1) after *Follow + heading* the next tap goes to *Off*
+  but the dot stays (the GPS keeps running, as in Apple Maps); the tap after that centres at once. (2) *Denied /
+  unavailable*: a tap tries again (the user may have changed the setting) and shows the plain message as a toast
+  again if it fails; there is **no extra info sheet** (deviation: the toast has the same text; one less screen).
+- **Follow and gestures:** a hand pan (`dragstart` with an `originalEvent`) leaves follow mode; a hand rotation
+  (`rotatestart` with an `originalEvent`) turns *Follow + heading* into *Follow*. A two-finger pinch also pans in
+  MapLibre, so a pinch while following stops following too (Apple Maps keeps following on a pinch; accepted for now).
+  Explicit centring zooms in to at least 15; following keeps the zoom. A mode change alone never moves the camera,
+  so it does not stop a running animation (the turn to north after a compass tap; see lessons).
+- **Heading:** iOS `webkitCompassHeading` (+ `screen.orientation.angle`), else an *absolute* `alpha`
+  (`deviceorientationabsolute` on Chrome/Android, 360 − alpha). Relative `alpha` is ignored (it is not a compass).
+  Smoothing: exponential along the shortest turn (factor 0.35), then a dead band of 2° and at most 10 updates per
+  second. The map turns to `current + shortest difference`, so 359° → 0° is a 1° turn, not a full spin. Each update is
+  an `easeTo` of 250 ms. `DeviceOrientationEvent.requestPermission()` is called synchronously inside the Locate tap
+  (iOS needs the direct tap). On a desktop with a mouse (`(hover: hover) and (pointer: fine)`) there is no heading
+  state: Follow → Off.
+- **Cone:** shown whenever a heading is known (after the permission on iOS; on Android at once), not only in heading
+  mode. 70° wide, 40° when `webkitCompassAccuracy` < 15°. Symbol layer with `icon-rotation-alignment: map`, so it stays
+  right when the map turns. The "searching" pulse is on the button only, not on the dot (there is no dot before the
+  first fix).
+- **Accuracy circle:** circle layer whose radius is `r0 × 2^zoom` (exponential interpolation), with `r0` computed per
+  fix from metres and latitude (512 px tiles). Real size at every zoom without updates per frame. Hidden above 2 km.
+- **Start from my location:** button in the empty Route sheet (filled, the main action; "Plan route" becomes the
+  second button as the spec says) and "My location" next to Reverse / Clear when there are points (both builds).
+  The worker `nearest` now has a `start` option (only nodes a route can leave, like `route()` does) and is a core
+  method `SkiNetwork.nearest()` with unit tests. **Insert, not replace:** with points the new start goes in front
+  (old A becomes B: "from here to there"); when the old A is within 30 m of the new start it is replaced instead (no
+  double point). Undo works as for any point change.
+- **Start limits** (`START_LIMITS` in `lib/location/start.ts`): more than **400 m** to the nearest run/lift (the
+  router's own `SNAP_DISTANCE`) → "You are … from the nearest run or lift. Start from my location works in the ski
+  area." and nothing changes; accuracy worse than **± 100 m** → "Your location is not exact enough …"; **75–400 m** →
+  set, with "You are far from the runs. Start set at the nearest lift or run." (spec copy); a fix older than **30 s** is
+  not used (the app waits up to 20 s for a new one).
+- **Wake lock:** Menu › Appearance › "Keep screen on while planning" (saved), shown only where the browser has
+  `navigator.wakeLock`. "While planning" = while the map is open and on screen (simplest rule to understand); the
+  lock is asked again after the page was hidden. All errors are silent.
+- **GPX / backup share:** already done in 4a/4b with one helper (`shareFile`): share sheet with a file where
+  `canShare({ files })` is true and the device is not a desktop, else a download; a cancelled share is not an error;
+  other share errors fall back to a download. The backup JSON uses the same path. No change needed.
+- **Touch:** `html, body { touch-action: pan-x pan-y }` (no page pinch-zoom or double-tap zoom; scrolling works),
+  the map keeps `touch-action: none` (MapLibre does pinch, rotate and two-finger tilt), and iOS `gesturestart/
+  gesturechange/gestureend` are cancelled on the document (`lib/touch.ts`). The viewport meta is unchanged
+  (no `user-scalable=no`, which iOS ignores anyway).
+- **Update prompt on the first-run screen** (phase 5 note): it is now part of the page flow above the logo
+  (`placement="inline"`), so it never covers the logo.

@@ -3,10 +3,11 @@
   // reloads on its own: the user taps Reload when it suits them (a route in progress is saved anyway).
   import Icon from './Icon.svelte';
 
-  let { onreload, onlater, placement = 'top' }: { onreload: () => void; onlater: () => void; placement?: 'top' | 'low' } = $props();
+  // placement 'inline': part of the page flow (first-run screen), not floating over it
+  let { onreload, onlater, placement = 'top' }: { onreload: () => void; onlater: () => void; placement?: 'top' | 'low' | 'inline' } = $props();
 </script>
 
-<div class="update" class:low={placement === 'low'} role="status" data-testid="update-prompt">
+<div class="update" class:low={placement === 'low'} class:inline={placement === 'inline'} role="status" data-testid="update-prompt">
   <span>New version available</span>
   <button type="button" class="reload" onclick={onreload} data-testid="update-reload">Reload</button>
   <button type="button" class="later" aria-label="Later" title="Later" onclick={onlater}><Icon name="x" size={16} strokeWidth={2.4} /></button>
@@ -35,6 +36,13 @@
   .update.low {
     top: auto;
     bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + 12px);
+  }
+  .update.inline {
+    position: static;
+    transform: none;
+    width: max-content;
+    max-width: 100%;
+    animation: none;
   }
   button {
     border: 0;

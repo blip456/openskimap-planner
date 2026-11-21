@@ -9,6 +9,7 @@ import HardDrive from '@lucide/svelte/icons/hard-drive';
 import MapIcon from '@lucide/svelte/icons/map';
 import Menu from '@lucide/svelte/icons/menu';
 import Navigation from '@lucide/svelte/icons/navigation';
+import NavigationOff from '@lucide/svelte/icons/navigation-off';
 import Pencil from '@lucide/svelte/icons/pencil';
 import RouteIcon from '@lucide/svelte/icons/route';
 import Search from '@lucide/svelte/icons/search';
@@ -61,6 +62,7 @@ export const icons = {
   map: MapIcon,
   menu: Menu,
   navigation: Navigation,
+  navigationOff: NavigationOff,
   pencil: Pencil,
   route: RouteIcon,
   search: Search,

@@ -4,8 +4,10 @@
   import ImportProgress from './ImportProgress.svelte';
   import ImportErrorBox from './ImportErrorBox.svelte';
   import type { AppState } from '../lib/app.svelte.ts';
+  import type { Snippet } from 'svelte';
 
-  let { app }: { app: AppState } = $props();
+  // `top`: shown above the logo in the page flow (the update prompt), so it never covers the logo
+  let { app, top }: { app: AppState; top?: Snippet } = $props();
   let input: HTMLInputElement;
   const standalone = typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches;
   const dev = import.meta.env.DEV;
@@ -18,6 +20,7 @@
 </script>
 
 <main class="nodata" data-testid="no-data">
+  {#if top}<div class="top-slot">{@render top()}</div>{/if}
   <img class="logo" src="/logo.svg" alt="" width="96" height="96" />
   <h1>Ski route planner</h1>
   <p class="lead">Plan ski routes on your iPhone, also without internet. First, add the map data. You do this once.</p>
@@ -73,6 +76,11 @@
   .nodata > :global(*) {
     width: 100%;
     max-width: 440px;
+  }
+  .top-slot {
+    display: flex;
+    justify-content: center;
+    margin: -24px 0 16px;
   }
   .logo {
     width: 96px;

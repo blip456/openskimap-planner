@@ -18,6 +18,9 @@ import { defaultStorage, type KeyValue } from './stores/persist.ts';
 import { loadPlannerData, savePlannerData, STATE_VERSION, type DisplayData, type MapView, type PlannerData } from './stores/planner-persist.ts';
 import { BrowserRouteStore, ServerRouteStore, countBackupRoutes } from './saved/stores.ts';
 import { gpxFileName, shareFile } from './share.ts';
+import { LocationState, browserDeps as browserLocationDeps } from './stores/location.svelte.ts';
+import { checkStart, insertStart, startMessage } from './location/start.ts';
+import { WakeLockKeeper } from './wake-lock.ts';
 import { ExploreState } from './stores/explore.svelte.ts';
 import { SearchState } from './stores/search.svelte.ts';
 import { geometryCoords } from './map/explore-layers.ts';
@@ -66,6 +69,12 @@ export class AppState {
   readonly ui = new UiState();
   readonly explore: ExploreState;
   readonly search: SearchState;
+  /** my location: GPS while visible, compass, Locate button mode (phase 6) */
+  readonly location: LocationState;
+  /** "Keep screen on while planning" */
+  readonly wakeLock = new WakeLockKeeper();
+  /** "Start from my location" is waiting for a position */
+  locating = $state(false);
   /** display options (route arrows and distances here; the Map sheet of phase 4b changes the rest) */
   display = $state<DisplayData>() as DisplayData;
   saved = $state.raw<SavedState>() as SavedState;
@@ -91,6 +100,7 @@ export class AppState {
     this.mapView = data.view;
     this.route = new RouteState({ stored: data });
     this.route.onNotice = (text) => this.ui.showToast(text);
+    this.location = new LocationState({ ...browserLocationDeps(), toast: (text) => this.ui.showToast(text, { ms: 6000 }) });
     const s = data.sections;
     if (s.sheet === 'route' || s.sheet === 'saved' || s.sheet === 'map') this.ui.openSheet(s.sheet as SheetId, s.detent === 'large' ? 'large' : 'medium');
     if (s.routePage === 'settings' || s.routePage === 'speeds') this.ui.routePage = s.routePage as RoutePage;
@@ -181,6 +191,54 @@ export class AppState {
 
   setSolid(on: boolean): void {
     this.settings.setSolid(on);
+  }
+
+  setKeepAwake(on: boolean): void {
+    // App.svelte asks for the lock while the setting is on and the map is open
+    this.settings.setKeepAwake(on);
+  }
+
+  /**
+   * "Start from my location" (plan §7): waits for a GPS position, snaps it to the nearest run, lift or station that a
+   * route can start from (worker `nearest`) and puts it in front of the route as the new A. Refuses with a message
+   * when the position is too far from the runs or not exact enough (limits in lib/location/start.ts).
+   */
+  async startFromMyLocation(): Promise<boolean> {
+    if (this.locating) return false;
+    const routing = this.routing;
+    if (!routing || !this.routingReady) {
+      this.ui.showToast('The map data is still loading. Try again in a moment.');
+      return false;
+    }
+    this.locating = true;
+    try {
+      let fix;
+      try {
+        fix = await this.location.requestFix();
+      } catch (err) {
+        this.ui.showToast(err instanceof Error ? err.message : String(err), { ms: 6000 });
+        return false;
+      }
+      const hit = await routing.call('nearest', [fix.lon, fix.lat], { start: true });
+      const check = checkStart(fix, hit);
+      if (!check.ok) {
+        this.ui.showToast(check.message, { ms: 6000 });
+        return false;
+      }
+      if (!this.route.setPoints(insertStart(this.route.points, check.point))) return false;
+      this.explore.close();
+      this.ui.showToast(startMessage(check));
+      if (this.ui.wide) this.ui.openSheet('route');
+      else this.ui.openSheet('route', 'medium');
+      this.ui.routePage = 'main';
+      this.ui.fitTo([[fix.lon, fix.lat], check.point], { maxZoom: 16 });
+      return true;
+    } catch (err) {
+      this.ui.showToast(err instanceof Error ? err.message : String(err));
+      return false;
+    } finally {
+      this.locating = false;
+    }
   }
 
   /** Loads the ski areas once per resort (precomputed in the PWA data, built by the worker on the desktop). */

@@ -8,7 +8,7 @@
 | 3 App skeleton + dev commands | done (waiting for commit) |
 | 4 Feature parity | done (4a + 4b), waiting for commit; `planner/` removed |
 | 5 PWA + import | done, waiting for commit and the owner's iPhone test (`docs/agents/iphone-test-phase5.md`) |
-| 6 iPhone features | to do |
+| 6 iPhone features | done, waiting for commit and the owner's iPhone test (`docs/agents/iphone-test-phase6.md`) |
 | 7 Liquid Glass UI + responsive | to do |
 | 8 Docs | to do |
 | Design | spec done (`docs/design/`) |
@@ -399,3 +399,69 @@ the tab bar at the large detent — content needs bottom padding = tab bar heigh
 - The update prompt sits at the top and can cover the logo on the first-run screen (small; phase 7 polish).
 
 **Questions for the owner:** none blocking. Is "Ski planner" fine as the name under the home screen icon?
+
+### 2026-11-21 · phase 6 · senior engineer · iPhone features
+**Done**
+- **My location:** `watchPosition` only while the user turned location on AND the page is visible (stops on
+  `visibilitychange` hidden, starts again on visible; no background tracking). Blue dot (white ring, grey after
+  30 s), accuracy circle in real metres (hidden above 2 km) and heading cone as MapLibre layers
+  (`lib/map/location-layers.ts`), same colours in light and dark. Plain messages for denied, unavailable, timeout,
+  insecure page (http) and no support; the app keeps working without location.
+- **Locate button** (`ui/LocateButton.svelte`, iPhone bottom right and desktop right column): Show my location →
+  (Finding your location) → Follow my location → Follow my location and heading → Stop following, icons per state
+  (outline, filled, custom heading arrow, crossed-out), aria-labels from spec §6. Panning by hand leaves follow mode,
+  turning by hand leaves heading mode. State machine in `lib/location/locate.ts`.
+- **Compass:** `DeviceOrientationEvent.requestPermission()` synchronously inside the Locate tap (iOS), then
+  `webkitCompassHeading` (absolute `alpha` elsewhere). Smoothing along the shortest turn, 2° dead band, max 10
+  updates/s, map turns by the shortest way (359 → 0). The compass button still turns the map north; in heading mode
+  it goes back to follow. Refused compass → "Compass is off…" toast, next tap stops following.
+- **Start from my location:** filled button in the empty Route sheet, "My location" next to Reverse/Clear with
+  points (both builds). Core `SkiNetwork.nearest(point, { start })` + worker `nearest(point, { start })`. Limits:
+  > 400 m from the runs or accuracy worse than ± 100 m → message, nothing changes; 75–400 m → set with the "far"
+  message. With points, the new start goes in front (old A becomes B); an old A within 30 m is replaced.
+- **Keep screen on while planning:** Menu › Appearance (saved; only shown where `navigator.wakeLock` exists), asked
+  again after the app was hidden, silent errors (`lib/wake-lock.ts`).
+- **GPX / backup share:** checked; both use `shareFile` (share sheet with a file, else download). No gap found.
+- **Touch:** `html, body { touch-action: pan-x pan-y }`, map `none`, iOS `gesture*` events cancelled
+  (`lib/touch.ts`).
+- **Phase 5 polish:** the update prompt on the first-run screen is part of the page above the logo (no overlap).
+- Dev overlay: the fake GPS position now drives My location (`LocationState.setFake`).
+- Docs: decisions (phase 6 entry: states, thresholds, insert vs replace, wake-lock rule), 2 lessons,
+  `docs/agents/iphone-test-phase6.md` (owner checklist).
+
+**Tests**
+- `npm test`: typecheck + **78 core** (5 new: `nearest`, incl. `start`) + 20 script + 19 server + **169 app** (new
+  `location.test.ts`, 30 tests: heading maths incl. wrap/smoothing/throttle, Locate state machine, the location store
+  with a fake browser (visibility stop/restart, denied, insecure, timeout, stale, compass permission + refusal,
+  requestFix, fake position), start limits + insert, worker `nearest` with `start`, accuracy circle size, wake lock
+  (re-acquire, silent), setting saved, page gesture block). Mutation checks: `bearingTarget` returning the raw
+  heading, and a doubled accuracy limit, each make a test fail.
+- `npm run test:e2e -- --trace off`: **36 passed** (12 new in `location.spec.ts`, all 4 projects): blue dot +
+  accuracy circle after the tap (`grantPermissions` + `setGeolocation`), centre, follow moves with the position,
+  hand pan → centred; touch projects: heading mode with a stubbed iOS `requestPermission` (asked once), fake
+  `deviceorientation` events → bearing 90 and cone rendered, 350 → 10 turns through north (no bearing > 25° on the
+  way), compass tap → follow + north, stop following → north; desktop mouse: follow → off. Start from my location
+  (snapped < 75 m, toast), too far, not exact, insert in front of an existing point. Denied: state, label, message,
+  start button message, map still works. Touch: computed `touch-action`, CDP two-finger pinch + twist zooms and turns
+  the map while `visualViewport.scale` stays 1. Keep screen on: switch, saved over reload.
+- Screenshots: `docs/agents/screenshots/phase6/` (location dot, heading, route empty, start from my location,
+  denied, Appearance; iPhone + wide, both builds). Older phase screenshots were refreshed by the run (they now show
+  the working locate button).
+
+**How to verify**
+- `npm test`; `npm run test:e2e -- --trace off`.
+- `npm run dev:pwa` → Chrome DevTools › Sensors: set a location near Oberstdorf (e.g. 47.4044, 10.2777), tap the
+  arrow button; or use the dev overlay (wrench) › Fake GPS. Route tab › Start from my location.
+- Owner on the iPhone: `docs/agents/iphone-test-phase6.md`.
+
+**Open issues / notes**
+- Not checked on a real iPhone: location and compass prompts, the feel of follow with heading (smoothing values may
+  need tuning: `HeadingSmoother` factor 0.35, dead band 2°, 100 ms), wake lock in the Home Screen app, share sheet
+  with the backup JSON (the share happens after an IndexedDB read; if iOS refuses it as "not from a tap", the
+  fallback is a download).
+- A two-finger pinch while following also stops following (MapLibre pans during a pinch); Apple Maps keeps following.
+- The "searching" pulse is on the button only (no dot before the first fix).
+- The inline update prompt on the first-run screen has no e2e test (the phase 5 update test runs with data).
+
+**Questions for the owner:** none blocking. Is "insert the new start in front of the route" the behaviour you want,
+or should "Start from my location" replace the current start?

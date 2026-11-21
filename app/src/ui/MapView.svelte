@@ -3,7 +3,7 @@
   // only in online mode. Route line + highlight + arrows + distance markers, route point markers (drag with finger
   // or mouse), the profile cursor, explore mode (tap → info card, hover highlight, search pin), the "Show" filter,
   // run colours, ski areas, 3D terrain, "show this on the map" requests, and the map view saved with the state.
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { Map as MlMap, Marker, ScaleControl, setWorkerUrl, type MapMouseEvent, type StyleSpecification } from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
@@ -33,6 +33,10 @@
   import { applyTerrain } from '../lib/map/terrain.ts';
   import { allInside, boundsOf, coverZoom } from '../lib/map/camera.ts';
   import type { MapApi, Padding } from '../lib/map/types.ts';
+  import type { LocationState } from '../lib/stores/location.svelte.ts';
+  import { addLocationLayers, setLocation } from '../lib/map/location-layers.ts';
+  import { bearingTarget } from '../lib/location/heading.ts';
+  import type { EaseToOptions } from 'maplibre-gl';
 
 
   let {
@@ -42,6 +46,7 @@
     ui,
     display,
     explore,
+    myLocation,
     basemap = 'local',
     online = false,
     skiAreas = null,
@@ -63,6 +68,8 @@
     ui: UiState;
     display: DisplayData;
     explore: ExploreState;
+    /** my location (blue dot, follow modes) */
+    myLocation: LocationState;
     /** the base map to show (already gated by online mode) */
     basemap?: BasemapId;
     online?: boolean;
@@ -147,6 +154,8 @@
       addRouteLayers(m, font);
       addSkiAreaLayers(m, font);
       addSlopeLayer(m);
+      // my location on top of everything (spec §2.25)
+      addLocationLayers(m);
       styleReady = true;
       styleVersion++;
     });
@@ -160,6 +169,14 @@
       ui.bearing = m.getBearing();
       ui.pitch = m.getPitch();
     };
+    // moving the map by hand stops following (as Apple Maps); turning it by hand stops turning with the compass.
+    // Only gestures have an originalEvent; the app's own camera moves do not.
+    m.on('dragstart', (e) => {
+      if (e.originalEvent) myLocation.userPanned();
+    });
+    m.on('rotatestart', (e) => {
+      if (e.originalEvent) myLocation.userRotated();
+    });
     m.on('rotate', turned);
     m.on('pitch', turned);
     turned();
@@ -221,7 +238,7 @@
     onready?.({
       zoomIn: () => m.zoomIn({ duration: duration(300) }),
       zoomOut: () => m.zoomOut({ duration: duration(300) }),
-      resetNorth: () => m.easeTo({ bearing: 0, pitch: display.terrain3d ? m.getPitch() : 0, duration: duration(500) }),
+      resetNorth: () => turnNorth(m),
     });
     return () => {
       if (frame) cancelAnimationFrame(frame);
@@ -284,6 +301,74 @@
   $effect(() => {
     void styleVersion;
     if (map && styleReady) setSearchHighlight(map, explore.pin?.lines);
+  });
+
+  // --- my location --------------------------------------------------------------------------------------------
+  $effect(() => {
+    void styleVersion;
+    const m = map;
+    if (!m || !styleReady) return;
+    const f = myLocation.fix;
+    const heading = myLocation.heading;
+    setLocation(
+      m,
+      f
+        ? {
+            lon: f.lon,
+            lat: f.lat,
+            accuracy: f.accuracy,
+            stale: myLocation.stale,
+            heading,
+            narrow: (myLocation.headingAccuracy ?? 99) < 15,
+          }
+        : null,
+    );
+  });
+
+  // centre once (Locate tap, first fix) and follow: every new fix moves the map; "follow with heading" also turns
+  // it so the heading points up (along the shortest turn, no spin at north). A mode change alone does not move the
+  // camera: that would stop a running animation (e.g. the turn to north after a compass tap).
+  let centreSeen = untrack(() => myLocation.centreSeq);
+  let fixSeen: unknown = null;
+  let headingSeen: number | null = null;
+  /** a "turn north" animation runs until then; follow moves keep bearing 0 instead of stopping it */
+  let northUntil = 0;
+  $effect(() => {
+    const m = map;
+    const f = myLocation.fix;
+    const mode = myLocation.mode;
+    const seq = myLocation.centreSeq;
+    const h = mode === 'heading' ? myLocation.heading : null;
+    if (!m || !f) return;
+    const explicit = seq !== centreSeen;
+    const newFix = f !== fixSeen;
+    const newHeading = h !== null && h !== headingSeen;
+    centreSeen = seq;
+    fixSeen = f;
+    headingSeen = h;
+    const following = mode === 'follow' || mode === 'heading';
+    if (!explicit && !(following && (newFix || newHeading))) return;
+    const opts: EaseToOptions = { center: [f.lon, f.lat], duration: duration(explicit ? 700 : 400) };
+    if (explicit && m.getZoom() < 15) opts.zoom = 15;
+    if (h !== null) {
+      opts.bearing = bearingTarget(m.getBearing(), h);
+      if (!explicit) opts.duration = duration(250);
+    } else if (performance.now() < northUntil) opts.bearing = 0;
+    m.easeTo(opts);
+  });
+
+  function turnNorth(m: MlMap): void {
+    northUntil = performance.now() + 700;
+    m.easeTo({ bearing: 0, pitch: display.terrain3d ? m.getPitch() : 0, duration: duration(500) });
+  }
+
+  let northSeen = untrack(() => myLocation.northSeq);
+  $effect(() => {
+    const seq = myLocation.northSeq;
+    const m = map;
+    if (!m || seq === northSeen) return;
+    northSeen = seq;
+    turnNorth(m);
   });
 
   // 3D terrain; switching it on tilts the map, switching it off flattens it again

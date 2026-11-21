@@ -1,4 +1,4 @@
-// State of the dev overlay (dev builds only, docs/pwa-plan.md §2.1). The fake GPS position is used in phase 6.
+// State of the dev overlay (dev builds only, docs/pwa-plan.md §2.1). The fake GPS position replaces the GPS (LocationState.setFake).
 export interface FakePosition {
   lat: number;
   lon: number;

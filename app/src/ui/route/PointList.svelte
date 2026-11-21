@@ -1,10 +1,16 @@
 <script lang="ts">
-  // Route points A, B, C… with remove buttons, then Reverse and Clear (spec §2.14).
+  // Route points A, B, C… with remove buttons, then Start from my location, Reverse and Clear (spec §2.14).
   import Icon from '../Icon.svelte';
   import { pointLetter, pointRole, ROLE_LABEL, type RouteState } from '../../lib/stores/route.svelte.ts';
   import type { UiState } from '../../lib/stores/ui.svelte.ts';
 
-  let { route, ui, desktop = false }: { route: RouteState; ui: UiState; desktop?: boolean } = $props();
+  let {
+    route,
+    ui,
+    desktop = false,
+    locating = false,
+    onstart,
+  }: { route: RouteState; ui: UiState; desktop?: boolean; locating?: boolean; onstart?: () => void } = $props();
 
   const n = $derived(route.points.length);
   let flashing = $state<number | null>(null);
@@ -41,7 +47,13 @@
     <div class="row hint">Now {desktop ? 'click' : 'tap'} the map to set the destination.</div>
   {/if}
 </div>
-<div class="btn-row">
+<div class="btn-row" class:three={!!onstart}>
+  {#if onstart}
+    <!-- the snapped position becomes the new start A (phase 6) -->
+    <button type="button" class="cap-btn" disabled={locating} onclick={onstart} aria-label="Start from my location" title="Start from my location" data-testid="start-from-location">
+      <Icon name={locating ? 'loader' : 'locateFixed'} size={17} /> My location
+    </button>
+  {/if}
   <button type="button" class="cap-btn" disabled={n < 2} onclick={() => route.reverse()} title="Swap start and destination" data-testid="reverse">
     <Icon name="arrowUpDown" size={17} /> Reverse
   </button>
@@ -51,6 +63,14 @@
 </div>
 
 <style>
+  /* three buttons fit in one line on a 390 px phone */
+  .btn-row.three {
+    gap: 6px;
+  }
+  .btn-row.three .cap-btn {
+    padding: 0 11px;
+    gap: 5px;
+  }
   .point {
     --sep-inset: 56px;
     transition: background var(--dur-fast);
