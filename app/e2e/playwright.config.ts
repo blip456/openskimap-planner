@@ -25,8 +25,8 @@ export default defineConfig({
   projects: [
     { name: 'desktop-wide', testMatch: ['desktop.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
     { name: 'desktop-iphone', testMatch: ['desktop.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
-    { name: 'pwa-wide', testMatch: ['pwa.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
-    { name: 'pwa-iphone', testMatch: ['pwa.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
+    { name: 'pwa-wide', testMatch: ['pwa.spec.ts', 'pwa-data.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
+    { name: 'pwa-iphone', testMatch: ['pwa.spec.ts', 'pwa-data.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
   ],
   webServer: [
     {

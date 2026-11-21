@@ -41,9 +41,24 @@ export class ImportCancelled extends Error {
   }
 }
 
-/** Errors the user can act on keep their message; the UI shows them as they are. */
+/** What went wrong, so the UI can show a clear title: wrong file, damaged file, not enough space, other. */
+export type ImportErrorCode = 'not-data' | 'damaged' | 'no-space' | 'other';
+
+/** Errors the user can act on keep their message; the UI shows them as they are (with a title from the code). */
 export class ImportError extends Error {
   override name = 'ImportError';
+  readonly code: ImportErrorCode;
+  constructor(message: string, code: ImportErrorCode = 'other') {
+    super(message);
+    this.code = code;
+  }
+}
+
+/** True for the browser's "storage is full" errors (QuotaExceededError; old Safari used code 22). */
+export function isQuotaError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { name?: unknown; code?: unknown };
+  return e.name === 'QuotaExceededError' || e.code === 22;
 }
 
 const MB = 1024 * 1024;
@@ -65,7 +80,9 @@ export async function importPackage(blob: Blob, root: StorageDir, options: Impor
     if (err instanceof DataPackageError) {
       // "not a ZIP" / "manifest.json is missing" → the copy from the design spec; other messages are specific
       const notOurs = /not a ZIP|manifest\.json is missing|not an OpenSkiMap/i.test(err.message);
-      throw new ImportError(notOurs ? 'This is not a data file for this app.' : err.message);
+      if (notOurs) throw new ImportError('This is not a data file for this app.', 'not-data');
+      const code = /compressed/.test(err.message) ? 'not-data' : /uses format|data format/.test(err.message) ? 'other' : 'damaged';
+      throw new ImportError(err.message, code);
     }
     throw err;
   }
@@ -77,7 +94,7 @@ export async function importPackage(blob: Blob, root: StorageDir, options: Impor
       const free = quota - usage;
       // the old data stays until the new data is complete, so the new package needs its full size
       if (bytesTotal > free) {
-        throw new ImportError(`Not enough space. Free ${Math.ceil((bytesTotal - free) / MB)} MB and try again.`);
+        throw new ImportError(`Not enough space. Free ${Math.ceil((bytesTotal - free) / MB)} MB and try again.`, 'no-space');
       }
     }
   }
@@ -106,7 +123,7 @@ export async function importPackage(blob: Blob, root: StorageDir, options: Impor
         checkCancel();
         const n = Math.min(chunkSize, f.size - done);
         const bytes = await read(f.dataOffset + done, n);
-        if (bytes.length !== n) throw new ImportError(`The file is damaged (${f.path}). Build it again and try again.`);
+        if (bytes.length !== n) throw new ImportError(`The file is damaged (${f.path}). Build it again and try again.`, 'damaged');
         hasher.update(bytes);
         await writer.write(bytes);
         done += n;
@@ -116,7 +133,7 @@ export async function importPackage(blob: Blob, root: StorageDir, options: Impor
       await writer.close();
       writer = null;
       if (hasher.digestHex() !== f.sha256) {
-        throw new ImportError(`The file is damaged (${f.path}). Build it again and try again.`);
+        throw new ImportError(`The file is damaged (${f.path}). Build it again and try again.`, 'damaged');
       }
     }
     options.onProgress?.({ phase: 'finishing', bytesDone, bytesTotal });
@@ -127,8 +144,8 @@ export async function importPackage(blob: Blob, root: StorageDir, options: Impor
     if (writer) await writer.abort().catch(() => {});
     await root.remove(packageName).catch(() => {});
     if (err instanceof ImportError || err instanceof ImportCancelled) throw err;
-    if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new ImportError('Not enough space. Free some space and try again.');
+    if (isQuotaError(err) || (err instanceof Error && /disk full/i.test(err.message))) {
+      throw new ImportError('Not enough space on this device. Free some space (iPhone: Settings › General › iPhone Storage) and try again.', 'no-space');
     }
     throw err;
   }

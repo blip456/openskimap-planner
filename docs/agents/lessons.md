@@ -193,3 +193,27 @@ wrong assumption. Format:
   the tap landed on the 3D button.
 - **Prevention:** e2e helpers that tap map coordinates frame the points again and wait for `waitForMapStill` before
   *every* tap (`tapPoints` in route.spec.ts). Never project once and tap later while a route can appear.
+
+## 2026-11-21 · phase 5 · waiting for a log line that was already printed
+- **What happened:** the new offline e2e test cleared the collected console lines and then waited for the
+  "[routing]" line. It timed out on both PWA projects.
+- **Root cause:** after the offline reload the routing worker was ready before the test reached that line; the line
+  was printed and then thrown away by the clear.
+- **Prevention:** wait for a state, not for an event that may be over: poll `window.__app.routingReady` (the `?e2e`
+  hook). Only clear a log *before* the action that writes the line.
+
+## 2026-11-21 · phase 5 · `TARGET` from a module is not a build-time constant for Rollup
+- **What happened:** (caught before it failed) the first desktop build still had the service worker chunk
+  (`register-*.js`), although the import sat behind `if (TARGET === 'pwa')`.
+- **Root cause:** `TARGET` is a constant exported from `platform/index.ts`; Rollup does not fold it across modules
+  for a dynamic import, so the chunk was emitted (never loaded, but shipped).
+- **Prevention:** code that must not be in one build is guarded by the literal `import.meta.env.VITE_TARGET` (or
+  `import.meta.env.DEV`). `scripts/e2e.mjs` now fails when `app/dist-desktop` has Workbox code, `sw.js` or a manifest.
+
+## 2026-11-21 · phase 5 · a changed rule needs its old tests changed on purpose
+- **What happened:** two existing tests failed after the phase 5 changes: the "disk full" import test expected the
+  old message, and the desktop short-link search test had online mode off.
+- **Root cause:** both were intended changes (a clear "Not enough space" message; short links now need online mode
+  and a network, plan §6). Not a code bug.
+- **Prevention:** when a rule changes on purpose, update the old test in the same change and say so in
+  decisions.md, so the next agent does not "fix" the code back.

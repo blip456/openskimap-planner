@@ -53,7 +53,11 @@ describe('import pipeline', () => {
   test('a write error (disk full) keeps the old data', async () => {
     const { root, result: first } = await freshImport();
     root.failAfterBytes = 100;
-    await expect(importPackage(testZip({ tileSize: 5000 }), root, { now })).rejects.toThrow(/disk full/);
+    // the simulated "disk full" write error becomes a clear "not enough space" error (phase 5)
+    const err = await importPackage(testZip({ tileSize: 5000 }), root, { now }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ImportError);
+    expect((err as ImportError).code).toBe('no-space');
+    expect((err as Error).message).toMatch(/^Not enough space/);
     root.failAfterBytes = null;
     expect((await findActivePackage(root))?.name).toBe(first.packageName);
     expect(await listPackageDirs(root)).toEqual([first.packageName]);

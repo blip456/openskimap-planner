@@ -24,6 +24,10 @@ export interface DataInfo {
   buildDate: string | null;
   /** size of the imported data in bytes (PWA), null when not known */
   sizeBytes?: number | null;
+  /** files of the imported data with their sizes (PWA, from the manifest) */
+  files?: { path: string; size: number }[];
+  /** date of the OpenSkiData download, when known */
+  openSkiDataDate?: string | null;
 }
 
 /** How the routing worker gets the planner file: it fetches a URL itself, or reads a Blob (OPFS File). */

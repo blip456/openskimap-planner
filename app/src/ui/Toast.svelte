@@ -2,10 +2,16 @@
   // Solid toast (spec §2.19); one at a time, optional action ("Undo").
   import type { ToastData } from '../lib/stores/ui.svelte.ts';
 
-  let { toast, ondone }: { toast: ToastData; ondone: () => void } = $props();
+  let {
+    toast,
+    ondone,
+    placement = 'top',
+    shift = 0,
+  }: { toast: ToastData; ondone: () => void; placement?: 'top' | 'low'; shift?: number } = $props();
 </script>
 
-<div class="toast" role="status" data-testid="toast">
+<!-- placement "low": above the tab bar, used while a menu or a large sheet covers the top (toastPlacement) -->
+<div class="toast" class:low={placement === 'low'} style:--shift={`${shift}px`} role="status" data-testid="toast" data-placement={placement}>
   <span>{toast.text}</span>
   {#if toast.action}
     <button
@@ -22,7 +28,7 @@
   .toast {
     position: fixed;
     z-index: var(--z-toast);
-    top: calc(var(--controls-top) + 56px);
+    top: calc(var(--controls-top) + 56px + var(--shift, 0px));
     left: 50%;
     transform: translateX(-50%);
     max-width: min(340px, calc(100% - 32px));
@@ -36,6 +42,10 @@
     font-size: 15px;
     font-weight: var(--fw-medium);
     animation: toast-in var(--dur-base) var(--ease-out);
+  }
+  .toast.low {
+    top: auto;
+    bottom: calc(var(--tabbar-bottom) + var(--tabbar-h) + 12px + var(--shift, 0px));
   }
   button {
     border: 0;

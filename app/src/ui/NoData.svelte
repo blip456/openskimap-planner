@@ -1,7 +1,8 @@
 <script lang="ts">
-  // First run / no data screen (spec §3.9): import the data ZIP.
+  // First run / no data screen (spec §3.9): how to get the data ZIP onto the iPhone, and a big import button.
   import Icon from './Icon.svelte';
   import ImportProgress from './ImportProgress.svelte';
+  import ImportErrorBox from './ImportErrorBox.svelte';
   import type { AppState } from '../lib/app.svelte.ts';
 
   let { app }: { app: AppState } = $props();
@@ -19,21 +20,24 @@
 <main class="nodata" data-testid="no-data">
   <img class="logo" src="/logo.svg" alt="" width="96" height="96" />
   <h1>Ski route planner</h1>
-  <p class="lead">Plan ski routes on your iPhone, also offline. First, add the map data.</p>
+  <p class="lead">Plan ski routes on your iPhone, also without internet. First, add the map data. You do this once.</p>
 
   {#if app.importing}
     <ImportProgress progress={app.importProgress} oncancel={() => app.cancelRunningImport()} />
   {:else}
-    <ol class="group steps">
-      <li><span class="num">1</span><span>On your computer, run <code>npm run build:pwa-data</code>.</span></li>
-      <li><span class="num">2</span><span>Move the ZIP file to this iPhone with AirDrop or iCloud Drive.</span></li>
-      <li><span class="num">3</span><span>Tap <b>Import data file</b> and pick the ZIP file.</span></li>
+    <ol class="group steps" data-testid="first-run-steps">
+      <li>
+        <span class="num">1</span><span>On your computer, run <code>npm run build:pwa-data</code>. It makes a ZIP file named
+          <code>openskimap-data-….zip</code>.</span>
+      </li>
+      <li>
+        <span class="num">2</span><span>Send the ZIP file to this iPhone. With <b>AirDrop</b> it goes to Files › Downloads. You
+          can also save it in <b>iCloud Drive</b>.</span>
+      </li>
+      <li><span class="num">3</span><span>Tap <b>Import data file</b> below and pick the ZIP file in Files. Do not unzip it.</span></li>
     </ol>
     {#if app.importError}
-      <div class="group error" role="alert" data-testid="import-error">
-        <span class="red"><Icon name="triangleAlert" size={20} /></span>
-        <span>{app.importError}</span>
-      </div>
+      <div class="error"><ImportErrorBox failure={app.importError} /></div>
     {/if}
     {#if !standalone}
       <p class="tip">Tip: add this app to your Home Screen first (Share › Add to Home Screen). The data is safer there.</p>
@@ -122,17 +126,7 @@
     font-size: 0.9em;
   }
   .error {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 12px 16px;
     margin-top: 12px;
-    text-align: left;
-    font-size: var(--t-subhead);
-  }
-  .red {
-    color: var(--red);
-    display: grid;
   }
   .tip {
     font-size: var(--t-footnote);

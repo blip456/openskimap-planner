@@ -23,6 +23,12 @@ test('desktop: map renders, plan mode, route between two points', async ({ page,
   await waitForMapStill(page);
   await shot(page, info, '2-route');
 
+  // the desktop build never registers a service worker and has no web app manifest (phase 5)
+  expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(0);
+  expect(await page.locator('link[rel=manifest]').count()).toBe(0);
+  const sw = await page.request.get('/sw.js');
+  expect(sw.status() === 404 || !(await sw.text()).includes('workbox')).toBe(true);
+
   console.log(log.infos.find((t) => t.startsWith('[routing]')));
   expect(log.errors).toEqual([]);
 });

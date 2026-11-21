@@ -352,7 +352,7 @@ describe('search state', () => {
     expect(pwa.s.items[0].error).toBe(true);
     expect(pwa.s.items[0].sub).toMatch(/desktop app/);
 
-    const desk = make({ shortLinks: () => true });
+    const desk = make({ shortLinks: () => true, online: () => true });
     desk.s.query = 'https://maps.app.goo.gl/xyz';
     await desk.s.run(true); // pasted: picks the result right away
     expect(desk.deps.resolve).toHaveBeenCalledWith('https://maps.app.goo.gl/xyz');

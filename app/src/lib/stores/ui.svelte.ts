@@ -104,3 +104,12 @@ export class UiState {
     this.flashPoint = { index, id: ++this.seq };
   }
 }
+
+/**
+ * Where toasts (and the update prompt) appear. Normally under the top row of map buttons. On the phone, a menu or a
+ * sheet at the large detent covers the top of the screen with its title, so they go above the tab bar instead.
+ */
+export function toastPlacement(s: { wide: boolean; menuOpen: boolean; sheetOpen: boolean; detent: Detent }): 'top' | 'low' {
+  if (s.wide) return 'top';
+  return s.menuOpen || (s.sheetOpen && s.detent === 'large') ? 'low' : 'top';
+}

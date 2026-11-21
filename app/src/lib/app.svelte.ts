@@ -4,6 +4,8 @@ import type { DataSource, ResortEntry } from './data/types.ts';
 import { ServerDataSource } from './data/server.ts';
 import { openLocalDataSource } from './data/local.ts';
 import { hasOpfs, opfsDataRoot } from './data/opfs.ts';
+import { removePackagesExcept } from './data/package-store.ts';
+import { readStorageStatus, requestPersist, toImportFailure, type ImportFailure, type StorageStatus } from './data/storage-info.ts';
 import { startImport } from './data/import/client.ts';
 import type { ImportProgress } from './data/import/pipeline.ts';
 import { startRoutingWorker, type RoutingClient } from './worker/client.ts';
@@ -40,7 +42,15 @@ export class AppState {
   loadInfo = $state.raw<LoadInfo | null>(null);
   importing = $state(false);
   importProgress = $state.raw<ImportProgress | null>(null);
-  importError = $state<string | null>(null);
+  importError = $state.raw<ImportFailure | null>(null);
+  /** browser storage: used, quota, persistent (Menu › Data) */
+  storage = $state.raw<StorageStatus>({ usage: null, quota: null, persisted: null });
+  /** the "Delete data" job is running */
+  deleting = $state(false);
+  /** a new app version is installed and waits (service worker); the user reloads when it suits them */
+  updateReady = $state(false);
+  /** reloads into the new version (set by the service worker module) */
+  applyUpdate: () => void = () => location.reload();
   /** bumps after every (re)load of the data, so the map rebuilds */
   dataVersion = $state(0);
   /** ski area outlines of the open resort (loaded when "Ski areas in colour" is first switched on) */
@@ -105,6 +115,7 @@ export class AppState {
     this.search = new SearchState({
       local: async (q) => (this.routing ? this.routing.call('search', q, 10) : []),
       online: () => this.settings.online,
+      network: () => this.network,
       shortLinks: () => this.caps.googleShortLinks,
       resolve: (url) => this.resolveLink(url),
       geocode: (q) => geocode(q, this.resort?.bbox ?? null),
@@ -115,7 +126,7 @@ export class AppState {
     });
     if (typeof addEventListener === 'function') {
       addEventListener('online', () => (this.network = true));
-      addEventListener('offline', () => (this.network = false));
+      addEventListener('offline', () => this.networkLost());
     }
   }
 
@@ -130,9 +141,23 @@ export class AppState {
 
   // --- map options (Map sheet, Menu) ---------------------------------------------------------------------------
 
-  /** The base map really shown: online maps only in online mode and while they work. */
+  /**
+   * Online features may be used: the online-mode switch is on AND the browser has a network (plan §6). Every online
+   * feature (online maps, Mapterhorn terrain, Nominatim, Google short links) asks this, so it falls back quietly.
+   */
+  get onlineUsable(): boolean {
+    return this.settings.online && this.network;
+  }
+
+  /** The base map really shown: online maps only in online mode, with a network, and while they work. */
   get basemap(): BasemapId {
-    return this.onlineFailed ? 'local' : effectiveBasemap(this.display.basemap, this.settings.online);
+    return this.onlineFailed ? 'local' : effectiveBasemap(this.display.basemap, this.onlineUsable);
+  }
+
+  /** The network went away: an online map falls back to the offline map, with one short hint. */
+  networkLost(): void {
+    this.network = false;
+    if (this.settings.online && this.display.basemap !== 'local' && !this.onlineFailed) this.ui.showToast(NO_NETWORK);
   }
 
   setBasemap(id: BasemapId): void {
@@ -422,15 +447,68 @@ export class AppState {
       console.info(`[import] ${(result.bytes / 1048576).toFixed(1)} MB in ${result.ms} ms (${result.writeMode})`);
       await this.openLocal();
       this.ui.showToast('Data imported');
+      // ask the browser to keep the data (iOS may otherwise delete it when space runs low); the result is shown
+      // on the Data page
+      await requestPersist();
+      await this.refreshStorage();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.importError = err instanceof Error && err.name === 'ImportCancelled' ? null : msg;
+      this.importError = err instanceof Error && err.name === 'ImportCancelled' ? null : toImportFailure(err);
+      void this.refreshStorage();
       return false;
     } finally {
       this.importing = false;
       this.importProgress = null;
       this.cancelImport = null;
+    }
+  }
+
+  /** Reads the storage estimate and the persistent status again (Menu › Data). */
+  async refreshStorage(): Promise<void> {
+    this.storage = await readStorageStatus();
+  }
+
+  /** "Protect data" on the Data page: asks for persistent storage again. */
+  async protectData(): Promise<void> {
+    const ok = await requestPersist();
+    await this.refreshStorage();
+    if (ok === false) this.ui.showToast('The browser did not allow it. See the note below.');
+  }
+
+  /**
+   * Deletes the imported data (Menu › Data › Delete data). Saved routes and settings stay. Afterwards the app shows
+   * the first-run screen.
+   */
+  async deleteData(): Promise<void> {
+    if (this.importing || this.deleting || TARGET !== 'pwa') return;
+    this.deleting = true;
+    try {
+      this.saveNow();
+      // stop everything that reads the files first
+      this.stopWorker?.();
+      this.stopWorker = null;
+      this.routing = null;
+      this.routingReady = false;
+      this.route.setRouter(null);
+      this.route.setNamer(null);
+      this.explore.close();
+      this.search.clear();
+      this.ui.closeMenu();
+      this.data = null;
+      this.resort = null;
+      this.skiAreas = null;
+      this.status = 'no-data';
+      // let the map unmount (it holds the tile files) before the files go
+      await new Promise((r) => setTimeout(r, 50));
+      await removePackagesExcept(await opfsDataRoot(false), null);
+      this.importError = null;
+      this.ui.showToast('Data deleted');
+    } catch (err) {
+      this.ui.showToast(`Could not delete the data: ${err instanceof Error ? err.message : String(err)}`);
+      await this.openLocal().catch(() => {});
+    } finally {
+      this.deleting = false;
+      await this.refreshStorage();
     }
   }
 
@@ -444,7 +522,8 @@ export class AppState {
     this.importError = null;
     const res = await fetch('/__dev/pwa-data');
     if (!res.ok) {
-      this.importError = ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? `Could not load the ZIP (${res.status})`;
+      const message = ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? `Could not load the ZIP (${res.status})`;
+      this.importError = { code: 'other', message };
       return;
     }
     await this.importData(await res.blob());

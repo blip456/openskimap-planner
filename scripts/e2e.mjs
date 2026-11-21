@@ -33,4 +33,23 @@ for (const dist of ['app/dist', 'app/dist-desktop']) {
 }
 console.log('Production bundles contain no dev-only code.');
 
+// the desktop build must never have a service worker or a web app manifest (phase 5)
+for (const f of ['sw.js', 'manifest.webmanifest']) {
+  if (fs.existsSync(path.join(ROOT, 'app/dist-desktop', f))) {
+    console.error(`app/dist-desktop/${f} exists: the desktop build must not have a service worker`);
+    process.exit(1);
+  }
+  if (!fs.existsSync(path.join(ROOT, 'app/dist', f))) {
+    console.error(`app/dist/${f} is missing: the PWA build needs it`);
+    process.exit(1);
+  }
+}
+for (const f of fs.readdirSync(path.join(ROOT, 'app/dist-desktop/assets')).filter((n) => n.endsWith('.js'))) {
+  if (/workbox|serviceWorker\.register/.test(fs.readFileSync(path.join(ROOT, 'app/dist-desktop/assets', f), 'utf8'))) {
+    console.error(`app/dist-desktop/assets/${f} contains service worker code`);
+    process.exit(1);
+  }
+}
+console.log('Only the PWA build has a service worker.');
+
 run('npx', ['playwright', 'test', '--config', 'app/e2e/playwright.config.ts', '--trace', 'off', ...process.argv.slice(2)]);

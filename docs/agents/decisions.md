@@ -252,3 +252,56 @@ Full spec: `docs/design/spec.md`, tokens: `docs/design/tokens.css`, mockups: `do
   same extractor before deleting it (profile, gradient, steps, distance markers, lift rows, crumbs, pinActions), so it
   no longer skips. Dropped from the old UI on purpose: the `window.skiPlanner` console helper (tests use `?e2e`) and
   the "layers" button copy of the Map section (the Map tab replaces it).
+
+## 2026-11-21 · phase 5 · PWA + import (senior engineer)
+- **Icons:** `scripts/icons.mjs` (from `ios-app-test`, adapted to `app/public/`) renders `favicon-32.png`,
+  `apple-touch-icon.png` (180, full-bleed, opaque), `icon-192.png`, `icon-512.png` and `icon-maskable-512.png`
+  (full-bleed background, drawing scaled to 72 % so it stays inside the safe circle). The PNGs are committed, so the
+  Vercel build does not need sharp. `npm run icons` after a logo change; a script test checks sizes and opacity.
+- **Home screen name:** the manifest `name` stays "Ski route planner" (what the app shows). `short_name` and
+  `apple-mobile-web-app-title` are "Ski planner", because iOS cuts names longer than about 12 characters under
+  the icon. Easy to change in `app/vite.config.ts` (`APP_SHORT_NAME`) and `index.html`.
+- **Service worker:** vite-plugin-pwa 2 (`generateSW`), only added to the Vite plugins for the `pwa` mode. It is
+  registered by `src/lib/pwa/register.ts` with `workbox-window` (`injectRegister: false`), loaded with a dynamic
+  import behind `import.meta.env.VITE_TARGET === 'pwa' && !DEV` (a literal, so the desktop build drops the chunk;
+  `TARGET` from `platform/` was not enough for Rollup). `registerType: 'prompt'`, `skipWaiting: false`,
+  `clientsClaim: true` (the first visit is controlled at once, so the next start works offline). Precache: html, js,
+  mjs (MapLibre worker), css, svg, png, webmanifest. No runtime cache: online hosts (OSM, OpenSnowMap,
+  OpenFreeMap, Mapterhorn, Protomaps fonts, Nominatim) are an explicit `NetworkOnly` route; the data is read from
+  OPFS as files, so nothing of it goes through the worker. `npm run test:e2e` fails when `app/dist-desktop` has
+  `sw.js`, a manifest or Workbox code.
+- **Update flow:** "New version available · Reload" capsule (top, like a toast; above the tab bar when the top is
+  covered). Reload sends `SKIP_WAITING`, reloads on `controlling`. "✕" hides it until the next start. The app also
+  checks for a new version when it comes back to the front (`visibilitychange`), because iOS keeps home screen apps
+  alive for days.
+- **Import errors** have a code (`not-data`, `damaged`, `no-space`, `other`) that crosses the worker boundary in the
+  RPC `code` field; the UI shows a title per code ("Wrong file", "The file is damaged", "Not enough space") plus the
+  message and a hint. A compressed ZIP counts as "Wrong file". `QuotaExceededError` (and the old Safari code 22)
+  during writing becomes "Not enough space"; the half-written folder is removed as before.
+- **persist():** asked after every successful import (not on start). The Data page shows "Keep data: On/Off/Unknown"
+  with a plain note, and an "Ask to keep the data" row while it is Off. Storage numbers come from
+  `navigator.storage.estimate()` (they include the browser's own overhead, so "Used by this app" is a bit more than
+  the data size).
+- **Delete data:** stops the routing worker, leaves the map (the status goes to `no-data`, the map unmounts and
+  releases the files), then removes every `pkg-*` folder. Saved routes, settings and the stored route points stay,
+  so importing the same data again brings the last route back.
+- **Online gating:** `AppState.onlineUsable = settings.online && navigator.onLine`. The base map, Mapterhorn terrain,
+  the Nominatim row and Google short links all use it. Without network an online base map falls back to the offline
+  map with one toast and comes back by itself when the network returns (the user's choice is kept). Search says
+  "No internet right now…" instead of offering online search. Google short links on the desktop now also need online
+  mode (before: only the server capability), as the task asks; long Google Maps links are parsed offline as before.
+  External links in info cards (website, OpenStreetMap) are plain links and are not hidden.
+- **`--phone`:** no `vite-plugin-mkcert` (deviation): it downloads the mkcert binary from GitHub at run time, which
+  fails behind firewalls and adds a hidden download. Instead `scripts/dev-pwa.mjs` uses an installed `mkcert`
+  (`brew install mkcert`), makes a certificate for localhost, `<host>.local` and the LAN addresses into
+  `build/certs/` (made again when the addresses change), starts Vite with `--host 0.0.0.0` and prints the URLs and
+  the iPhone trust steps. Without mkcert it stops with a clear message. mkcert is not installed in the cloud
+  environment; the HTTPS path was tried with a fake `mkcert` (openssl self-signed) and `curl -k`. `--phone` also works
+  for `preview:pwa` (needed to test the service worker on the iPhone without Vercel).
+- **Vercel:** `vercel.json` with `installCommand: npm ci --ignore-scripts` (the native packages of TileServer GL,
+  canvas and sqlite3 are not needed for the static build and would slow it down or fail), build `npm run build:pwa`,
+  output `app/dist`, SPA rewrite for every path except `assets/`, `sw.js`, `workbox-*` and the manifest (a missing
+  asset gives a 404, not index.html), `no-cache` for `/`, `/index.html`, `/sw.js`, the manifest, a one-year immutable
+  cache for `/assets/*` and `workbox-*.js`, `application/manifest+json` for the manifest.
+- **Toast overlap (4b review):** `toastPlacement()` puts toasts (and the update prompt) above the tab bar while the
+  menu or a large sheet is open on the phone; the desktop layout keeps them at the top.

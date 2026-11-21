@@ -7,6 +7,7 @@ import {
   NO_MATCHES,
   RESOLVING,
   SHORT_LINK_HINT,
+  SHORT_LINK_OFFLINE_HINT,
   classifyQuery,
   coordinateItem,
   firstEnabled,
@@ -21,7 +22,10 @@ import {
 
 export interface SearchDeps {
   local: (query: string) => Promise<SearchEntry[]>;
+  /** the online-mode switch */
   online: () => boolean;
+  /** the browser has a network (navigator.onLine); missing = always */
+  network?: () => boolean;
   /** the desktop server can follow Google Maps short links */
   shortLinks: () => boolean;
   resolve: (url: string) => Promise<GoogleResult>;
@@ -43,6 +47,15 @@ export class SearchState {
   constructor(deps: SearchDeps, delay = 150) {
     this.deps = deps;
     this.delay = delay;
+  }
+
+  private get network(): boolean {
+    return this.deps.network?.() ?? true;
+  }
+
+  /** online search may be used: online mode on and a network */
+  private get onlineUsable(): boolean {
+    return this.deps.online() && this.network;
   }
 
   private show(items: SearchItem[], footnote: string | null = null): void {
@@ -78,6 +91,10 @@ export class SearchState {
         // PWA: no server to follow the link; use what the link says, or explain
         return this.show(fallback ? [fallback] : [message('This link needs the desktop app', SHORT_LINK_HINT, { error: true })]);
       }
+      if (!this.onlineUsable) {
+        // following a short link needs the internet (the desktop server asks Google)
+        return this.show(fallback ? [fallback] : [message('This link needs internet', SHORT_LINK_OFFLINE_HINT, { error: true })]);
+      }
       this.show([RESOLVING]);
       try {
         const r = await this.deps.resolve(q.text);
@@ -98,14 +115,14 @@ export class SearchState {
       hits = [];
     }
     if (seq !== this.seq) return;
-    const { items, footnote } = textItems(q.text, hits, this.deps.online());
+    const { items, footnote } = textItems(q.text, hits, this.deps.online(), this.network);
     this.show(items, footnote);
   }
 
   async activate(item: SearchItem | undefined = this.items[this.active]): Promise<void> {
     if (!item || item.disabled) return;
     if (item.online) {
-      if (!this.deps.online()) return;
+      if (!this.onlineUsable) return;
       const seq = ++this.seq;
       this.show([message('Searching online…', '', { icon: 'loader' })]);
       try {

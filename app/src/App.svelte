@@ -26,6 +26,8 @@
   import Menu from './ui/menu/Menu.svelte';
   import CreditLine from './ui/CreditLine.svelte';
   import Toast from './ui/Toast.svelte';
+  import UpdatePrompt from './ui/UpdatePrompt.svelte';
+  import { toastPlacement } from './lib/stores/ui.svelte.ts';
   import { isTyping, shortcutFor } from './lib/keyboard.ts';
 
   const app = new AppState();
@@ -47,6 +49,14 @@
     void app.start();
     // dev builds only: Vite replaces import.meta.env.DEV with false in production, and the import is dropped
     if (import.meta.env.DEV) void import('./ui/DevOverlay.svelte').then((m) => (DevOverlay = m.default));
+    // PWA production build only: the service worker (offline start + update prompt). VITE_TARGET is replaced at build
+    // time (not TARGET from platform/: only a literal here lets the desktop build drop the chunk); dev:pwa never registers a worker (it would get in the way of hot reload).
+    if (import.meta.env.VITE_TARGET === 'pwa' && !import.meta.env.DEV && 'serviceWorker' in navigator) {
+      void import('./lib/pwa/register.ts').then(({ registerServiceWorker }) => {
+        const apply = registerServiceWorker({ onUpdateReady: () => (app.updateReady = true) });
+        if (apply) app.applyUpdate = apply;
+      });
+    }
   });
 
   // desktop layout from 900 px (spec §3.11); between 600 and 899 the iPhone layout is used
@@ -72,6 +82,12 @@
 
   /** iPhone: the info card temporarily replaces the tab sheet (no tab selected, spec §2.13) */
   const sheetContent = $derived(explore.card ? 'info' : ui.sheet);
+  /** toasts move above the tab bar while a menu or a large sheet covers the top (4b review) */
+  const placement = $derived(
+    toastPlacement({ wide: ui.wide, menuOpen: ui.menuOpen, sheetOpen: app.status === 'ready' && sheetContent !== null, detent: ui.detent }),
+  );
+  let updateLater = $state(false);
+  const showUpdate = $derived(app.updateReady && !updateLater);
 
   // map padding = the part of the map covered by the sheet at the medium detent (spec §2.9). At the large detent
   // the sheet covers the map anyway; the padding stays at the medium value so the camera does not jump.
@@ -193,7 +209,7 @@
       {explore}
       display={app.display}
       basemap={app.basemap}
-      online={app.settings.online}
+      online={app.onlineUsable}
       skiAreas={app.skiAreas}
       {padding}
       hoverEnabled={hoverDevice}
@@ -318,7 +334,8 @@
   {#if ui.menuOpen}<Menu {app} popover={ui.wide} />{/if}
 {/if}
 
-{#if ui.toast}<Toast toast={ui.toast} ondone={() => ui.hideToast()} />{/if}
+{#if showUpdate}<UpdatePrompt {placement} onreload={() => app.applyUpdate()} onlater={() => (updateLater = true)} />{/if}
+{#if ui.toast}<Toast toast={ui.toast} ondone={() => ui.hideToast()} {placement} shift={showUpdate ? 52 : 0} />{/if}
 {#if DevOverlay}<DevOverlay {app} />{/if}
 
 <style>

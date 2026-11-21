@@ -45,8 +45,34 @@ the **PWA build** for the iPhone, which keeps the map data in the browser storag
 - `npm run dev:desktop`: desktop version with hot reload on <http://localhost:5173> (also starts the desktop server
   and the tile server).
 - `npm run dev:pwa`: iPhone (PWA) version on <http://localhost:5174>, data from the browser storage. Import the ZIP
-  from `npm run build:pwa-data`, or press *Load data from build/*.
-- `npm run build:desktop` / `npm run build:pwa`: production builds (`app/dist-desktop`, `app/dist`).
+  from `npm run build:pwa-data`, or press *Load data from build/*. No service worker here (it would get in the way
+  of hot reload).
+- `npm run dev:pwa -- --phone`: the same over HTTPS on your Wi-Fi, so you can open it on the iPhone (see below).
+- `npm run preview:pwa`: builds the real PWA and serves it on <http://localhost:4174> **with** the service worker, to
+  test install, offline start and the update prompt. `npm run preview:pwa -- --phone` does this over HTTPS on the Wi-Fi.
+- `npm run build:desktop` / `npm run build:pwa`: production builds (`app/dist-desktop`, `app/dist`). Only the PWA
+  build has a service worker and a web app manifest.
+- `npm run icons`: makes all app icons (home screen, manifest, favicon) from `app/public/logo.svg`.
+
+### Testing on the iPhone from your Mac (`--phone`)
+
+The iPhone needs HTTPS for storage, location and the service worker. `--phone` uses a certificate from
+[mkcert](https://github.com/FiloSottile/mkcert):
+
+1. Once on the Mac: `brew install mkcert` and `mkcert -install`.
+2. `npm run dev:pwa -- --phone`. It prints the addresses to open on the iPhone (same Wi-Fi), e.g.
+   `https://your-mac.local:5174/`, and where mkcert's `rootCA.pem` is.
+3. Once on the iPhone: AirDrop `rootCA.pem` to the iPhone, install the profile (Settings › General › VPN & Device
+   Management), then turn on full trust for it (Settings › General › About › Certificate Trust Settings).
+
+The certificate is kept in `build/certs/` and made again when your Mac's addresses change.
+
+### Hosting the iPhone app on Vercel
+
+`vercel.json` has everything: Vercel runs `npm run build:pwa` and publishes `app/dist` as a static site (no
+serverless functions). `sw.js`, `index.html` and the manifest are never cached by the browser, so updates arrive;
+the files in `assets/` have a hash in their name and are cached for a year. Every push gets a preview link with
+HTTPS that you can open and add to the Home Screen.
 
 ## Using the tiles in gpx.studio
 
@@ -191,7 +217,7 @@ address is looked up in OpenStreetMap and the pin is marked **approximate**.
 | --- | --- |
 | **Resort** | The resort to show (all resorts of the built data). |
 | **Online mode** | Off: everything works without internet. On: adds the online maps and online search. Default: off in the iPhone app, on in the desktop build. Saved. |
-| **Data** (iPhone app) | The installed data (resorts, build date, zoom levels, size) and **Import data file…**. |
+| **Data** (iPhone app) | The installed data (resorts, build date, zoom levels), the size of each part, the storage used and available, **Keep data** (whether the browser promised to keep the data), **Import new data file…** and **Delete data**. |
 | **Routes backup** | Export backup, Import backup…, and (desktop with project folder) Copy all to this browser. |
 | **Appearance** | **Solid interface**: buttons and panels without the see-through effect (easier to read). Saved. |
 | **gpx.studio** (desktop build) | The tile links for gpx.studio, each with a *Copy* button. |
@@ -352,6 +378,12 @@ This creates `build/pwa/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip`. It hold
 (with the search index and ski areas already computed), the fonts the labels need and the icons. The ZIP is not
 compressed, so the phone can copy the big files straight out of it. At the end the command prints the size of every
 file and the total. `manifest.json` inside the ZIP lists the zoom levels, the data dates and a SHA-256 for each file.
+
+To get it onto the iPhone: AirDrop the ZIP (it lands in Files › Downloads) or save it in iCloud Drive. In the app,
+tap **Import data file** and pick it. Do not unzip it. The app checks every file; if something is wrong you get a
+clear message and your old data stays. After the first visit the app starts without internet (the service worker
+keeps the app, the data lives in the browser storage). A step-by-step test list is in
+`docs/agents/iphone-test-phase5.md`.
 
 ## Project layout
 

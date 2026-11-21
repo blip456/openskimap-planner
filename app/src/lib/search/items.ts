@@ -111,14 +111,20 @@ export const message = (title: string, sub = '', opts: { error?: boolean; icon?:
 export const NO_MATCHES = message('No matches', 'Try another name, coordinates or a Google Maps link');
 export const RESOLVING = message('Resolving Google Maps link…', 'Following the link to find its location', { icon: 'loader' });
 export const OFFLINE_HINT = 'Online search is off. Turn on online mode in Settings.';
+export const NO_NETWORK_HINT = 'No internet right now, so online search is not available.';
+export const SHORT_LINK_OFFLINE_HINT = 'Short Google Maps links need internet and online mode. Paste the long address instead.';
 export const SHORT_LINK_HINT = 'Short Google Maps links (maps.app.goo.gl) only work in the desktop app. Open the link in a browser and paste the long address from there.';
 
 /** Rows for a name search: local hits, then "Search online" (online mode, 3+ letters), or "No matches". */
-export function textItems(text: string, hits: readonly SearchEntry[], online: boolean): { items: SearchItem[]; footnote: string | null } {
+/**
+ * Rows for a text search. The "Search online" row needs online mode AND a network (`network`, default true); without
+ * matches a footnote says why there is no online search.
+ */
+export function textItems(text: string, hits: readonly SearchEntry[], online: boolean, network = true): { items: SearchItem[]; footnote: string | null } {
   const items = hits.map(entryItem);
-  if (online && text.trim().length >= 3) items.push(onlineItem(text.trim()));
+  if (online && network && text.trim().length >= 3) items.push(onlineItem(text.trim()));
   if (!items.length) items.push(NO_MATCHES);
-  const footnote = !online && !hits.length ? OFFLINE_HINT : null;
+  const footnote = hits.length ? null : !online ? OFFLINE_HINT : !network ? NO_NETWORK_HINT : null;
   return { items, footnote };
 }
 

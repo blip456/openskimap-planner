@@ -13,8 +13,10 @@
     "build:pwa-data": "node scripts/build-pwa-data.mjs",
     "build:pwa": "vite build --config app/vite.config.ts --mode pwa",
     "build:desktop": "vite build --config app/vite.config.ts --mode desktop",
+    "icons": "node scripts/icons.mjs",
     "dev:desktop": "node scripts/dev-desktop.mjs",
-    "dev:pwa": "vite --config app/vite.config.ts --mode pwa",
+    "dev:pwa": "node scripts/dev-pwa.mjs",
+    "preview:pwa": "npm run build:pwa && node scripts/dev-pwa.mjs --preview",
     "tiles": "tileserver-gl --config build/tileserver/config.json --bind 127.0.0.1 --port 8080",
     "server": "node server/server.mjs",
     "start": "node scripts/start.mjs",
@@ -51,6 +53,8 @@
     "svelte-check": "^4.7.8",
     "typescript": "^5.9.3",
     "vite": "^8.3.8",
-    "vitest": "^5.1.1"
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.1",
+    "workbox-window": "^7.4.1"
   }
 }

@@ -167,7 +167,7 @@
         </button>
       {/each}
     </div>
-    {#if app.onlineFailed}
+    {#if app.onlineFailed || (!app.network && d.basemap !== 'local')}
       <p class="grp-f warn" data-testid="basemap-offline">No internet: the offline ski map is shown.</p>
     {:else if d.basemap === 'online'}
       <p class="grp-f">The run and lift lines are pictures here, so they can't be {app.desktop ? 'clicked' : 'tapped'}, hidden or coloured by steepness. Routing works as usual.</p>

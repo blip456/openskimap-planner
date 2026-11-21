@@ -24,6 +24,8 @@ export class LocalDataSource implements DataSource {
       zoom: m.zoom,
       buildDate: m.buildDate,
       sizeBytes: m.files.reduce((n, f) => n + f.size, 0),
+      files: m.files.map(({ path, size }) => ({ path, size })),
+      openSkiDataDate: typeof m.source.openSkiData?.date === 'string' ? m.source.openSkiData.date : null,
     };
   }
 

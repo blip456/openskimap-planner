@@ -7,7 +7,7 @@
 | 2 Data ZIP + zoom levels | done (waiting for commit) |
 | 3 App skeleton + dev commands | done (waiting for commit) |
 | 4 Feature parity | done (4a + 4b), waiting for commit; `planner/` removed |
-| 5 PWA + import | to do |
+| 5 PWA + import | done, waiting for commit and the owner's iPhone test (`docs/agents/iphone-test-phase5.md`) |
 | 6 iPhone features | to do |
 | 7 Liquid Glass UI + responsive | to do |
 | 8 Docs | to do |
