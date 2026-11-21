@@ -26,6 +26,13 @@ const STATIC = {
   '/geoparse.js': path.join(PUBLIC, 'geoparse.js'),
   '/zip.js': path.join(PUBLIC, 'zip.js'),
   '/route-stores.js': path.join(PUBLIC, 'route-stores.js'),
+  '/icon.svg': path.join(PUBLIC, 'icon.svg'),
+  '/favicon.svg': path.join(PUBLIC, 'icon.svg'),
+  '/favicon.ico': path.join(PUBLIC, 'favicon.ico'),
+  '/apple-touch-icon.png': path.join(PUBLIC, 'apple-touch-icon.png'),
+  '/icon-192.png': path.join(PUBLIC, 'icon-192.png'),
+  '/icon-512.png': path.join(PUBLIC, 'icon-512.png'),
+  '/manifest.webmanifest': path.join(PUBLIC, 'manifest.webmanifest'),
 };
 // MapLibre GL JS ships as ES modules (main, shared and worker files), served from node_modules.
 const VENDOR = path.join(ROOT, 'node_modules/maplibre-gl/dist');
@@ -35,6 +42,10 @@ const MIME = {
   '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.map': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 
 function staticFile(pathname) {

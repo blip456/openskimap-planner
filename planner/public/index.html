@@ -3,14 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#12161d" />
     <title>Ski route planner</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="stylesheet" href="/vendor/maplibre-gl.css" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <aside id="panel">
       <header>
-        <h1>Ski route planner</h1>
+        <h1 class="app-title"><img src="/icon.svg" alt="" class="app-icon" width="28" height="28" />Ski route planner</h1>
         <select id="resort" aria-label="Resort"></select>
         <div class="search">
           <input

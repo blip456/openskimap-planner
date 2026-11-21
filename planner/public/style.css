@@ -45,6 +45,19 @@ h1 {
   font-size: 18px;
 }
 
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-icon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 6px;
+}
+
 section,
 details {
   margin: 10px 0;
