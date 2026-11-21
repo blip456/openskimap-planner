@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mockup: sheets (iPhone)</title>
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<!--SPRITE-->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><!-- Lucide 1.77 icons (ISC licence) -->
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" /></symbol>
+<symbol id="i-undo-2" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" /></symbol>
+<symbol id="i-redo-2" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5" /><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13" /></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><path d="M9 5h8.5a1 1 0 010 7h-11a1 1 0 000 7H15" /><circle cx="18" cy="19" r="3" /><circle cx="6" cy="5" r="3" /></symbol>
+<symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z" /></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" /><path d="M15 5.764v15" /><path d="M9 3.236v15" /></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></symbol>
+<symbol id="i-navigation" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11" /></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></symbol>
+<symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></symbol>
+<symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol>
+<symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+<symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></symbol>
+<symbol id="i-arrow-up-down" viewBox="0 0 24 24"><path d="m21 16-4 4-4-4" /><path d="M17 20V4" /><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /></symbol>
+<symbol id="i-sliders-horizontal" viewBox="0 0 24 24"><path d="M10 5H3" /><path d="M12 19H3" /><path d="M14 3v4" /><path d="M16 17v4" /><path d="M21 12h-9" /><path d="M21 19h-5" /><path d="M21 5h-7" /><path d="M8 10v4" /><path d="M8 12H3" /></symbol>
+<symbol id="i-cable-car" viewBox="0 0 24 24"><path d="M10 3h.01" /><path d="M14 2h.01" /><path d="m2 9 20-5" /><path d="M12 12V6.5" /><rect width="16" height="10" x="4" y="12" rx="3" /><path d="M9 12v5" /><path d="M15 12v5" /><path d="M4 17h16" /></symbol>
+<symbol id="i-footprints" viewBox="0 0 24 24"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" /><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" /><path d="M16 17h4" /><path d="M4 13h4" /></symbol>
+<symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></symbol>
+<symbol id="i-mountain-snow" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z" /><path d="M4.14 15.08c2.62-1.57 5.24-1.43 7.86.42 2.74 1.94 5.49 2 8.23.19" /></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></symbol>
+<symbol id="i-hard-drive" viewBox="0 0 24 24"><path d="M10 16h.01" /><path d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /><path d="M21.946 12.013H2.054" /><path d="M6 16h.01" /></symbol>
+<symbol id="i-archive" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></symbol>
+<symbol id="i-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2" /><path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715" /><path d="M16 12a4 4 0 0 0-4-4" /><path d="m19 5-1.256 1.256" /><path d="M20 12h2" /></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M12 2v13" /><path d="m16 6-4-4-4 4" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /></symbol>
+<symbol id="i-locate-fixed" viewBox="0 0 24 24"><line x1="2" x2="5" y1="12" y2="12" /><line x1="19" x2="22" y1="12" y2="12" /><line x1="12" x2="12" y1="2" y2="5" /><line x1="12" x2="12" y1="19" y2="22" /><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="3" /></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></symbol>
+<symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></symbol>
+</svg>
+<!--/SPRITE-->
+<div class="frames">
+
+<!-- 1 · Route sheet at the medium detent. Plan + Locate ride on the sheet edge. -->
+<section class="phone" id="route-medium" style="background-position: center -120px">
+  <div class="status"><span>9:41</span><span class="island"></span><span class="right"><span class="bars"><i style="height:4px"></i><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i></span><span class="batt"></span></span></div>
+  <button class="gbtn glass top-left" aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+  <div class="gcap glass" style="right:calc(var(--edge) + 92px); top:var(--controls-top)"><span class="seg"><svg class="ic"><use href="#i-undo-2"/></svg></span></div>
+  <div class="gcap glass top-right"><span class="seg"><svg class="ic"><use href="#i-box"/></svg>3D</span></div>
+  <div class="mk a" style="left:147px; top:128px">A</div>
+  <div class="mk b" style="left:256px; top:346px">B</div>
+
+  <button class="plan-btn glass" style="bottom:auto; top:340px"><svg class="ic s20"><use href="#i-pencil"/></svg>Plan route</button>
+  <button class="gbtn glass locate" style="bottom:auto; top:340px" aria-label="Show my location"><svg class="ic"><use href="#i-navigation"/></svg></button>
+
+  <div class="sheet medium" role="dialog" aria-label="Route">
+    <div class="handle"></div>
+    <div class="sh-head">
+      <div class="titles"><h2 class="sh-title">Gipfel to Seealpe</h2><div class="sh-sub">Oberstdorf · <span class="warn">Changed since you saved it</span></div></div>
+      <span class="rbtn accent" aria-label="Share GPX"><svg class="ic"><use href="#i-share"/></svg></span>
+      <span class="rbtn" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></span>
+    </div>
+    <div class="sh-body">
+      <div class="grp">
+        <div class="stats">
+          <div class="stat"><div class="k">Time</div><div class="v">42<small>min</small></div></div>
+          <div class="stat"><div class="k">Distance</div><div class="v">8.4<small>km</small></div></div>
+          <div class="stat"><div class="k">Descent</div><div class="v">1210<small>m</small></div></div>
+        </div>
+        <div class="chips"><span class="chip">5.1 km skiing</span><span class="chip">2 lifts</span><span class="chip">avg 21%</span><span class="chip">max 38%</span></div>
+      </div>
+      <div class="grp">
+        <div class="row has-badge"><span class="pt a">A</span><span class="txt"><div class="t">Nebelhorn top station</div><div class="s">Start</div></span><svg class="ic rm"><use href="#i-circle-x"/></svg></div>
+        <div class="row has-badge"><span class="pt b">B</span><span class="txt"><div class="t">Höfatsblick</div><div class="s">Stop</div></span><svg class="ic rm"><use href="#i-circle-x"/></svg></div>
+        <div class="row has-badge"><span class="pt c">C</span><span class="txt"><div class="t">Seealpe</div><div class="s">Destination</div></span><svg class="ic rm"><use href="#i-circle-x"/></svg></div>
+      </div>
+      <div class="btn-row"><span class="btn"><svg class="ic"><use href="#i-arrow-up-down"/></svg>Reverse</span><span class="btn red"><svg class="ic"><use href="#i-trash-2"/></svg>Clear</span></div>
+    </div>
+  </div>
+
+  <nav class="tabbar glass"><span class="tab sel"><svg class="ic"><use href="#i-route"/></svg>Route</span><span class="tab"><svg class="ic"><use href="#i-bookmark"/></svg>Saved</span><span class="tab"><svg class="ic"><use href="#i-map"/></svg>Map</span></nav>
+  <button class="search-btn glass" aria-label="Search"><svg class="ic"><use href="#i-search"/></svg></button>
+  <span class="home-ind"></span>
+</section>
+
+<!-- 2 · Route sheet at the large detent, scrolled to the profile (finger on the chart) and directions -->
+<section class="phone" id="route-large">
+  <div class="status auto"><span>9:41</span><span class="island"></span><span class="right"><span class="bars"><i style="height:4px"></i><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i></span><span class="batt"></span></span></div>
+  <div class="sheet large">
+    <div class="handle"></div>
+    <div class="sh-head">
+      <div class="titles"><h2 class="sh-title">Gipfel to Seealpe</h2><div class="sh-sub">Oberstdorf · 3 points</div></div>
+      <span class="rbtn accent" aria-label="Share GPX"><svg class="ic"><use href="#i-share"/></svg></span>
+      <span class="rbtn" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></span>
+    </div>
+    <div class="sh-body">
+      <div class="grp">
+        <div class="warnrow"><svg class="ic"><use href="#i-triangle-alert"/></svg><span>The route uses a black run, because no easier way was found.</span></div>
+      </div>
+      <div class="grp">
+        <!-- while the finger is on the chart, the readout replaces the title and the segmented control -->
+        <div class="chart-head" style="min-height:50px"><div class="readout"><i class="sw-col" style="background:var(--piste-advanced)"></i>34% · 1655 m<small>at 5.2 km · Black run · Höfatsblick-Abfahrt</small></div></div>
+        <div class="chart" aria-label="Gradient profile. Drag along it to see a point on the map.">
+          <span class="yl" style="top:-4px">2200</span><span class="yl" style="top:58px">1600</span><span class="yl" style="top:118px">1000</span>
+          <svg viewBox="0 0 300 128" preserveAspectRatio="none">
+            <g stroke="var(--separator)" stroke-width="0.5" vector-effect="non-scaling-stroke"><line x1="0" y1="0" x2="300" y2="0"/><line x1="0" y1="64" x2="300" y2="64"/><line x1="0" y1="128" x2="300" y2="128"/></g>
+            <path d="M0 4 L20 10 L40 22 L60 30 L80 48 L100 60 L120 74 L120 128 L0 128Z" fill="var(--piste-intermediate)" opacity="0.85"/>
+            <path d="M120 74 L150 44 L150 128 L120 128Z" fill="var(--lift)" opacity="0.85"/>
+            <path d="M150 44 L170 50 L190 66 L196 70 L210 84 L230 92 L250 100 L270 108 L284 112 L284 128 L150 128Z" fill="var(--piste-advanced)" opacity="0.85"/>
+            <path d="M284 112 L300 118 L300 128 L284 128Z" fill="var(--connection)" opacity="0.85"/>
+            <path d="M0 4 L20 10 L40 22 L60 30 L80 48 L100 60 L120 74 L150 44 L170 50 L190 66 L196 70 L210 84 L230 92 L250 100 L270 108 L284 112 L300 118" fill="none" stroke="var(--label)" stroke-width="1.5" vector-effect="non-scaling-stroke" opacity="0.6"/>
+          </svg>
+          <span class="cursor" style="left:62%"></span>
+          <span class="knob" style="left:62%; top:66%"></span>
+                  </div>
+        <div class="xl"><span>0</span><span>2 km</span><span>4 km</span><span>6 km</span><span>8.4 km</span></div>
+        <div class="legend"><span><i style="background:var(--piste-intermediate)"></i>Red</span><span><i style="background:var(--piste-advanced)"></i>Black</span><span><i style="background:var(--lift)"></i>Lift</span><span><i style="background:var(--connection)"></i>Path / walk</span></div>
+      </div>
+      <div class="gap" style="height:16px"></div>
+      <div class="grp-h">Directions</div>
+      <div class="grp">
+        <div class="leg-h"><span class="pt mini a">A</span><span class="arrow">→</span><span class="pt mini b">B</span><span class="meta">~18 min · 3.2 km</span><svg class="ic"><use href="#i-chevron-down"/></svg></div>
+        <div class="row step"><span class="si" style="background:var(--piste-intermediate)">1</span><span class="txt"><div class="t">Ski Gipfelabfahrt</div><div class="s">Red (intermediate) · 2.9 km · ↓ 610 m · ~11 min</div></span></div>
+        <div class="row step"><span class="si" style="background:var(--connection)"><svg class="ic"><use href="#i-footprints"/></svg></span><span class="txt"><div class="t">Walk</div><div class="s">120 m · ~2 min</div></span></div>
+        <div class="row step"><span class="si" style="background:var(--lift)"><svg class="ic"><use href="#i-arrow-up"/></svg></span><span class="txt"><div class="t">Take Koblat-Sesselbahn</div><div class="s">chair lift · 1.1 km · ↑ 290 m · ~7 min</div></span></div>
+      </div>
+      <div class="grp">
+        <div class="leg-h"><span class="pt mini b">B</span><span class="arrow">→</span><span class="pt mini c">C</span><span class="meta">~24 min · 5.2 km</span><svg class="ic" style="transform:rotate(-90deg)"><use href="#i-chevron-down"/></svg></div>
+      </div>
+    </div>
+  </div>
+  <nav class="tabbar glass"><span class="tab sel"><svg class="ic"><use href="#i-route"/></svg>Route</span><span class="tab"><svg class="ic"><use href="#i-bookmark"/></svg>Saved</span><span class="tab"><svg class="ic"><use href="#i-map"/></svg>Map</span></nav>
+  <button class="search-btn glass" aria-label="Search"><svg class="ic"><use href="#i-search"/></svg></button>
+  <span class="home-ind on-sheet"></span>
+</section>
+
+<!-- 3 · Map sheet (large), compare with the owner's screenshot of the native app -->
+<section class="phone" id="map-sheet">
+  <div class="status auto"><span>9:41</span><span class="island"></span><span class="right"><span class="bars"><i style="height:4px"></i><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i></span><span class="batt"></span></span></div>
+  <div class="sheet large">
+    <div class="handle"></div>
+    <div class="sh-head">
+      <div class="titles"><h2 class="sh-title">Map</h2></div>
+      <span class="rbtn" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></span>
+    </div>
+    <div class="sh-body">
+      <div class="grp-h">Show</div>
+      <div class="grp">
+        <div class="row"><span class="txt"><div class="t">Ski runs</div></span><span class="sw on" role="switch" aria-checked="true"></span></div>
+        <div class="row"><span class="txt"><div class="t">Lifts</div></span><span class="sw on"></span></div>
+        <div class="row"><span class="txt"><div class="t">Cross-country</div></span><span class="sw"></span></div>
+        <div class="row"><span class="txt"><div class="t">Touring &amp; sled</div></span><span class="sw"></span></div>
+      </div>
+      <div class="gap"></div>
+      <div class="grp-h">Run colours</div>
+      <div class="grp">
+        <div class="row"><span class="txt"><div class="t">Official difficulty</div></span></div>
+        <div class="row"><span class="txt"><div class="t">Steepness</div></span><svg class="ic chk"><use href="#i-check"/></svg></div>
+      </div>
+      <div class="grp-f"><span><i class="sw-col" style="background:var(--slope-lt10)"></i>&lt; 10%</span>&nbsp;&nbsp; <span><i class="sw-col" style="background:var(--slope-10-25)"></i>10–25%</span>&nbsp;&nbsp; <span><i class="sw-col" style="background:var(--slope-25-40)"></i>25–40%</span>&nbsp;&nbsp; <span><i class="sw-col" style="background:var(--slope-gt40)"></i>&gt; 40%</span></div>
+      <div class="gap"></div>
+      <div class="grp-h">Extra</div>
+      <div class="grp">
+        <div class="row"><span class="txt"><div class="t">Ski areas in colour</div></span><span class="sw"></span></div>
+        <div class="row"><span class="txt"><div class="t">Route arrows</div></span><span class="sw on"></span></div>
+        <div class="row"><span class="txt"><div class="t">Route distances</div></span><span class="sw on"></span></div>
+      </div>
+      <div class="gap"></div>
+      <div class="grp-h">Terrain</div>
+      <div class="grp">
+        <div class="row"><span class="txt"><div class="t">3D terrain</div></span><span class="sw on"></span></div>
+      </div>
+      <div class="grp-f">Tilts the map to show the mountains. Tilt with two fingers.</div>
+    </div>
+  </div>
+  <nav class="tabbar glass"><span class="tab"><svg class="ic"><use href="#i-route"/></svg>Route</span><span class="tab"><svg class="ic"><use href="#i-bookmark"/></svg>Saved</span><span class="tab sel"><svg class="ic"><use href="#i-map"/></svg>Map</span></nav>
+  <button class="search-btn glass" aria-label="Search"><svg class="ic"><use href="#i-search"/></svg></button>
+  <span class="home-ind on-sheet"></span>
+</section>
+
+<!-- 4 · Menu (modal large sheet, iOS Settings style) -->
+<section class="phone" id="menu">
+  <div class="status light"><span>9:41</span><span class="island"></span><span class="right"><span class="bars"><i style="height:4px"></i><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i></span><span class="batt"></span></span></div>
+  <div class="scrim"></div>
+  <div class="sheet large modal">
+    <div class="handle"></div>
+    <div class="sh-head" style="justify-content:flex-end; min-height:44px; padding-bottom:0"><span class="rbtn" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></span></div>
+    <div class="sh-body" style="padding-top:0">
+      <h1 class="large-title">Settings</h1>
+      <div class="grp">
+        <div class="row has-icon"><span class="tile" style="background:var(--green)"><svg class="ic"><use href="#i-mountain-snow"/></svg></span><span class="txt"><div class="t">Resort</div></span><span class="val">Oberstdorf</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="row has-icon"><span class="tile" style="background:var(--accent)"><svg class="ic"><use href="#i-globe"/></svg></span><span class="txt"><div class="t">Online mode</div></span><span class="sw"></span></div>
+      </div>
+      <div class="grp-f" style="margin-bottom:24px">Off: everything works without internet. On: adds online maps and online search.</div>
+      <div class="grp">
+        <div class="row has-icon"><span class="tile" style="background:var(--gray)"><svg class="ic"><use href="#i-hard-drive"/></svg></span><span class="txt"><div class="t">Data</div></span><span class="val">412 MB</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="row has-icon"><span class="tile" style="background:var(--orange)"><svg class="ic"><use href="#i-archive"/></svg></span><span class="txt"><div class="t">Routes backup</div></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+        <div class="row has-icon"><span class="tile" style="background:var(--indigo)"><svg class="ic"><use href="#i-sun-moon"/></svg></span><span class="txt"><div class="t">Appearance</div></span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+      </div>
+      <div class="gap"></div>
+      <div class="grp">
+        <div class="row has-icon"><span class="tile" style="background:var(--gray)"><svg class="ic"><use href="#i-info"/></svg></span><span class="txt"><div class="t">About &amp; credits</div></span><span class="val">1.0.0</span><svg class="ic chev"><use href="#i-chevron-right"/></svg></div>
+      </div>
+      <div class="grp-f">Always check the piste map and the conditions on the day.</div>
+    </div>
+  </div>
+  <span class="home-ind on-sheet"></span>
+</section>
+
+<!-- 5 · Menu › Data (PWA), import in progress -->
+<section class="phone" id="menu-data">
+  <div class="status light"><span>9:41</span><span class="island"></span><span class="right"><span class="bars"><i style="height:4px"></i><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i></span><span class="batt"></span></span></div>
+  <div class="scrim"></div>
+  <div class="sheet large modal">
+    <div class="handle"></div>
+    <div class="sh-head center"><span class="left back"><svg class="ic"><use href="#i-chevron-left"/></svg>Settings</span><h2 class="sh-title">Data</h2><span class="right rbtn" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></span></div>
+    <div class="sh-body" style="padding-top:12px">
+      <div class="grp">
+        <div class="row" style="display:block; padding:12px 16px 14px">
+          <div style="display:flex; justify-content:space-between"><span class="t" style="font-weight:600">Importing data…</span><span class="val" style="font-size:15px">62%</span></div>
+          <div class="s" style="font-size:13px; color:var(--label-2); margin-top:2px">Copying terrain.pmtiles · 186 of 300 MB</div>
+          <div class="progress" role="progressbar" aria-valuenow="62"><i></i></div>
+        </div>
+        <div class="row link"><span class="txt"><div class="t" style="color:var(--red)">Cancel import</div></span></div>
+      </div>
+      <div class="grp-f">Keep the app open until the import is done. Your current data stays until the new data is ready.</div>
+      <div class="gap"></div>
+      <div class="grp-h">Installed data</div>
+      <div class="grp">
+        <div class="row"><span class="txt"><div class="t">Resorts</div></span><span class="val">Oberstdorf</span></div>
+        <div class="row"><span class="txt"><div class="t">Built on</div></span><span class="val">18 Nov 2026</span></div>
+        <div class="row"><span class="txt"><div class="t">Detail level</div></span><span class="val">Terrain z13 · Map z13</span></div>
+        <div class="row"><span class="txt"><div class="t">Space used</div></span><span class="val">412 MB</span></div>
+        <div class="row"><span class="txt"><div class="t">Free space</div></span><span class="val">8.2 GB</span></div>
+        <div class="row"><span class="txt"><div class="t">Protected from clean-up</div></span><span class="val">Yes</span></div>
+      </div>
+      <div class="grp-f">iPhone can delete website data when space is low. “Protected” means the data is only deleted if you delete it.</div>
+      <div class="gap"></div>
+      <div class="grp">
+        <div class="row link" style="opacity:.4"><span class="txt"><div class="t">Import data file…</div></span></div>
+        <div class="row dest"><span class="txt"><div class="t">Delete data</div></span></div>
+      </div>
+    </div>
+  </div>
+  <span class="home-ind on-sheet"></span>
+</section>
+
+<!-- 6 · First run: no data yet -->
+<section class="phone no-map" id="onboarding">
+  <div class="status auto"><span>9:41</span><span class="island"></span><span class="right"><span class="bars"><i style="height:4px"></i><i style="height:6px"></i><i style="height:9px"></i><i style="height:12px"></i></span><span class="batt"></span></span></div>
+  <div class="onb">
+    <img class="logo" src="logo.svg" alt="">
+    <h1>Ski route planner</h1>
+    <p class="lead">Plan ski routes on your iPhone, also offline. First, add the map data.</p>
+    <div class="grp steps">
+      <div class="row"><span class="num">1</span><span class="txt"><div class="t" style="white-space:normal">On your computer, run <code>npm run build:pwa-map-data</code>.</div></span></div>
+      <div class="row"><span class="num">2</span><span class="txt"><div class="t" style="white-space:normal">Move the ZIP file to this iPhone with AirDrop or iCloud Drive.</div></span></div>
+      <div class="row"><span class="num">3</span><span class="txt"><div class="t" style="white-space:normal">Tap <b>Import data file</b> and pick the ZIP file.</div></span></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="grp-f" style="text-align:center; margin-bottom:14px">Tip: add this app to your Home Screen first (Share › Add to Home Screen). The data is safer there.</div>
+    <button class="btn big filled"><svg class="ic"><use href="#i-hard-drive"/></svg>Import data file</button>
+  </div>
+  <span class="home-ind on-sheet"></span>
+</section>
+
+</div>
+</body>
+</html>

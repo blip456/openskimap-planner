@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2028"/>
+      <stop offset="100%" stop-color="#0c0f14"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Blackish squircle background -->
+  <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+  <rect x="4" y="4" width="504" height="504" rx="110" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="4"/>
+
+  <!-- Crisp alpine sparkles -->
+  <g fill="#ffffff">
+    <path d="M90 96 C90 111 90 111 105 111 C90 111 90 111 90 126 C90 111 90 111 75 111 C90 111 90 111 90 96 Z" opacity="0.85"/>
+    <circle cx="418" cy="96" r="6" opacity="0.5"/>
+    <path d="M430 172 C430 181 430 181 439 181 C430 181 430 181 430 190 C430 181 430 181 421 181 C430 181 430 181 430 172 Z" opacity="0.68"/>
+  </g>
+
+  <!-- Ski poles -->
+  <g stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <line x1="142" y1="252" x2="48" y2="322" stroke-width="15"/>
+    <ellipse cx="68" cy="307" rx="7.5" ry="18" transform="rotate(-37 68 307)" stroke-width="9" fill="#12161d"/>
+    <line x1="370" y1="252" x2="464" y2="322" stroke-width="15"/>
+    <ellipse cx="444" cy="307" rx="7.5" ry="18" transform="rotate(37 444 307)" stroke-width="9" fill="#12161d"/>
+  </g>
+
+  <!-- Forward-facing skis angled outward (left ski pointing forward-left, right ski pointing forward-right) -->
+  <g transform="rotate(24 204 358)">
+    <path d="
+      M 182 354
+      L 226 354
+      L 232 436
+      C 231 462, 216 480, 204 480
+      C 192 480, 177 462, 176 436
+      Z
+    " fill="#9aa6b5"/>
+    <path d="
+      M 182 354
+      L 226 354
+      L 232 424
+      C 231 450, 216 468, 204 468
+      C 192 468, 177 450, 176 424
+      Z
+    " fill="#ffffff"/>
+    <line x1="204" y1="382" x2="204" y2="442" stroke="#12161d" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <g transform="rotate(-24 308 358)">
+    <path d="
+      M 286 354
+      L 330 354
+      L 336 436
+      C 335 462, 320 480, 308 480
+      C 296 480, 281 462, 280 436
+      Z
+    " fill="#9aa6b5"/>
+    <path d="
+      M 286 354
+      L 330 354
+      L 336 424
+      C 335 450, 320 468, 308 468
+      C 296 468, 281 450, 280 424
+      Z
+    " fill="#ffffff"/>
+    <line x1="308" y1="382" x2="308" y2="442" stroke="#12161d" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Little Yeti skier mascot -->
+  <g>
+    <!-- Crescent yeti horns -->
+    <path d="M 184 120 C 148 104, 134 66, 156 38 C 162 31, 172 36, 169 45 C 164 66, 178 88, 210 100 Z" fill="#ffffff"/>
+    <path d="M 328 120 C 364 104, 378 66, 356 38 C 350 31, 340 36, 343 45 C 348 66, 334 88, 302 100 Z" fill="#ffffff"/>
+
+    <!-- Fluffy crown tuft -->
+    <path d="M 224 90 C 228 64, 247 58, 256 72 C 266 54, 289 62, 288 90 Z" fill="#ffffff"/>
+
+    <!-- Dark separation under the two feet where they rest on the skis -->
+    <ellipse cx="204" cy="360" rx="28" ry="15" fill="#12161d" stroke="#12161d" stroke-width="11"/>
+    <ellipse cx="308" cy="360" rx="28" ry="15" fill="#12161d" stroke="#12161d" stroke-width="11"/>
+
+    <!-- Fluffy body, cheek puffs & stubby arms -->
+    <path d="
+      M 256 80
+      C 322 80, 362 120, 366 180
+      C 384 190, 388 210, 372 222
+      C 396 230, 406 252, 388 270
+      C 376 282, 362 276, 354 268
+      C 352 316, 324 348, 284 358
+      L 228 358
+      C 188 348, 160 316, 158 268
+      C 150 276, 136 282, 124 270
+      C 106 252, 116 230, 140 222
+      C 124 210, 128 190, 146 180
+      C 150 120, 190 80, 256 80 Z
+    " fill="#ffffff"/>
+
+    <!-- Feet planted on the skis -->
+    <ellipse cx="204" cy="358" rx="26" ry="14" fill="#ffffff"/>
+    <ellipse cx="308" cy="358" rx="26" ry="14" fill="#ffffff"/>
+
+    <!-- Ski goggles outer frame -->
+    <path d="
+      M 186 120
+      L 326 120
+      C 358 120, 378 140, 378 170
+      C 378 200, 356 220, 324 220
+      L 282 220
+      C 268 220, 264 202, 256 202
+      C 248 202, 244 220, 230 220
+      L 188 220
+      C 156 220, 134 200, 134 170
+      C 134 140, 154 120, 186 120 Z
+    " fill="#12161d"/>
+
+    <!-- Ski goggles white inner rim -->
+    <path d="
+      M 188 130
+      L 324 130
+      C 350 130, 366 146, 366 170
+      C 366 193, 350 208, 322 208
+      L 284 208
+      C 272 208, 267 191, 256 191
+      C 245 191, 240 208, 228 208
+      L 190 208
+      C 162 208, 146 193, 146 170
+      C 146 146, 162 130, 188 130 Z
+    " fill="none" stroke="#ffffff" stroke-width="8"/>
+
+    <!-- Goggle lens glint -->
+    <path d="M 166 152 L 188 140" stroke="#ffffff" stroke-width="7.5" stroke-linecap="round" opacity="0.55"/>
+    <path d="M 162 166 L 174 160" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" opacity="0.4"/>
+
+    <!-- Happy arched eyes -->
+    <path d="M 192 176 Q 210 154 228 176" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+    <path d="M 284 176 Q 302 154 320 176" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+
+    <!-- Clean happy smile -->
+    <path d="M 220 246 Q 256 274 292 246" fill="none" stroke="#12161d" stroke-width="11.5" stroke-linecap="round"/>
+  </g>
+</svg>
