@@ -14,8 +14,15 @@ import { UiState, type Detent, type RoutePage, type SheetId } from './stores/ui.
 import { SavedState } from './stores/saved.svelte.ts';
 import { defaultStorage, type KeyValue } from './stores/persist.ts';
 import { loadPlannerData, savePlannerData, STATE_VERSION, type DisplayData, type MapView, type PlannerData } from './stores/planner-persist.ts';
-import { BrowserRouteStore, ServerRouteStore } from './saved/stores.ts';
+import { BrowserRouteStore, ServerRouteStore, countBackupRoutes } from './saved/stores.ts';
 import { gpxFileName, shareFile } from './share.ts';
+import { ExploreState } from './stores/explore.svelte.ts';
+import { SearchState } from './stores/search.svelte.ts';
+import { geometryCoords } from './map/explore-layers.ts';
+import { NO_NETWORK, effectiveBasemap, type BasemapId } from './map/basemaps.ts';
+import { geocode } from '@core/search.ts';
+import type { SkiAreas } from '@core/ski-areas.ts';
+import type { GoogleResult } from './search/items.ts';
 
 /** Points further than this from any run or lift keep their coordinates as title. */
 const NAME_DISTANCE = 150;
@@ -36,10 +43,19 @@ export class AppState {
   importError = $state<string | null>(null);
   /** bumps after every (re)load of the data, so the map rebuilds */
   dataVersion = $state(0);
+  /** ski area outlines of the open resort (loaded when "Ski areas in colour" is first switched on) */
+  skiAreas = $state.raw<SkiAreas | null>(null);
+  skiAreasError = $state<string | null>(null);
+  /** the browser says it has a network connection */
+  network = $state(typeof navigator === 'undefined' ? true : navigator.onLine !== false);
+  /** an online map could not load in this session: the offline map is used until the user picks one again */
+  onlineFailed = $state(false);
 
   readonly settings: Settings;
   readonly route: RouteState;
   readonly ui = new UiState();
+  readonly explore: ExploreState;
+  readonly search: SearchState;
   /** display options (route arrows and distances here; the Map sheet of phase 4b changes the rest) */
   display = $state<DisplayData>() as DisplayData;
   saved = $state.raw<SavedState>() as SavedState;
@@ -69,6 +85,133 @@ export class AppState {
     if (s.sheet === 'route' || s.sheet === 'saved' || s.sheet === 'map') this.ui.openSheet(s.sheet as SheetId, s.detent === 'large' ? 'large' : 'medium');
     if (s.routePage === 'settings' || s.routePage === 'speeds') this.ui.routePage = s.routePage as RoutePage;
     this.saved = this.makeSaved(data.routeStorage);
+    this.explore = new ExploreState({
+      feature: async (id) => (this.routing ? this.routing.call('feature', id) : null),
+      route: this.route,
+      // show the tapped spot in the free part of the map, without zooming in
+      onopen: (card, geometry) => {
+        const coords = geometryCoords(geometry);
+        this.ui.fitTo(coords.length ? coords : [card.position], { onlyIfHidden: true, keepZoom: true });
+      },
+      onpin: (pin) => {
+        const coords: [number, number][] = [[pin.lon, pin.lat], ...(pin.lines ?? []).flat()];
+        this.ui.fitTo(coords, { maxZoom: 16 });
+      },
+      onused: () => {
+        if (this.ui.wide) this.ui.openSheet('route');
+        else this.ui.openSheet('route', 'medium');
+      },
+    });
+    this.search = new SearchState({
+      local: async (q) => (this.routing ? this.routing.call('search', q, 10) : []),
+      online: () => this.settings.online,
+      shortLinks: () => this.caps.googleShortLinks,
+      resolve: (url) => this.resolveLink(url),
+      geocode: (q) => geocode(q, this.resort?.bbox ?? null),
+      pick: (pin) => {
+        this.ui.searchOpen = false;
+        this.explore.openPin(pin);
+      },
+    });
+    if (typeof addEventListener === 'function') {
+      addEventListener('online', () => (this.network = true));
+      addEventListener('offline', () => (this.network = false));
+    }
+  }
+
+  /** Google Maps short links: the desktop server follows them (capability googleShortLinks). */
+  private async resolveLink(url: string): Promise<GoogleResult> {
+    const q = new URLSearchParams({ url, resort: this.resort?.id ?? '' });
+    const res = await fetch(`/api/resolve?${q}`);
+    const body = (await res.json().catch(() => ({}))) as GoogleResult & { error?: string };
+    if (!res.ok) throw new Error(body.error ?? res.statusText);
+    return body;
+  }
+
+  // --- map options (Map sheet, Menu) ---------------------------------------------------------------------------
+
+  /** The base map really shown: online maps only in online mode and while they work. */
+  get basemap(): BasemapId {
+    return this.onlineFailed ? 'local' : effectiveBasemap(this.display.basemap, this.settings.online);
+  }
+
+  setBasemap(id: BasemapId): void {
+    this.display.basemap = id;
+    this.onlineFailed = false;
+    if (id !== 'local' && !this.network) this.onlineFallback(NO_NETWORK);
+  }
+
+  /** An online map did not load (no internet): tell the user and show the offline map. */
+  onlineFallback(message: string): void {
+    if (this.onlineFailed) return;
+    this.onlineFailed = true;
+    this.ui.showToast(message);
+  }
+
+  setOnline(on: boolean): void {
+    this.settings.setOnline(on);
+    this.onlineFailed = false;
+    if (on && !this.network) this.ui.showToast(NO_NETWORK);
+  }
+
+  setSolid(on: boolean): void {
+    this.settings.setSolid(on);
+  }
+
+  /** Loads the ski areas once per resort (precomputed in the PWA data, built by the worker on the desktop). */
+  async loadSkiAreas(): Promise<void> {
+    if (this.skiAreas || !this.routing) return;
+    const routing = this.routing;
+    try {
+      const areas = await routing.call('skiAreas');
+      if (routing === this.routing) this.skiAreas = areas;
+      this.skiAreasError = null;
+    } catch {
+      this.skiAreasError = 'Could not load the ski areas.';
+    }
+  }
+
+  // --- routes backup (Menu) ------------------------------------------------------------------------------------
+
+  async exportBackup(): Promise<void> {
+    try {
+      const backup = await this.saved.exportBackup();
+      if (!backup) {
+        this.ui.showToast('There are no saved routes to export.');
+        return;
+      }
+      await shareFile(backup.blob, backup.filename, { desktop: this.desktop });
+    } catch (err) {
+      this.ui.showToast(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /** Reads a backup file: the number of routes in it (for the question), or an error message. */
+  async readBackup(file: Blob): Promise<{ text: string; count: number } | { error: string }> {
+    try {
+      const text = await file.text();
+      return { text, count: countBackupRoutes(text) };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  async importBackup(text: string): Promise<void> {
+    try {
+      const count = await this.saved.importBackup(text);
+      this.ui.showToast(`${count} route${count === 1 ? '' : 's'} imported.`);
+    } catch {
+      this.ui.showToast('This file is not a valid backup.');
+    }
+  }
+
+  async copyAllToBrowser(): Promise<void> {
+    try {
+      const count = await this.saved.copyAllToBrowser();
+      this.ui.showToast(`${count} route${count === 1 ? '' : 's'} copied to this browser.`);
+    } catch (err) {
+      this.ui.showToast(`Copy failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   private makeSaved(storage: 'browser' | 'server'): SavedState {
@@ -172,6 +315,9 @@ export class AppState {
     this.resort = resort;
     this.mapView = null;
     if (!keepPoints) this.route.clear();
+    this.explore.close();
+    this.search.clear();
+    this.skiAreas = null;
     this.dataVersion++;
     await this.startRouting(this.data, resort);
   }
@@ -216,6 +362,8 @@ export class AppState {
     this.stored = { ...this.stored, resort: resort.id };
     this.data = ds;
     this.resort = resort;
+    this.skiAreas = null;
+    this.explore.close();
     this.dataVersion++;
     this.status = 'ready';
     this.startPersistence();
@@ -248,6 +396,7 @@ export class AppState {
     );
     this.loadInfo = { ...info, timings: { ...t, totalMs: Math.round(performance.now() - t0) } };
     this.routingReady = true;
+    if (this.display.showSkiAreas) void this.loadSkiAreas();
     this.route.setRouter((points, options) => client.call('route', points, options));
     this.route.setNamer(async (p) => {
       const hit = await client.call('nearest', p);

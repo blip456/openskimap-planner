@@ -9,11 +9,24 @@
     active = false,
     onclick,
     testid,
-  }: { icon: IconName; label: string; active?: boolean; onclick?: () => void; testid?: string } = $props();
+    size = 48,
+    expanded,
+  }: { icon: IconName; label: string; active?: boolean; onclick?: () => void; testid?: string; size?: number; expanded?: boolean } = $props();
 </script>
 
-<button type="button" class="glass glass-button" class:active aria-label={label} title={label} {onclick} data-testid={testid}>
-  <span class="content"><Icon name={icon} /></span>
+<button
+  type="button"
+  class="glass glass-button"
+  class:active
+  style:width={`${size}px`}
+  style:height={`${size}px`}
+  aria-label={label}
+  aria-expanded={expanded}
+  title={label}
+  {onclick}
+  data-testid={testid}
+>
+  <span class="content"><Icon name={icon} size={size < 40 ? 18 : 22} /></span>
 </button>
 
 <style>

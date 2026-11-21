@@ -5,10 +5,8 @@
   // or ←/→ on the focused chart. The readout replaces the chart header; a marker shows the point on the map.
   import { onDestroy } from 'svelte';
   import Segmented from '../Segmented.svelte';
-  import type { RouteResponse } from '../../lib/worker/engine.ts';
   import { pointLetter, pointRole } from '../../lib/stores/route.svelte.ts';
   import {
-    distanceTicks,
     elevationAxis,
     pointMarks,
     profileLegend,
@@ -16,7 +14,10 @@
     routeProfileSegments,
     sampleAt,
     type ProfileMode,
+    type ProfileRoute,
     type ProfileSample,
+    visibleDistanceTicks,
+    endLabel,
   } from '../../lib/route/profile.ts';
   import { markerLabel, stepKind } from '../../lib/route/steps.ts';
   import { formatDistance } from '../../lib/format.ts';
@@ -28,14 +29,23 @@
     oncursor,
     tall = false,
     desktop = false,
+    title = 'Gradient profile',
+    showPoints = true,
+    testid = 'profile',
   }: {
-    result: RouteResponse;
+    /** a route, or one run/lift as a one-step route (info cards) */
+    result: ProfileRoute;
     mode: ProfileMode;
-    onmode: (m: ProfileMode) => void;
+    /** without it the colours are fixed (no Official / Steepness switch) */
+    onmode?: (m: ProfileMode) => void;
     /** [lon, lat] of the scrubbed point for the map marker, or null */
     oncursor: (p: [number, number] | null) => void;
     tall?: boolean;
     desktop?: boolean;
+    title?: string;
+    /** route points A, B, C… at the leg ends */
+    showPoints?: boolean;
+    testid?: string;
   } = $props();
 
   let width = $state(300);
@@ -48,12 +58,14 @@
   const legend = $derived(profileLegend(segments, mode));
   const total = $derived(usable ? points[points.length - 1].d : 1);
   const axis = $derived(usable ? elevationAxis(points, 3) : { min: 0, max: 1, ticks: [] });
-  const marks = $derived(usable ? pointMarks(result, points) : []);
+  const marks = $derived(usable && showPoints ? pointMarks(result, points) : []);
 
   const plotW = $derived(Math.max(10, width - pad.left - pad.right));
   const plotH = $derived(H - pad.top - pad.bottom);
-  // a tick label needs ~44 px; ticks too close to the end label are dropped (the end label shows the total)
-  const xTicks = $derived(usable ? distanceTicks(total).filter((d, i, all) => i === all.length - 1 || ((total - d) / total) * plotW >= 44) : []);
+  // ticks whose label would touch the end label are dropped (the end label shows the total)
+  // middle ticks are round numbers; the end label is the real total (a 68 m lift must not say "100 m")
+  const tickLabel = (d: number) => (d === 0 ? '0' : d >= total ? endLabel(total) : markerLabel(Math.round(d / 100) * 100));
+  const xTicks = $derived(usable ? visibleDistanceTicks(total, plotW, tickLabel) : []);
   const baseY = $derived(pad.top + plotH);
   const x = (d: number) => pad.left + (d / total) * plotW;
   const y = (e: number) => pad.top + plotH - ((e - axis.min) / (axis.max - axis.min)) * plotH;
@@ -177,16 +189,16 @@
 </script>
 
 {#if usable}
-  <div class="grp chart-cell" data-testid="profile">
+  <div class="grp chart-cell" data-testid={testid}>
     <div class="head">
       {#if readout}
-        <div class="readout" class:fading data-testid="profile-readout" aria-live="off">
+        <div class="readout" class:fading data-testid={`${testid}-readout`} aria-live="off">
           <div class="main"><i class="swatch" style:background={readout.color}></i>{readout.main}</div>
           <div class="sub">{readout.sub}</div>
         </div>
       {:else}
-        <span class="title">Gradient profile</span>
-        <div class="seg">
+        <span class="title">{title}</span>
+        {#if onmode}<div class="seg">
           <Segmented
             compact
             label="Colour the profile by"
@@ -198,7 +210,7 @@
               { value: 'steepness', label: 'Steepness', title: 'Colour every slice by its measured gradient' },
             ]}
           />
-        </div>
+        </div>{/if}
       {/if}
     </div>
     <div class="plot" bind:clientWidth={width}>
@@ -208,13 +220,13 @@
         height={H}
         viewBox={`0 0 ${width} ${H}`}
         role="slider"
-        aria-label="Gradient profile. Drag along it to see a point on the map."
+        aria-label={`${title}. Drag along it to see a point on the map.`}
         aria-valuemin={0}
         aria-valuemax={Math.round(total)}
         aria-valuenow={Math.round(sample?.d ?? 0)}
         aria-valuetext={readout ? `${readout.main}, ${readout.sub}` : description}
         tabindex="0"
-        data-testid="profile-chart"
+        data-testid={`${testid}-chart`}
         onpointerdown={onPointerDown}
         onpointermove={onPointerMove}
         onpointerup={onPointerUp}
@@ -243,7 +255,7 @@
             class="xlabel"
             x={x(d)}
             y={H - 5}
-            text-anchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}>{d === 0 ? '0' : markerLabel(Math.round(d / 100) * 100)}</text
+            text-anchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}>{tickLabel(d)}</text
           >
         {/each}
         {#if sample}

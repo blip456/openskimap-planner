@@ -37,7 +37,7 @@
       </button>
     {/each}
   </nav>
-  <button type="button" class="glass search" aria-label="Search" title="Search" onclick={onsearch}>
+  <button type="button" class="glass search" aria-label="Search" title="Search" onclick={onsearch} data-testid="search-button">
     <Icon name="search" size={24} />
   </button>
 </div>

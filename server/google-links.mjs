@@ -1,4 +1,4 @@
-// Google Maps link resolving for the desktop server (copied from planner/search.mjs; planner/ goes away in phase 4).
+// Google Maps link resolving for the desktop server (moved here from the old planner, removed in phase 4b).
 import { isGoogleMapsLink, parseGoogleMapsUrl } from '../packages/core/src/geoparse.ts';
 import { SearchError, geocode } from '../packages/core/src/search.ts';
 

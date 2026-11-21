@@ -6,7 +6,7 @@
 | 1 Shared core | done (waiting for commit) |
 | 2 Data ZIP + zoom levels | done (waiting for commit) |
 | 3 App skeleton + dev commands | done (waiting for commit) |
-| 4 Feature parity | 4a (route) done, waiting for commit · 4b to do |
+| 4 Feature parity | done (4a + 4b), waiting for commit; `planner/` removed |
 | 5 PWA + import | to do |
 | 6 iPhone features | to do |
 | 7 Liquid Glass UI + responsive | to do |
@@ -235,3 +235,109 @@ Fix in 4b: (1) summary chips overflow the right edge on iPhone width (wrap or ho
 (2) list separators in the point list extend past the row/group edge; (3) profile x-axis labels "3 km" and
 "3.6 km" overlap (skip a tick label that is too close to the end label); (4) the profile legend is hidden behind
 the tab bar at the large detent — content needs bottom padding = tab bar height + safe area.
+
+### 2026-11-21 · phase 4b · senior frontend engineer · feature parity part 2, planner/ removed
+**Done**
+- **4a review fixes:** (1) summary chips: one scrolling line with a fade at the right edge while there is more;
+  (2) separators: `.grp` gets its own stacking context (WebKit clips positioned children at the rounded corners) and
+  a separator is never wider than its row (they run to the trailing edge, as in iOS and the mockups); (3) profile
+  x-axis: a tick is dropped when its label would touch the end label (by estimated label width), and the end label
+  is the real total ("68 m", not "100 m"); (4) large sheet: bottom padding = tab bar + its distance from the bottom +
+  24, and the fade covers only the tab bar area. Checked in `screenshots/phase4b/*-route-*.png`.
+- **Explore mode / info cards:** tap (touch) or click a run, lift, lift station or place → card with crumbs, key
+  numbers, "Use this spot in your route" (start / destination / stop / replace start, as `pinActions`), steepness
+  note, piste-section note, elevation profile (ProfileChart with slope colours, touch scrubbing, map cursor), all
+  old detail rows, tags, description, links. Whole-geometry highlight (all tile pieces + same-piste sections) and a
+  lighter whole-piste highlight from the worker details; mouse hover highlight on `(hover: hover)` devices. iPhone:
+  sheet (medium/large); desktop: floating card top right. Tile data first, then `feature(id)` from the worker.
+- **Search:** round button next to the tab bar (iPhone: field above the keyboard, results in a glass panel, sheet
+  and tab bar hidden while searching); desktop: field in the panel header, ⌘K / Ctrl+K, ↑/↓/Enter/Esc. Local search
+  (runs pin at the top, lifts at the bottom station, places), coordinates, full Google Maps links, short links via
+  `/api/resolve` only with `googleShortLinks` (else a clear hint), "Search online for …" (Nominatim from the
+  browser) only in online mode, offline hint. A result drops an orange pin and opens its card.
+- **Map tab:** Show (4 switches), Run colours (official / steepness + legend), Extra (ski areas in colour with
+  legend: hover/tap emphasises, tap zooms; route arrows; route distances), Terrain (3D), Base map (online mode only:
+  Ski map (offline), OpenSnowMap, OpenFreeMap + pistes from the local ski tiles; fallbacks with a toast, also when
+  online mode is switched off). 3D capsule top right, compass when turned (tap → north), lift/one-way arrow images,
+  scale bar on the desktop layout.
+- **Menu (≡):** Settings root (Resort › , Online mode switch, Data › (PWA), Routes backup › , Appearance › ,
+  gpx.studio › (desktop build), About & credits ›), sub-pages with back button and edge swipe; iPhone modal large
+  sheet, desktop popover; Esc closes. Online mode (default off in the PWA, on on the desktop) and Solid interface are
+  saved. Data: installed data from the manifest + Import data file (phase 3 pipeline, progress, errors). Backup:
+  export, import with "Add N routes?" dialog, Copy all to this browser (project folder). About: version, sources,
+  licences; the credit line on the map opens it. Menu button shows a dot in online mode (orange without network).
+- **Desktop layout ≥ 900 px:** floating panel (glass header with search + menu + segmented Route · Saved · Map, solid
+  body reusing the sheet headers/bodies), map toolbar (panel button, Plan route + P, undo/redo, 3D), right column
+  (compass, zoom +/−, locate), floating info card, menu popover. Checked at 1280×800 and 1440×900.
+- **planner/ removed:** old frontend and `planner/server.mjs` deleted; `npm start` = TileServer GL + `server/server.mjs`
+  with the desktop build; `planner` / `planner:legacy` scripts removed; the parity test uses frozen copies of the old
+  functions (`packages/core/test/reference/app-route.legacy.mjs`) and now also compares lift rows, crumbs and the
+  pin actions. README sections about the planner UI rewritten for the new UI.
+- Files: `app/src/lib/explore/info-card.ts`, `lib/search/items.ts`, `lib/stores/{explore,search}.svelte.ts`,
+  `lib/map/{layer-filter,basemaps,explore-layers,ski-area-layers,terrain,types}.ts`, `lib/gpx-studio.ts`,
+  `ui/{DesktopPanel,Compass,TerrainButton,ConfirmDialog}.svelte`, `ui/info/*`, `ui/search/*`, `ui/map/MapBody.svelte`,
+  `ui/menu/*`, plus changes in `App.svelte`, `MapView.svelte`, `app.svelte.ts`, `ProfileChart.svelte`.
+
+**Tests**
+- `npm test`: typecheck (core, workers, node, 2× svelte-check) + 73 core + 14 script + 19 server + **122 app**
+  (Vitest; new `explore.test.ts`: info cards, pin actions, explore state, layer filter, base maps + online gating +
+  OpenFreeMap fallback, search rows + search state (short links, online only, stale answers), settings persistence,
+  ⌘K, gpx.studio links, axis labels, backup counting; `legacy-parity.test.ts` no longer skips). Mutation checks: the
+  online gating of the search row and of the base map each make a test fail.
+- `npm run test:e2e`: 16 tests (4 projects × smoke + route + 2 new in `explore.spec.ts`): tap a run → card with stats
+  and profile (hover readout + map cursor with a mouse) → Start here; search a lift → pin → Go here → route (pin at
+  the bottom station); coordinates; steepness colours and hidden lifts (layer visibility + no rendered lift
+  features); ski-area legend (emphasis); 3D (terrain + pitch) and compass; base map choices by build; menu → Resort
+  → back; Solid interface changes `--glass-filter` and survives a reload; gpx.studio only in the desktop build, Data
+  only in the PWA; online mode with all external requests blocked → OpenSnowMap / OpenFreeMap fall back to the
+  offline map with a toast; online search row only in online mode; desktop panel geometry at 1280×800, screenshot at
+  1440×900. No console errors (failed requests to the blocked hosts are ignored in that one test).
+- Screenshots: `docs/agents/screenshots/phase4b/` (info card, search, Map sheet, ski areas, menu, menu data (PWA),
+  panel at 1280 and 1440, route-1…5 for the 4a fixes; iPhone and wide, both builds).
+
+**Parity checklist (README of the old planner → new place)**
+
+| Old planner | New place | State |
+| --- | --- | --- |
+| Route points, plan/explore modes, P, Esc, markers | 4a (see table above) | done |
+| Directions, gradient profile, summary, warnings, settings, speed, undo/redo, persistence, saved routes | 4a | done |
+| Hover highlight of runs/lifts/places | `MapView` mousemove (hover devices) + `hover-highlight` layers | done |
+| Info cards: lifts, runs, stations, places, crumbs, links, steepness note, piste sections, profile with slope colours | `ExploreState` + `info-card.ts` + `InfoBody` (sheet / desktop card) | done |
+| Use as start / destination / stop (pinActions) | card actions (`applyPinAction`, undoable) | done |
+| First click on the map closes an open card | `emptyTap` | done |
+| Search: names, coordinates, Google links, short links (server), online search | `SearchState` (online row only in online mode; short links only with the capability) | done |
+| Search pin with actions, highlight of the found run/lift | orange pin + card, `search-highlight` | done |
+| ⌘K / Ctrl+K, ↑/↓/Enter/Esc in results | `keyboard.ts`, `PanelSearch` | done |
+| Map: base map (local / OpenSnowMap / OpenFreeMap), online errors | Map tab, `basemaps.ts` (online mode only, offline fallback) | done |
+| 3D terrain (+ map button), Mapterhorn fallback | 3D capsule, Map tab, `terrain.ts` (local terrain; online only as fallback) | done |
+| Show (runs, lifts, cross-country, touring & sled), run labels follow | `layer-filter.ts` | done |
+| Run colours (official / steepness) + legend | `addSlopeLayer`, Map tab | done |
+| Ski areas in colour + legend (hover, click to zoom) | `ski-area-layers.ts`, Map tab legend | done |
+| Route arrows, route distances toggles | Map tab | done |
+| Lift / one-way direction arrows as images | `useArrowImages` | done |
+| Navigation control (zoom, compass), scale bar | desktop: zoom +/−, compass, scale bar; iPhone: compass (pinch to zoom) | done |
+| Layers button copy of the Map section | Map tab (replaces it) | done (replaced) |
+| Resort select | Menu › Resort | done |
+| Export / import backup, Copy all to this browser | Menu › Routes backup | done |
+| gpx.studio links with Copy | Menu › gpx.studio (desktop build) | done |
+| Footer credits and licences | Menu › About & credits + credit line on the map | done |
+| `window.skiPlanner` console helper | not carried over (tests use `?e2e` hooks) | dropped on purpose |
+| Old server `/api/route`, `/api/search-index`, `/api/feature`, `/api/ski-areas`, `/api/geocode` | routing worker in the app; Nominatim from the browser | done (server only serves files, routes, short links) |
+
+**How to verify**
+- `npm test`; `npm run test:e2e` (needs `npm run build` + `npm run build:pwa-data`).
+- `npm start` → <http://localhost:8081>: tap a run (card), ⌘K search, Map tab, ≡ menu. `npm run dev:pwa` for the
+  iPhone build (Chrome device mode).
+- `npm run build -- --only=ski` still works (ran it after the removal).
+
+**Open issues / notes**
+- Not checked on a real iPhone: the search field above the keyboard (`visualViewport`), the edge swipe back in the
+  menu, glass cost of the search panel.
+- Landscape phone layout (spec §3.10) is not done (phase 7). Between 600 and 899 px the iPhone layout is used.
+- The desktop map toolbar uses the 48 px map buttons, not the 36 px capsules of spec §3.11 (phase 7 polish).
+- The Data page has no Delete data / storage protection yet (phase 5, as planned).
+- Map errors from online hosts are not logged; if an online map is broken for another reason the user only sees the
+  fallback toast.
+
+### Orchestrator review of 4b screenshots
+- The toast ("Data imported") overlaps the large-sheet title (see `phase4b/pwa-iphone-menu.png`). Move toasts below the top safe area plus header, or above the tab bar, when a large sheet is open. Fix in phase 5 or 7.

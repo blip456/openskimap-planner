@@ -1,4 +1,4 @@
-// Copied from planner/routes-store.mjs for the new desktop server; planner/ goes away in phase 4.
+// Saved routes in the project folder (saved-routes/), for the desktop server. Moved here from the old planner.
 // Saved routes: one JSON file per route in saved-routes/, grouped into folders by a "folder" field.
 // Each file keeps what is needed to reopen the route (resort, points, settings) and the GPX made when saving.
 import crypto from 'node:crypto';

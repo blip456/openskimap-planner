@@ -9,6 +9,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 const APP = import.meta.dirname;
 const ROOT = path.resolve(APP, '..');
 const DESKTOP_SERVER = process.env.DESKTOP_SERVER_URL ?? 'http://127.0.0.1:8081';
+const VERSION = (JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as { version: string }).version;
 
 type Target = 'pwa' | 'desktop';
 
@@ -60,7 +61,7 @@ export default defineConfig(({ mode }) => {
     publicDir: path.join(APP, 'public'),
     plugins: [svelte(), devDataZip()],
     resolve: { alias: { '@core': path.join(ROOT, 'packages/core/src') } },
-    define: { 'import.meta.env.VITE_TARGET': JSON.stringify(target) },
+    define: { 'import.meta.env.VITE_TARGET': JSON.stringify(target), 'import.meta.env.VITE_APP_VERSION': JSON.stringify(VERSION) },
     worker: { format: 'es' },
     build: {
       outDir: path.join(APP, target === 'pwa' ? 'dist' : 'dist-desktop'),

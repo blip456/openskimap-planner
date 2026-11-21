@@ -367,12 +367,14 @@
     --cell-bg: color-mix(in srgb, var(--bg-cell) 72%, transparent);
   }
   .large-look .body {
+    --bar-space: calc(var(--tabbar-bottom) + var(--tabbar-h));
     touch-action: pan-y;
-    padding-bottom: 120px;
+    /* the last content can scroll clear of the floating tab bar (tab bar height + its distance from the bottom) */
+    padding-bottom: calc(var(--bar-space) + 24px);
     --cell-bg: var(--bg-cell);
-    /* scroll-edge fade under the floating tab bar */
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 130px), transparent);
-    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 130px), transparent);
+    /* scroll-edge fade only under the tab bar, not over the content above it */
+    mask-image: linear-gradient(to bottom, #000 calc(100% - var(--bar-space) - 12px), transparent calc(100% - var(--bar-space) / 2));
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--bar-space) - 12px), transparent calc(100% - var(--bar-space) / 2));
   }
   @media (min-width: 900px) {
     .sheet.large-look {

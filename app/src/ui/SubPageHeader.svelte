@@ -8,7 +8,7 @@
     titleId = 'sheet-title',
     onback,
     onclose,
-  }: { title: string; back: string; titleId?: string; onback: () => void; onclose: () => void } = $props();
+  }: { title: string; back: string; titleId?: string; onback: () => void; onclose?: () => void } = $props();
 </script>
 
 <div class="sub-head">
@@ -16,9 +16,11 @@
     <Icon name="chevronLeft" size={24} strokeWidth={2.4} /><span>{back}</span>
   </button>
   <h2 id={titleId} tabindex="-1">{title}</h2>
+  {#if onclose}
   <button type="button" class="round-btn" aria-label="Close" title="Close" onclick={onclose} data-testid="sheet-close">
-    <Icon name="x" size={18} strokeWidth={2.4} />
-  </button>
+      <Icon name="x" size={18} strokeWidth={2.4} />
+    </button>
+  {/if}
 </div>
 
 <style>
@@ -57,5 +59,9 @@
   }
   .round-btn {
     justify-self: end;
+  }
+  /* no close button (desktop panel): keep the title centred */
+  .sub-head:not(:has(.round-btn))::after {
+    content: '';
   }
 </style>

@@ -1,35 +1,23 @@
-// Parity with the old planner (planner/public/app.js): its profile, gradient, step-text and distance-marker
-// functions are cut out of app.js and run on real routes, and must give the same results as the new modules.
-// Skips when planner/ is gone (phase 4b removes it) or when the real data is missing.
+// Parity with the old planner frontend: its profile, gradient, step-text, distance-marker, lift-row and pin-action
+// functions (frozen in packages/core/test/reference/app-route.legacy.mjs when planner/ was removed) run on real
+// routes and lifts, and must give the same results as the new modules. Uses the real data when it exists.
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { SkiNetwork, type RouteResult } from '@core/routing/index.ts';
+import { featureDetails } from '@core/feature-info.ts';
 import type { ResortData } from '@core/types.ts';
 import miniResort from '../../packages/core/test/fixtures/mini-resort.json';
 import { routeGradient, routeProfilePoints, routeProfileSegments } from '../src/lib/route/profile.ts';
 import { distanceMarkers, stepMeta, stepTitle } from '../src/lib/route/steps.ts';
+import { applyPinAction, crumbsFor, liftRows, pinActions } from '../src/lib/explore/info-card.ts';
+// @ts-expect-error plain JavaScript reference copy without types
+import * as legacyModule from '../../packages/core/test/reference/app-route.legacy.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const APP_JS = path.join(ROOT, 'planner/public/app.js');
 const REAL = path.join(ROOT, 'build/planner/oberstdorf-kleinwalsertal.json');
 
-/** Top-level `function name(…) {…}` or `const name = …;` from the old app.js, as source text. */
-function extract(src: string, name: string): string {
-  const fn = new RegExp(`^function ${name}\\(`, 'm').exec(src);
-  if (fn) {
-    const end = src.indexOf('\n}\n', fn.index);
-    return src.slice(fn.index, end + 2);
-  }
-  const c = new RegExp(`^const ${name} = `, 'm').exec(src);
-  if (!c) throw new Error(`${name} not found in app.js`);
-  const rest = src.slice(c.index);
-  const firstLine = rest.slice(0, rest.indexOf('\n'));
-  const multi = /[[{]$/.test(firstLine);
-  const end = multi ? rest.search(/^[\]}];\n/m) + 3 : rest.indexOf(';\n') + 2;
-  return rest.slice(0, end);
-}
-
+type LngLat = [number, number];
 type Legacy = {
   routeProfilePoints(r: unknown): unknown[];
   routeGradient(r: unknown): unknown;
@@ -37,17 +25,12 @@ type Legacy = {
   stepTitle(s: unknown): string;
   stepMeta(s: unknown): string;
   distanceMarkers(c: unknown): { properties: { label: string }; geometry: { coordinates: number[] } }[];
+  liftRows(lp: unknown, st: unknown): [string, string | null][];
+  crumbsFor(pr: unknown): string[];
+  pinActions(p: LngLat, after?: () => void): [string, () => void, boolean?][];
+  withState(s: { points: LngLat[] }): void;
 };
-
-function loadLegacy(): Legacy {
-  const src = fs.readFileSync(APP_JS, 'utf8');
-  const names = [
-    'DIFFICULTY_INFO', 'LIFT_COLOR', 'WALK_COLOR', 'SLOPE_CLASSES', 'slopeClass', 'haversineM', 'routeProfilePoints', 'routeGradient',
-    'officialStyle', 'routeProfileSegments', 'fmtDist', 'fmtTime', 'stepTitle', 'stepMeta', 'haversine', 'fmtMarker', 'distanceMarkers',
-  ];
-  const body = `${names.map((n) => extract(src, n)).join('\n')}\nreturn { routeProfilePoints, routeGradient, routeProfileSegments, stepTitle, stepMeta, distanceMarkers };`;
-  return new Function(body)() as Legacy;
-}
+const legacy = legacyModule as unknown as Legacy;
 
 function routes(): RouteResult[] {
   const out: RouteResult[] = [];
@@ -76,8 +59,7 @@ function routes(): RouteResult[] {
   return out;
 }
 
-describe.skipIf(!fs.existsSync(APP_JS))('parity with the old planner', () => {
-  const legacy = fs.existsSync(APP_JS) ? loadLegacy() : (null as unknown as Legacy);
+describe('parity with the old planner', () => {
   const all = routes();
 
   test('enough real routes to compare', () => {
@@ -112,6 +94,37 @@ describe.skipIf(!fs.existsSync(APP_JS))('parity with the old planner', () => {
       const coords = r.coordinates.map((c) => [c[0], c[1]] as [number, number]);
       const old = legacy.distanceMarkers(coords).map((f) => ({ label: f.properties.label, coordinates: f.geometry.coordinates }));
       expect(distanceMarkers(coords)).toEqual(old);
+    }
+  });
+
+  test('info card: lift rows and crumbs are the same', () => {
+    const data = (fs.existsSync(REAL) ? JSON.parse(fs.readFileSync(REAL, 'utf8')) : miniResort) as ResortData;
+    let n = 0;
+    for (const l of data.lifts.slice(0, 40)) {
+      const d = featureDetails(data, String(l.properties.id));
+      if (!d) continue;
+      const old = legacy.liftRows(d.properties, d.stats ?? {}).filter(([, v]) => v != null && v !== '').map(([label, value]) => ({ label, value }));
+      expect(liftRows(d.properties, d.stats ?? {})).toEqual(old);
+      expect(crumbsFor(d.properties)).toEqual(legacy.crumbsFor(d.properties));
+      n++;
+    }
+    expect(n).toBeGreaterThan(0);
+  });
+
+  test('"Use this spot" actions: same labels, same main action, same resulting points', () => {
+    const p: LngLat = [9, 9];
+    const starts: LngLat[][] = [[], [[1, 1]], [[1, 1], [2, 2]], [[1, 1], [2, 2], [3, 3]]];
+    for (const pts of starts) {
+      const ours = pinActions(pts.length);
+      legacy.withState({ points: pts.map((x) => [...x] as LngLat) });
+      const old = legacy.pinActions(p);
+      expect(ours.map((a) => [a.label, a.primary])).toEqual(old.map(([label, , primary]) => [label, !!primary]));
+      ours.forEach((a, i) => {
+        const state = { points: pts.map((x) => [...x] as LngLat) };
+        legacy.withState(state);
+        legacy.pinActions(p)[i][1]();
+        expect(applyPinAction(pts, a.id, p)).toEqual(state.points);
+      });
     }
   });
 });

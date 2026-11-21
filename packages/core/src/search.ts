@@ -1,6 +1,6 @@
 // Search: local name index over runs, lifts and places, the ranking used by the search box, and the
 // online lookup in OpenStreetMap Nominatim (online mode only, on explicit request).
-// Google Maps short links are resolved by the desktop server (planner/search.mjs), not here.
+// Google Maps short links are resolved by the desktop server (server/google-links.mjs), not here.
 import type { Position, ResortData } from './types.ts';
 
 const LIFT_NAMES: Record<string, string> = {

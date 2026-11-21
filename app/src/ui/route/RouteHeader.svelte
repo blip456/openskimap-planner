@@ -6,7 +6,7 @@
   import SubPageHeader from '../SubPageHeader.svelte';
   import type { AppState } from '../../lib/app.svelte.ts';
 
-  let { app, onclose }: { app: AppState; onclose: () => void } = $props();
+  let { app, onclose }: { app: AppState; onclose?: () => void } = $props();
   const route = $derived(app.route);
   const ui = $derived(app.ui);
   const title = $derived(route.savedId && route.routeName ? route.routeName : 'Route');

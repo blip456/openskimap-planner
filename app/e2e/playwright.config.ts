@@ -1,5 +1,5 @@
 // Smoke tests of both builds in Chromium (desktop window and iPhone size). Run with `npm run test:e2e`, which
-// builds both targets first. Screenshots go to docs/agents/screenshots/phase3/ and phase4a/.
+// builds both targets first. Screenshots go to docs/agents/screenshots/phase3/ and phase4b/.
 import os from 'node:os';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
@@ -23,10 +23,10 @@ export default defineConfig({
     launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
   },
   projects: [
-    { name: 'desktop-wide', testMatch: ['desktop.spec.ts', 'route.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
-    { name: 'desktop-iphone', testMatch: ['desktop.spec.ts', 'route.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
-    { name: 'pwa-wide', testMatch: ['pwa.spec.ts', 'route.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
-    { name: 'pwa-iphone', testMatch: ['pwa.spec.ts', 'route.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
+    { name: 'desktop-wide', testMatch: ['desktop.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
+    { name: 'desktop-iphone', testMatch: ['desktop.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${DESKTOP_PORT}` } },
+    { name: 'pwa-wide', testMatch: ['pwa.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...wide, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
+    { name: 'pwa-iphone', testMatch: ['pwa.spec.ts', 'route.spec.ts', 'explore.spec.ts'], use: { ...iphone, baseURL: `http://127.0.0.1:${PWA_PORT}` } },
   ],
   webServer: [
     {

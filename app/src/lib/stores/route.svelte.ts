@@ -153,6 +153,17 @@ export class RouteState {
     return true;
   }
 
+  /** Replaces all points (info card / search pin actions). False when there would be too many. */
+  setPoints(points: readonly LngLat[]): boolean {
+    if (points.length > MAX_POINTS) {
+      this.onNotice?.(`A route can have at most ${MAX_POINTS} points.`);
+      return false;
+    }
+    this.points = points.map((p) => [p[0], p[1]]);
+    this.pointsChanged();
+    return true;
+  }
+
   movePoint(i: number, p: LngLat): void {
     if (i < 0 || i >= this.points.length) return;
     this.points = this.points.map((q, j) => (j === i ? [p[0], p[1]] : q));

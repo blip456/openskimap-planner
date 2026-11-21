@@ -22,6 +22,8 @@ export interface DataInfo {
   zoom: { terrain: number | null; basemap: number | null; ski: number | null } | null;
   /** YYYY-MM-DD of the data build, when known */
   buildDate: string | null;
+  /** size of the imported data in bytes (PWA), null when not known */
+  sizeBytes?: number | null;
 }
 
 /** How the routing worker gets the planner file: it fetches a URL itself, or reads a Blob (OPFS File). */

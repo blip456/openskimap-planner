@@ -1,5 +1,4 @@
-// Parsing of typed coordinates and Google Maps links. Shared by the browser UI and the planner server.
-// (The old planner frontend still has its own copy in planner/public/geoparse.js until phase 4.)
+// Parsing of typed coordinates and Google Maps links. Shared by the app and the desktop server.
 //
 // Coordinates (latitude first unless hemispheres say otherwise):
 //   47.3481, 10.2160        47.3481 10.2160        47.3481N 10.2160E       -33.86, 151.21

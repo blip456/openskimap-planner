@@ -25,6 +25,19 @@
     }
     return out;
   });
+  // one line that scrolls sideways (spec §2.15); a fade at the right edge shows that there is more
+  let chipRow = $state<HTMLDivElement>();
+  let more = $state(false);
+  function measure() {
+    if (chipRow) more = chipRow.scrollLeft + chipRow.clientWidth < chipRow.scrollWidth - 1;
+  }
+  $effect(() => {
+    void chips;
+    measure();
+    const ro = typeof ResizeObserver === 'function' && chipRow ? new ResizeObserver(measure) : null;
+    if (ro && chipRow) ro.observe(chipRow);
+    return () => ro?.disconnect();
+  });
   // screen readers: "Route: 42 minutes, 8.4 kilometres" (spec §4.8)
   const spoken = $derived(`Route: ${formatDuration(s.duration).replace('min', 'minutes').replace(' h ', ' hours ')}, ${formatDistance(s.distance).replace('km', 'kilometres').replace(/ m$/, ' metres')}`);
 </script>
@@ -39,7 +52,7 @@
       </div>
     {/each}
   </div>
-  <div class="chips">
+  <div class="chips" class:fade-end={more} bind:this={chipRow} onscroll={measure} data-testid="route-chips">
     {#each chips as c (c.text)}<span class="chip" title={desktop ? c.title : undefined} data-testid="route-chip">{c.text}</span>{/each}
   </div>
 </div>
@@ -81,6 +94,10 @@
     padding: 0 16px 12px;
     scrollbar-width: none;
     touch-action: pan-x;
+  }
+  .chips.fade-end {
+    mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent calc(100% - 4px));
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent calc(100% - 4px));
   }
   .chips::-webkit-scrollbar {
     display: none;

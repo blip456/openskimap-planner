@@ -152,3 +152,44 @@ wrong assumption. Format:
 - **Root cause:** `const fmtTime = (s) => {` spans several lines; the extractor ended at the first `;`.
 - **Prevention:** the extractor treats a first line ending in `{` or `[` as a block that ends at a line starting with
   `}` / `]`. A mutation check (changing the slice length and the 30 m window) made the parity test fail as expected.
+
+## 2026-11-21 · phase 4b · a no-op `setPadding` stopped the 3D tilt
+- **What happened:** the iPhone e2e test sometimes saw the map stay flat after switching 3D on (pitch never > 30).
+- **Root cause:** the sheet reports its position again after it settles (320 ms), the padding object is new but has the
+  same values, and `map.setPadding()` jumps the camera, which cancels the running `easeTo({ pitch: 60 })`. Same family
+  as the phase 3 lesson, but with equal values.
+  A second cause showed up in the next run: right after a large → medium change, `ui.sheetTop` still held the *large*
+  top until the sheet settled, so the padding really changed twice.
+- **Prevention:** `MapView` only calls `setPadding` when a value really changed, and the app computes the medium
+  padding from `round(0.475 × H)` (the sheet's own rule), not from `ui.sheetTop` (comments in both). The explore test
+  switches 3D right after moving the sheet and checks the pitch. Any new camera animation must survive a sheet settle.
+
+## 2026-11-21 · phase 4b · expectations written from memory (third time)
+- **What happened:** two new tests failed: a lift card expected a "Direction" row (the test fixture's lifts have no
+  `direction`; only built data has it), and the search pin title expected "See-Eckbahn" (search names carry the lift
+  number, "23 See-Eckbahn" – already in the phase 3 lesson).
+- **Root cause:** the expectation was written from the old UI on real data, not from the fixture and the code.
+- **Prevention:** print the fixture's properties (`python3 -c …` / `node -e …`) before writing an expectation on it;
+  for names from the search index use `toContainText`. Code was right both times; only the tests changed.
+
+## 2026-11-21 · phase 4b · Playwright: stale map queries and stale result rows
+- **What happened:** `queryRenderedFeatures` right after hiding a layer still returned 18 lifts; `toHaveText` on the
+  search rows failed with "strict mode violation: 11 elements" right after typing a new query.
+- **Root cause:** rendered features update with the next frame; the rows of the previous query stay until the
+  150 ms search debounce has run.
+- **Prevention:** wrap map queries in `expect.poll`; for lists, first `toHaveCount(n)` (retries), then check the text.
+
+## 2026-11-21 · phase 4b · the top row is under the large sheet (again)
+- **What happened:** an iPhone test tried to tap the menu button while the Map sheet was at the large detent and timed
+  out after 3 minutes ("sheet-head intercepts pointer events").
+- **Root cause:** by design the large sheet covers the top row (phase 4a lesson); the new test forgot it.
+- **Prevention:** in e2e tests, every tap on a top-row control on the phone follows a check that the sheet is at
+  medium (`sheet-handle` tap + `data-detent` = medium). Do not use `force`.
+
+## 2026-11-21 · phase 4b · fixing the padding bug changed test timing
+- **What happened:** after the `setPadding` fix the iPhone route test failed: point C was never added, and 3D was on.
+- **Root cause:** after A and B the new route is fitted into the free part of the map. Before, the needless
+  `setPadding` cut that animation short; now it runs to the end, and C was projected while the camera was moving, so
+  the tap landed on the 3D button.
+- **Prevention:** e2e helpers that tap map coordinates frame the points again and wait for `waitForMapStill` before
+  *every* tap (`tapPoints` in route.spec.ts). Never project once and tap later while a route can appear.

@@ -88,6 +88,23 @@ export function isUsableRoute(r: unknown): r is SavedRoute {
 // ---------------------------------------------------------------------------------------------------------------
 // IndexedDB
 
+const usableBackupRoute = (r: unknown): r is SavedRoute => {
+  const x = r as Partial<SavedRoute> | null;
+  return !!x && Array.isArray(x.points) && typeof x.gpx === 'string' && !!x.resort;
+};
+
+/** Number of routes a backup file would add. Throws when the text is not a backup. */
+export function countBackupRoutes(text: string): number {
+  let data: { routes?: unknown };
+  try {
+    data = JSON.parse(text) as { routes?: unknown };
+  } catch {
+    throw new Error('This file is not a valid backup.');
+  }
+  if (!data || typeof data !== 'object' || !Array.isArray(data.routes)) throw new Error('This file is not a valid backup.');
+  return data.routes.filter(usableBackupRoute).length;
+}
+
 export class BrowserRouteStore implements RouteStore {
   readonly id = 'browser' as const;
   private dbPromise: Promise<IDBDatabase> | null = null;
@@ -185,7 +202,7 @@ export class BrowserRouteStore implements RouteStore {
     const routes = Array.isArray(data?.routes) ? data.routes : [];
     let count = 0;
     for (const r of routes as SavedRoute[]) {
-      if (!r || !Array.isArray(r.points) || typeof r.gpx !== 'string' || !r.resort) continue;
+      if (!usableBackupRoute(r)) continue;
       const saved: SavedRoute = { ...r, id: /^[a-f0-9]{12}$/.test(String(r.id)) ? r.id : newId() };
       saved.name = cleanText(saved.name, 120) || 'Ski route';
       saved.folder = cleanText(saved.folder, 60) || DEFAULT_FOLDER;

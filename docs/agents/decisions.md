@@ -204,3 +204,51 @@ Full spec: `docs/design/spec.md`, tokens: `docs/design/tokens.css`, mockups: `do
 - **Parity test with the old code:** `app/test/legacy-parity.test.ts` cuts the old functions out of
   `planner/public/app.js` and compares profile points, gradient, segments (both modes), step texts and distance
   markers on 36 real routes. It skips itself when `planner/` is removed in 4b.
+
+## 2026-11-21 · phase 4b · explore, search, Map sheet, menu, desktop panel, planner/ removed (senior frontend engineer)
+- **Layout breakpoint:** the desktop arrangement (left panel, map toolbar, right column with compass, zoom and locate,
+  floating info card, menu popover) is used from **900 px window width**, in both builds (`ui.wide`). Below that the
+  iPhone layout. Landscape phones (spec §3.10) are left for phase 7.
+- **Panel tabs keep the testids `tab-route|saved|map`** (segmented buttons get an optional `testid`), and the panel's
+  body has `data-testid="sheet-body"`, so the route tests run on both layouts. The panel is never closed; Esc does not
+  close it (spec §3.11). Sheet headers have an optional close button (none in the panel).
+- **Info card state** is separate from the open tab (`ExploreState.card`): on the iPhone the sheet shows the card
+  instead of the tab content and no tab is selected; closing it returns to the tab sheet. A "Use this spot" action
+  opens the Route tab. The card shows the tile's data at once and then the worker's details (stale answers ignored).
+- **Card content changes vs the old popup:** the lift title is the name only; type and seats moved to the subtitle
+  ("Chairlift · 6 seats", spec §2.13). Three key numbers on top (run: Length · Descent · Steepest; lift/station:
+  Length · Rise · Ride time; place: Elevation), then the actions, then all old rows under "Details". The old row texts
+  (fmtKm with 2 decimals, fmtSlope, liftRows) are unchanged; a parity test compares them with the old functions.
+- **Elevation profile in cards reuses `ProfileChart`** with a one-step route made from the feature geometry (runs:
+  steepness slices, lifts: lift colour; lifts drawn bottom → top as before). Props `title`, `showPoints`, optional
+  `onmode`. Touch scrubbing and the map cursor work the same as for routes.
+- **Search pin is orange** (`--orange`, like the old planner and the task), not the red map pin of spec §2.24: red is
+  already the destination marker colour. It is a DOM marker (one at a time).
+- **Search:** the worker does the local search; coordinates and full Google Maps links are parsed in the browser;
+  short links go to `/api/resolve` only with the capability `googleShortLinks` (the existing name; the task called it
+  `resolveShortLinks`). Without it the row says the long link is needed. "Search online" rows only in online mode;
+  Nominatim is called from the browser (`geocode` of the core, its 1 request/s limit). On the iPhone the field sits
+  above the keyboard (`visualViewport`), the tab bar and the open sheet are hidden while searching (no glass on glass).
+- **Base maps:** `effectiveBasemap(choice, online)`; the choice is kept when online mode is off. OpenFreeMap gets the
+  runs and lifts from the core overlay style with `pmtiles://ski` (no tile server needed). Hillshading/3D use the
+  local terrain first, Mapterhorn online only as fallback in online mode. When an online map fails (OpenFreeMap style
+  fetch, or a tile error from an online host) the app shows a toast and uses the offline map for the rest of the
+  session (`onlineFailed`), until the user picks a base map again. Map errors from online hosts are not logged as
+  console errors (they are expected without network).
+- **Style switches** use `setStyle(…, { diff: false })`; every `style.load` re-adds the route, explore, ski-area and
+  steepness layers and the arrow images, and a `styleVersion` counter re-runs the map effects.
+- **`setPadding` only when the padding really changes,** and the sheet padding is `H − round(0.475 × H)` (no longer
+  `ui.sheetTop`, which lags behind a detent change). Every `setPadding` stops a running camera animation (found by
+  the 3D tilt test, see lessons).
+- **Compass:** shown while the map is turned (|bearing| > 1°) or tilted without 3D; tap = north (and flat unless 3D
+  is on). Scale bar (old planner) only on the desktop layout.
+- **Menu:** modal large sheet (iPhone) / popover over the panel (desktop). Data page (PWA) shows the manifest summary
+  and *Import data file…*; deleting data, `persist()` and the full storage screen stay in phase 5. Appearance has
+  Solid interface and Units; "Keep screen on" is phase 6. About shows the version from package.json
+  (`import.meta.env.VITE_APP_VERSION`, set in `vite.config.ts`).
+- **Routes backup:** "Import backup…" first counts the routes in the file and asks (spec §2.23, `<dialog>`).
+- **planner/ removed.** `routes-store.mjs` and the Google link code already lived in `server/`. The legacy-parity test
+  now uses `packages/core/test/reference/app-route.legacy.mjs`: the old pure functions cut out of `app.js` with the
+  same extractor before deleting it (profile, gradient, steps, distance markers, lift rows, crumbs, pinActions), so it
+  no longer skips. Dropped from the old UI on purpose: the `window.skiPlanner` console helper (tests use `?e2e`) and
+  the "layers" button copy of the Map section (the Map tab replaces it).

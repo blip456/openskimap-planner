@@ -4,6 +4,8 @@ export type SheetId = 'route' | 'saved' | 'map';
 export type Detent = 'medium' | 'large';
 /** Sub-pages of the Route sheet */
 export type RoutePage = 'main' | 'settings' | 'speeds';
+/** Pages of the settings menu (spec §3.5) */
+export type MenuPage = 'root' | 'resort' | 'data' | 'backup' | 'appearance' | 'gpx' | 'about';
 
 export interface ToastData {
   text: string;
@@ -26,7 +28,20 @@ export class UiState {
   /** [lon, lat] of the point under the finger/mouse on the gradient profile */
   profileCursor = $state.raw<[number, number] | null>(null);
   /** asks the map to show these coordinates (id changes every time) */
-  fitRequest = $state.raw<{ id: number; coords: Line } | null>(null);
+  fitRequest = $state.raw<{ id: number; coords: Line; maxZoom?: number; onlyIfHidden?: boolean; keepZoom?: boolean } | null>(null);
+  /** desktop layout (≥ 900 px wide): floating left panel instead of sheets and tab bar */
+  wide = $state(false);
+  /** desktop: the left panel is hidden (panel button in the map toolbar) */
+  panelHidden = $state(false);
+  /** iPhone: the search field above the keyboard is open */
+  searchOpen = $state(false);
+  /** asks the desktop search field to take the focus (⌘K); id changes every time */
+  focusSearch = $state(0);
+  menuOpen = $state(false);
+  menuPage = $state<MenuPage>('root');
+  /** map bearing / pitch (compass button) */
+  bearing = $state(0);
+  pitch = $state(0);
   /** route point row to flash in the Route sheet (iPhone: tap on a marker) */
   flashPoint = $state.raw<{ index: number; id: number } | null>(null);
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -69,8 +84,20 @@ export class UiState {
     if (lines && ms) this.highlightTimer = setTimeout(() => (this.highlight = null), ms);
   }
 
-  fitTo(coords: Line): void {
-    if (coords.length) this.fitRequest = { id: ++this.seq, coords };
+  /** Shows these coordinates on the map. `onlyIfHidden`: only when they are (partly) hidden; `maxZoom`: zoom limit;
+   * `keepZoom`: never zoom in (only pan, or zoom out when needed). */
+  fitTo(coords: Line, options: { maxZoom?: number; onlyIfHidden?: boolean; keepZoom?: boolean } = {}): void {
+    if (coords.length) this.fitRequest = { id: ++this.seq, coords, ...options };
+  }
+
+  openMenu(page: MenuPage = 'root'): void {
+    this.menuPage = page;
+    this.menuOpen = true;
+  }
+
+  closeMenu(): void {
+    this.menuOpen = false;
+    this.menuPage = 'root';
   }
 
   flash(index: number): void {

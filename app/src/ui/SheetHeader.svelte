@@ -9,7 +9,7 @@
     subtitle,
     actions,
     onclose,
-  }: { title: string; titleId?: string; subtitle?: Snippet; actions?: Snippet; onclose: () => void } = $props();
+  }: { title: string; titleId?: string; subtitle?: Snippet; actions?: Snippet; onclose?: () => void } = $props();
 </script>
 
 <div class="sheet-head">
@@ -18,9 +18,11 @@
     {#if subtitle}<p class="subtitle">{@render subtitle()}</p>{/if}
   </div>
   {#if actions}{@render actions()}{/if}
+  {#if onclose}
   <button type="button" class="round-btn" aria-label="Close" title="Close" onclick={onclose} data-testid="sheet-close">
-    <Icon name="x" size={18} strokeWidth={2.4} />
-  </button>
+      <Icon name="x" size={18} strokeWidth={2.4} />
+    </button>
+  {/if}
 </div>
 
 <style>

@@ -1,7 +1,15 @@
 // Saved routes: the library of the open storage place, saving the current route, opening and deleting routes.
 // Old planner: loadLibrary / saveRoute / openSavedRoute / deleteSavedRoute.
 import type { RouteSummary } from '@core/routing/index.ts';
-import { DEFAULT_FOLDER, type BrowserRouteStore, type RouteStore, type SavedFolder, type SavedRoute, type SavedRouteMeta } from '../saved/stores.ts';
+import {
+  DEFAULT_FOLDER,
+  type BrowserRouteStore,
+  type RouteStore,
+  type SavedFolder,
+  type SavedRoute,
+  type SavedRouteMeta,
+  type ServerRouteStore,
+} from '../saved/stores.ts';
 import type { RouteState } from './route.svelte.ts';
 
 export type StorageId = 'browser' | 'server';
@@ -137,6 +145,40 @@ export class SavedState {
     if (wasOpen) this.deps.route.unlinkSaved();
     await this.load();
     this.deps.toast('Route deleted', full ? { label: 'Undo', run: () => void this.restore(store, full!, wasOpen) } : undefined);
+  }
+
+  // --- backup (Menu › Routes backup) -------------------------------------------------------------------------
+
+  private get browser(): BrowserRouteStore {
+    return this.stores.browser as BrowserRouteStore;
+  }
+
+  /** All routes of this device as one JSON file; null when there is nothing to export. */
+  async exportBackup(): Promise<{ blob: Blob; filename: string } | null> {
+    const backup = await this.browser.exportBackup();
+    return backup.count ? { blob: backup.blob, filename: backup.filename } : null;
+  }
+
+  /** Adds the routes of a backup file to this device. Returns how many were added. */
+  async importBackup(text: string): Promise<number> {
+    const count = await this.browser.importBackup(text);
+    if (this.storage === 'browser') await this.load();
+    return count;
+  }
+
+  /** Desktop: copies every route of the project folder into this browser (same id: no duplicates). */
+  async copyAllToBrowser(): Promise<number> {
+    const server = this.stores.server as ServerRouteStore | null;
+    if (!server) return 0;
+    let count = 0;
+    for (const folder of await server.list()) {
+      for (const meta of folder.routes) {
+        await this.browser.save(await server.getWithGpx(meta.id));
+        count++;
+      }
+    }
+    if (this.storage === 'browser') await this.load();
+    return count;
   }
 
   private async restore(store: RouteStore, r: SavedRoute, relink: boolean): Promise<void> {

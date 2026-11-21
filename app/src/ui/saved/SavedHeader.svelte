@@ -3,7 +3,7 @@
   import SheetHeader from '../SheetHeader.svelte';
   import type { AppState } from '../../lib/app.svelte.ts';
 
-  let { app, onclose }: { app: AppState; onclose: () => void } = $props();
+  let { app, onclose }: { app: AppState; onclose?: () => void } = $props();
 </script>
 
 <SheetHeader title="Saved routes" {onclose}>

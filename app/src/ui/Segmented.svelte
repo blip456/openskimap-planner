@@ -9,7 +9,7 @@
     compact = false,
     testid,
   }: {
-    options: { value: T; label: string; title?: string }[];
+    options: { value: T; label: string; title?: string; testid?: string }[];
     value: T | null;
     onchange: (v: T) => void;
     label: string;
@@ -29,7 +29,8 @@
       class:on={o.value === value}
       title={o.title}
       onclick={() => onchange(o.value)}
-      data-value={o.value}>{o.label}</button
+      data-value={o.value}
+      data-testid={o.testid}>{o.label}</button
     >
   {/each}
 </div>

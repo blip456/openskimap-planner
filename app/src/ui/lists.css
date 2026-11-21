@@ -3,6 +3,8 @@
   background: var(--cell-bg, var(--bg-cell));
   border-radius: var(--r-cell);
   overflow: hidden;
+  /* own stacking context: the rounded corners also clip positioned children (separators) in WebKit */
+  isolation: isolate;
   margin-bottom: 8px;
 }
 .grp-h {
@@ -54,6 +56,7 @@
   right: 0;
   left: var(--sep-inset, 16px);
   height: 0.5px;
+  max-width: calc(100% - var(--sep-inset, 16px));
   background: var(--separator);
 }
 button.row,

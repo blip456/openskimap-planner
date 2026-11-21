@@ -1,11 +1,12 @@
-// Phase 4a: everything about the route, in both builds, with a mouse (wide) and with touch (iPhone size).
+// Phase 4a: everything about the route, in both builds, with a mouse (wide, desktop panel layout) and with touch
+// (iPhone size). Screenshots go to phase4b/ now (route-*.png), so the 4b layout fixes can be checked.
 // Plan 3 points by tapping, drag a marker, undo/redo, the Route sheet at medium and large (drag), scrub the
 // gradient profile, collapse a leg, a route setting, save the route, share/download GPX, reload → restored.
 import path from 'node:path';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { ROOT, collectErrors, mouseDrag, newestZip, project, shot, threePoints, touchDrag, waitForMap, waitForMapStill } from './common.ts';
 
-const SHOTS = path.join(ROOT, 'docs/agents/screenshots/phase4a');
+const SHOTS = path.join(ROOT, 'docs/agents/screenshots/phase4b');
 type LngLat = [number, number];
 type AppHook = {
   route: { points: LngLat[]; result: { summary: { duration: number; distance: number }; warnings: string[] } | null; error: string | null; busy: boolean };
@@ -25,21 +26,30 @@ async function openApp(page: Page, info: TestInfo): Promise<void> {
   await waitForMap(page, 120_000);
 }
 
-/** Puts the points in the part of the map above the medium sheet, then taps/clicks them one by one. */
+/** Puts the points in the part of the map above the medium sheet, then taps/clicks them one by one. Before every
+ * tap the points are framed again and the map must stand still: after the second point the new route is fitted
+ * into the free area (a camera animation), which would move the next point away from where it was projected. */
 async function tapPoints(page: Page, points: LngLat[], touch: boolean): Promise<void> {
-  await page.evaluate((pts) => {
-    const map = (window as unknown as { __map: import('maplibre-gl').Map }).__map;
-    const h = map.getContainer().clientHeight;
-    const lons = pts.map((p) => p[0]);
-    const lats = pts.map((p) => p[1]);
-    map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
-    map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], {
-      padding: { top: 170, bottom: Math.round(h * 0.56), left: 70, right: 70 },
-      animate: false,
-    });
-  }, points);
-  await waitForMap(page);
+  const frame = () =>
+    page.evaluate((pts) => {
+      const map = (window as unknown as { __map: import('maplibre-gl').Map }).__map;
+      const h = map.getContainer().clientHeight;
+      const lons = pts.map((p) => p[0]);
+      const lats = pts.map((p) => p[1]);
+      // desktop layout (≥ 900 px): the panel covers the left 404 px, nothing covers the bottom
+      const wide = innerWidth >= 900;
+      map.stop();
+      map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+      map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], {
+        // phone: above the medium sheet and the Plan / Locate buttons that ride on it
+        padding: wide ? { top: 140, bottom: 120, left: 480, right: 140 } : { top: 170, bottom: Math.round(h * 0.56) + 80, left: 70, right: 70 },
+        animate: false,
+      });
+    }, points);
   for (const p of points) {
+    await waitForMapStill(page);
+    await frame();
+    await waitForMap(page);
     const xy = await project(page, p);
     if (touch) await page.touchscreen.tap(xy.x, xy.y);
     else await page.mouse.click(xy.x, xy.y);
@@ -51,6 +61,8 @@ const summaryText = (page: Page) => page.getByTestId('route-summary').innerText(
 
 test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, share, reload', async ({ page, isMobile }, info) => {
   const touch = isMobile;
+  // desktop layout (≥ 900 px): a floating panel with the same contents instead of the sheet with detents
+  const wide = (page.viewportSize()?.width ?? 0) >= 900;
   const log = collectErrors(page);
   // iPhone: the Web Share API with files (Chromium on Linux has none); record the calls
   if (touch) {
@@ -74,12 +86,15 @@ test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, 
   await tapPoints(page, pts, touch);
   for (const l of ['A', 'B', 'C']) await expect(page.getByTestId(`marker-${l}`)).toBeVisible();
   await expect(page.getByTestId('route-summary')).toBeVisible();
-  await expect(page.getByTestId('sheet')).toHaveAttribute('data-detent', 'medium');
+  if (wide) {
+    await expect(page.getByTestId('panel')).toBeVisible();
+    await expect(page.getByTestId('tab-route')).toHaveAttribute('aria-checked', 'true');
+  } else await expect(page.getByTestId('sheet')).toHaveAttribute('data-detent', 'medium');
   await expect(page.locator('[data-testid^=point-row-]')).toHaveCount(3);
   await expect(page.getByTestId('undo')).toBeVisible();
   await expect.poll(async () => (await app(page)).busy).toBe(false);
   await waitForMapStill(page);
-  await shot(page, info, '1-route-medium', SHOTS);
+  await shot(page, info, 'route-1-medium', SHOTS);
 
   // --- drag marker B ------------------------------------------------------------------------------------------
   const before = (await app(page)).points;
@@ -112,15 +127,17 @@ test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, 
     expect((await app(page)).points).toHaveLength(3);
   }
 
-  // --- the sheet to the large detent: drag the handle (touch) or click it (mouse) ------------------------------
-  const handle = page.getByTestId('sheet-handle');
-  if (touch) {
-    const hb = (await handle.boundingBox())!;
-    await touchDrag(page, { x: hb.x + hb.width / 2, y: hb.y + 8 }, { x: hb.x + hb.width / 2, y: 120 }, { steps: 8 });
-  } else await handle.click();
-  await expect(page.getByTestId('sheet')).toHaveAttribute('data-detent', 'large');
+  // --- the sheet to the large detent: drag the handle (touch) or click it (mouse); the desktop panel has none ---
+  if (!wide) {
+    const handle = page.getByTestId('sheet-handle');
+    if (touch) {
+      const hb = (await handle.boundingBox())!;
+      await touchDrag(page, { x: hb.x + hb.width / 2, y: hb.y + 8 }, { x: hb.x + hb.width / 2, y: 120 }, { steps: 8 });
+    } else await handle.click();
+    await expect(page.getByTestId('sheet')).toHaveAttribute('data-detent', 'large');
+  }
   await page.waitForTimeout(600);
-  await shot(page, info, '2-route-large', SHOTS);
+  await shot(page, info, 'route-2-large', SHOTS);
 
   // --- scrub the gradient profile ---------------------------------------------------------------------------
   const chart = page.getByTestId('profile-chart');
@@ -140,7 +157,7 @@ test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, 
     await expect(page.getByTestId('profile-cursor')).toBeVisible();
     for (let i = 1; i <= 10; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x1 + ((x2 - x1) * i) / 10, y }] });
     await expect(readout).not.toHaveText(first);
-    await shot(page, info, '3-profile-scrub', SHOTS);
+    await shot(page, info, 'route-3-profile-scrub', SHOTS);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await cdp.detach();
     // the horizontal drag scrubbed: the sheet did not move
@@ -152,7 +169,7 @@ test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, 
     await expect(page.getByTestId('profile-cursor')).toBeVisible();
     await page.mouse.move(x2, y, { steps: 5 });
     await expect(readout).not.toHaveText(first);
-    await shot(page, info, '3-profile-scrub', SHOTS);
+    await shot(page, info, 'route-3-profile-scrub', SHOTS);
     await page.mouse.move(cb.x + cb.width / 2, cb.y - 120);
   }
   expect(first).toMatch(/\d+ m/);
@@ -178,7 +195,7 @@ test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, 
   await page.getByTestId('open-route-settings').click();
   await expect(page.getByTestId('route-settings')).toBeVisible();
   await page.waitForTimeout(400);
-  await shot(page, info, '4-route-settings', SHOTS);
+  await shot(page, info, 'route-4-settings', SHOTS);
   const blue = page.getByTestId('difficulty-easy');
   await expect(blue).toBeChecked();
   await blue.locator('..').click();
@@ -235,7 +252,7 @@ test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, 
   await expect(page.getByTestId('folder-Tests')).toContainText('E2E route');
   await expect(page.getByTestId('save-route')).toHaveText('Save changes');
   await page.waitForTimeout(400);
-  await shot(page, info, '5-saved', SHOTS);
+  await shot(page, info, 'route-5-saved', SHOTS);
   if (!touch) {
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('share-folder').click()]);
     expect(download.suggestedFilename()).toBe('tests.zip');
@@ -294,11 +311,13 @@ test('route: plan, drag, undo/redo, sheet, profile, directions, settings, save, 
     await expect(page.getByTestId('saved-empty')).toBeVisible();
     await page.getByTestId('toast').getByRole('button', { name: 'Undo' }).click();
     await expect(page.getByTestId('folder-Tests')).toContainText('E2E route');
-    await page.locator('body').click({ position: { x: 5, y: 400 } }); // focus out of the sheet, on the map
+    await page.locator('body').click({ position: { x: wide ? 640 : 5, y: wide ? 500 : 400 } }); // focus out of the sheet, on the map
     const plan = page.getByTestId('plan-button');
     const wasOn = (await plan.getAttribute('aria-pressed')) === 'true';
-    await page.keyboard.press('Escape'); // closes the sheet first
-    await expect(page.getByTestId('sheet')).toHaveCount(0);
+    if (!wide) {
+      await page.keyboard.press('Escape'); // closes the sheet first
+      await expect(page.getByTestId('sheet')).toHaveCount(0);
+    }
     await page.keyboard.press('p');
     await expect(plan).toHaveAttribute('aria-pressed', String(!wasOn));
     await page.keyboard.press('p');

@@ -172,6 +172,33 @@ export function distanceTicks(total: number, maxTicks = 4): number[] {
   return ticks;
 }
 
+/** Label of the total at the end of the distance axis: whole metres below 1 km, else km with one decimal
+ * (no decimal for whole km), like the route's distance markers. */
+export function endLabel(total: number): string {
+  if (total < 1000) return `${Math.round(total)} m`;
+  const km = Math.round(total / 100) / 10;
+  return `${Number.isInteger(km) ? km.toFixed(0) : km.toFixed(1)} km`;
+}
+
+/** Rough width of an 11 px axis label in px (tabular digits, about 6.2 px per character). */
+export const labelWidth = (text: string, charWidth = 6.2): number => text.length * charWidth;
+
+/**
+ * Distance ticks that fit on a plot `plotW` px wide: a middle tick (centred label) is dropped when its label
+ * would touch the end label (right-aligned at the end). `label` turns a distance into the label text.
+ */
+export function visibleDistanceTicks(total: number, plotW: number, label: (d: number) => string, gap = 8): number[] {
+  const ticks = distanceTicks(total);
+  const endWidth = labelWidth(label(total));
+  return ticks.filter((d, i) => {
+    if (i === ticks.length - 1) return true;
+    const space = ((total - d) / total) * plotW;
+    // the first label is left-aligned at 0, the others are centred on their tick
+    const own = i === 0 ? labelWidth(label(d)) : labelWidth(label(d)) / 2;
+    return space >= own + endWidth + gap;
+  });
+}
+
 export interface ProfileSample {
   d: number;
   e: number;

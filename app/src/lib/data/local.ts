@@ -23,6 +23,7 @@ export class LocalDataSource implements DataSource {
       tiles: [...tiles.keys()],
       zoom: m.zoom,
       buildDate: m.buildDate,
+      sizeBytes: m.files.reduce((n, f) => n + f.size, 0),
     };
   }
 

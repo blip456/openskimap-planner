@@ -18,8 +18,6 @@
     "tiles": "tileserver-gl --config build/tileserver/config.json --bind 127.0.0.1 --port 8080",
     "server": "node server/server.mjs",
     "start": "node scripts/start.mjs",
-    "planner": "node planner/server.mjs",
-    "planner:legacy": "node planner/server.mjs",
     "typecheck": "tsc -p packages/core && tsc -p app/tsconfig.worker.json && tsc -p app/tsconfig.node.json && svelte-check --tsconfig app/tsconfig.json --fail-on-warnings && svelte-check --tsconfig app/tsconfig.test.json --fail-on-warnings",
     "test:core": "node --test \"packages/core/test/**/*.test.mjs\"",
     "test:scripts": "node --test \"scripts/test/**/*.test.mjs\"",

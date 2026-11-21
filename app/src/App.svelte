@@ -2,18 +2,28 @@
   import { onMount, type Component } from 'svelte';
   import { AppState } from './lib/app.svelte.ts';
   import MapView from './ui/MapView.svelte';
+  import type { MapApi, Padding } from './lib/map/types.ts';
   import NoData from './ui/NoData.svelte';
   import TabBar from './ui/TabBar.svelte';
   import GlassButton from './ui/GlassButton.svelte';
   import PlanButton from './ui/PlanButton.svelte';
   import ModePill from './ui/ModePill.svelte';
   import UndoRedo from './ui/UndoRedo.svelte';
+  import TerrainButton from './ui/TerrainButton.svelte';
+  import Compass from './ui/Compass.svelte';
   import BottomSheet from './ui/BottomSheet.svelte';
   import SheetHeader from './ui/SheetHeader.svelte';
   import RouteHeader from './ui/route/RouteHeader.svelte';
   import RouteBody from './ui/route/RouteBody.svelte';
   import SavedHeader from './ui/saved/SavedHeader.svelte';
   import SavedBody from './ui/saved/SavedBody.svelte';
+  import MapBody from './ui/map/MapBody.svelte';
+  import InfoHeader from './ui/info/InfoHeader.svelte';
+  import InfoBody from './ui/info/InfoBody.svelte';
+  import InfoFloat from './ui/info/InfoFloat.svelte';
+  import SearchOverlay from './ui/search/SearchOverlay.svelte';
+  import DesktopPanel from './ui/DesktopPanel.svelte';
+  import Menu from './ui/menu/Menu.svelte';
   import CreditLine from './ui/CreditLine.svelte';
   import Toast from './ui/Toast.svelte';
   import { isTyping, shortcutFor } from './lib/keyboard.ts';
@@ -23,15 +33,29 @@
   if (new URLSearchParams(location.search).has('e2e')) (window as Window & { __app?: AppState }).__app = app;
   const route = app.route;
   const ui = app.ui;
+  const explore = app.explore;
   const desktop = app.desktop;
+  /** mouse hover highlights on the map only where there is a real hover (spec §2: hover inside (hover: hover)) */
+  const hoverDevice = typeof matchMedia === 'function' && matchMedia('(hover: hover)').matches;
 
   let DevOverlay = $state<Component<{ app: AppState }> | null>(null);
   let innerHeight = $state(800);
+  let innerWidth = $state(1280);
+  let mapApi: MapApi | null = null;
 
   onMount(() => {
     void app.start();
     // dev builds only: Vite replaces import.meta.env.DEV with false in production, and the import is dropped
     if (import.meta.env.DEV) void import('./ui/DevOverlay.svelte').then((m) => (DevOverlay = m.default));
+  });
+
+  // desktop layout from 900 px (spec §3.11); between 600 and 899 the iPhone layout is used
+  $effect(() => {
+    ui.wide = innerWidth >= 900;
+  });
+  // the panel always shows one tab
+  $effect(() => {
+    if (ui.wide && ui.sheet === null) ui.openSheet('route');
   });
 
   $effect(() => {
@@ -46,12 +70,19 @@
     hadResult = has;
   });
 
+  /** iPhone: the info card temporarily replaces the tab sheet (no tab selected, spec §2.13) */
+  const sheetContent = $derived(explore.card ? 'info' : ui.sheet);
+
   // map padding = the part of the map covered by the sheet at the medium detent (spec §2.9). At the large detent
   // the sheet covers the map anyway; the padding stays at the medium value so the camera does not jump.
-  const bottomPadding = $derived.by(() => {
-    if (!ui.sheet) return 0;
-    const mediumTop = ui.detent === 'medium' && ui.sheetTop !== null ? ui.sheetTop : Math.round(innerHeight * 0.475);
-    return Math.max(0, innerHeight - mediumTop);
+  // Desktop: the panel on the left.
+  const padding = $derived.by<Padding>(() => {
+    if (ui.wide) return { top: 0, right: 0, bottom: 0, left: ui.panelHidden ? 0 : 12 + 380 };
+    if (!sheetContent) return { top: 0, right: 0, bottom: 0, left: 0 };
+    // the medium top is always round(0.475 × H) (BottomSheet). Not ui.sheetTop: right after a large → medium change it
+    // still holds the large top until the sheet settles, and the extra padding change would stop camera animations.
+    const mediumTop = Math.round(innerHeight * 0.475);
+    return { top: 0, right: 0, bottom: Math.max(0, innerHeight - mediumTop), left: 0 };
   });
 
   function onkeydown(e: KeyboardEvent) {
@@ -62,28 +93,86 @@
     if (action === 'undo') route.undo();
     else if (action === 'redo') route.redo();
     else if (action === 'plan') route.togglePlanMode();
-    else if (action === 'escape') {
-      if (ui.sheet) closeSheet();
-      else route.togglePlanMode(false);
-    }
+    else if (action === 'search') openSearch();
+    else if (action === 'escape') escape();
+  }
+
+  /** Esc closes the top-most layer (spec §4.7): menu → search → info card → sheet (iPhone) → plan mode. */
+  function escape() {
+    if (ui.menuOpen) ui.closeMenu();
+    else if (ui.searchOpen) ui.searchOpen = false;
+    else if (explore.card) closeInfo();
+    else if (ui.sheet && !ui.wide) closeSheet();
+    else route.togglePlanMode(false);
+  }
+
+  function openSearch() {
+    if (ui.wide) {
+      if (ui.panelHidden) ui.panelHidden = false;
+      ui.focusSearch++;
+    } else ui.searchOpen = true;
   }
 
   function closeSheet() {
+    if (explore.card) {
+      closeInfo();
+      return;
+    }
     ui.closeSheet();
     ui.profileCursor = null;
     ui.setHighlight(null);
   }
 
+  function closeInfo() {
+    explore.close();
+    ui.profileCursor = null;
+  }
+
+  function selectTab(id: 'route' | 'saved' | 'map') {
+    if (explore.card) {
+      closeInfo();
+      ui.openSheet(id);
+      return;
+    }
+    if (ui.sheet === id) closeSheet();
+    else ui.openSheet(id);
+  }
+
   function markerTap(i: number) {
+    explore.close();
     ui.openSheet('route');
     ui.routePage = 'main';
     ui.flash(i);
   }
 
-  const soon = (what: string) => ui.showToast(`${what} comes in the next update.`);
+  // explore mode: a tap on empty map closes an open card; on the desktop the first one explains plan mode
+  let explained = false;
+  function emptyTap() {
+    if (explore.card) {
+      closeInfo();
+      return;
+    }
+    if (desktop && !explained) {
+      explained = true;
+      ui.showToast('To add points, press ✎ Plan route (P).');
+    }
+  }
+
+  function toggle3d() {
+    app.display.terrain3d = !app.display.terrain3d;
+  }
+
+  const soon = (what: string) => ui.showToast(`${what} comes in a later update.`);
 </script>
 
-<svelte:window bind:innerHeight {onkeydown} />
+<svelte:window bind:innerHeight bind:innerWidth {onkeydown} />
+
+{#snippet menuButton(size: number)}
+  <span class="menu-wrap">
+    <GlassButton icon="menu" label="Menu" {size} expanded={ui.menuOpen} onclick={() => (ui.menuOpen ? ui.closeMenu() : ui.openMenu())} testid="menu-button" />
+    {#if app.settings.online}<i class="status-dot" class:offline={!app.network} aria-hidden="true"></i>{/if}
+  </span>
+{/snippet}
 
 {#if app.status === 'starting'}
   <div class="splash" aria-busy="true"></div>
@@ -101,71 +190,132 @@
       resort={app.resort}
       {route}
       {ui}
+      {explore}
       display={app.display}
-      {bottomPadding}
+      basemap={app.basemap}
+      online={app.settings.online}
+      skiAreas={app.skiAreas}
+      {padding}
+      hoverEnabled={hoverDevice}
       initialView={app.mapView}
       onview={(v) => app.setMapView(v)}
       onmarkertap={markerTap}
       onmaptap={() => {
-        if (ui.sheet && ui.detent === 'large') {
+        if (!ui.wide && sheetContent && ui.detent === 'large') {
           ui.detent = 'medium';
           return true;
         }
+        if (route.planMode && explore.card) closeInfo();
         return false;
       }}
+      onfeature={(f, at) => void explore.openFeature(f, at)}
+      onemptytap={emptyTap}
+      onfallback={(msg) => app.onlineFallback(msg)}
+      onterrainmissing={() => {
+        app.display.terrain3d = false;
+        ui.showToast('3D needs terrain data. Turn on online mode or build the data with terrain.');
+      }}
+      onready={(api) => (mapApi = api)}
     />
   {/key}
 
-  <div class="top-left">
-    <GlassButton icon="menu" label="Menu" onclick={() => soon('The settings menu')} />
-  </div>
-  <!-- top-right row: undo/redo, then the 3D capsule (phase 4b) -->
-  <div class="top-right">
-    <UndoRedo canUndo={route.canUndo} canRedo={route.canRedo} onundo={() => route.undo()} onredo={() => route.redo()} {desktop} />
-  </div>
-
-  {#if route.planMode}
-    <div class="mode-row">
-      <ModePill points={route.points.length} {desktop} onstop={() => route.togglePlanMode(false)} />
+  {#if ui.wide}
+    <!-- desktop: panel on the left, toolbar at the top of the map area, map buttons bottom right -->
+    {#if !ui.panelHidden}<DesktopPanel {app} />{/if}
+    <div class="toolbar" class:full={ui.panelHidden}>
+      <GlassButton
+        icon="panelLeft"
+        label={ui.panelHidden ? 'Show the panel' : 'Hide the panel'}
+        active={!ui.panelHidden}
+        onclick={() => (ui.panelHidden = !ui.panelHidden)}
+        testid="panel-toggle"
+      />
+      {#if ui.panelHidden}{@render menuButton(48)}{/if}
+      <PlanButton on={route.planMode} {desktop} ontoggle={() => route.togglePlanMode()} />
+      <UndoRedo canUndo={route.canUndo} canRedo={route.canRedo} onundo={() => route.undo()} onredo={() => route.redo()} {desktop} />
+      <TerrainButton on={app.display.terrain3d} ontoggle={toggle3d} />
     </div>
-  {/if}
+    {#if route.planMode}
+      <div class="mode-row wide" class:full={ui.panelHidden}>
+        <ModePill points={route.points.length} desktop onstop={() => route.togglePlanMode(false)} />
+      </div>
+    {/if}
+    <div class="right-column">
+      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} onreset={() => mapApi?.resetNorth()} />
+      <div class="glass zoom" role="group" aria-label="Zoom">
+        <button type="button" aria-label="Zoom in" title="Zoom in" onclick={() => mapApi?.zoomIn()} data-testid="zoom-in">+</button>
+        <span class="divider" aria-hidden="true"></span>
+        <button type="button" aria-label="Zoom out" title="Zoom out" onclick={() => mapApi?.zoomOut()} data-testid="zoom-out">−</button>
+      </div>
+      <GlassButton icon="navigation" label="Show my location" onclick={() => soon('My location')} />
+    </div>
+    <InfoFloat {app} onclose={closeInfo} />
+    <CreditLine wide onopen={() => ui.openMenu('about')} />
+  {:else}
+    <div class="top-left">{@render menuButton(48)}</div>
+    <div class="top-right">
+      <UndoRedo canUndo={route.canUndo} canRedo={route.canRedo} onundo={() => route.undo()} onredo={() => route.redo()} {desktop} />
+      <TerrainButton on={app.display.terrain3d} ontoggle={toggle3d} />
+    </div>
+    <div class="compass-slot">
+      <Compass bearing={ui.bearing} pitch={app.display.terrain3d ? 0 : ui.pitch} onreset={() => mapApi?.resetNorth()} />
+    </div>
 
-  <div class="controls" class:on-sheet={ui.sheet !== null} class:under-large={ui.sheet !== null && ui.detent === 'large'}>
-    <PlanButton on={route.planMode} {desktop} ontoggle={() => route.togglePlanMode()} />
-    <GlassButton icon="navigation" label="Show my location" onclick={() => soon('My location')} />
-  </div>
+    {#if route.planMode}
+      <div class="mode-row">
+        <ModePill points={route.points.length} {desktop} onstop={() => route.togglePlanMode(false)} />
+      </div>
+    {/if}
 
-  {#if !ui.sheet}<CreditLine />{/if}
+    <div class="controls" class:on-sheet={sheetContent !== null} class:under-large={sheetContent !== null && ui.detent === 'large'}>
+      <PlanButton on={route.planMode} {desktop} ontoggle={() => route.togglePlanMode()} />
+      <GlassButton icon="navigation" label="Show my location" onclick={() => soon('My location')} />
+    </div>
 
-  {#if ui.sheet}
-    <BottomSheet
-      detent={ui.detent}
-      labelledby="sheet-title"
-      ondetent={(d) => (ui.detent = d)}
-      onsettle={(top) => (ui.sheetTop = top)}
-      onclose={closeSheet}
-      scrollKey={`${ui.sheet}:${ui.routePage}`}
-    >
-      {#snippet header()}
-        {#if ui.sheet === 'route'}
-          <RouteHeader {app} onclose={closeSheet} />
-        {:else if ui.sheet === 'saved'}
-          <SavedHeader {app} onclose={closeSheet} />
+    {#if !sheetContent && !ui.searchOpen}<CreditLine onopen={() => ui.openMenu('about')} />{/if}
+
+    <!-- the search field and its results replace the sheet while searching (no glass on glass) -->
+    {#if sheetContent && !ui.searchOpen}
+      <BottomSheet
+        detent={ui.detent}
+        labelledby="sheet-title"
+        ondetent={(d) => (ui.detent = d)}
+        onsettle={(top) => (ui.sheetTop = top)}
+        onclose={closeSheet}
+        testid={sheetContent === 'info' ? 'info-sheet' : 'sheet'}
+        scrollKey={`${sheetContent}:${ui.routePage}:${explore.card?.title ?? ''}`}
+      >
+        {#snippet header()}
+          {#if sheetContent === 'info' && explore.card}
+            <InfoHeader card={explore.card} onclose={closeInfo} />
+          {:else if sheetContent === 'route'}
+            <RouteHeader {app} onclose={closeSheet} />
+          {:else if sheetContent === 'saved'}
+            <SavedHeader {app} onclose={closeSheet} />
+          {:else}
+            <SheetHeader title="Map" onclose={closeSheet} />
+          {/if}
+        {/snippet}
+        {#if sheetContent === 'info'}
+          <InfoBody {app} tall={ui.detent === 'large'} />
+        {:else if sheetContent === 'route'}
+          {#key ui.routePage}<RouteBody {app} />{/key}
+        {:else if sheetContent === 'saved'}
+          <SavedBody {app} />
         {:else}
-          <SheetHeader title="Map" onclose={closeSheet} />
+          <MapBody {app} />
         {/if}
-      {/snippet}
-      {#if ui.sheet === 'route'}
-        {#key ui.routePage}<RouteBody {app} />{/key}
-      {:else if ui.sheet === 'saved'}
-        <SavedBody {app} />
-      {:else}
-        <p class="later">The map options come in the next update.</p>
-      {/if}
-    </BottomSheet>
+      </BottomSheet>
+    {/if}
+
+    {#if ui.searchOpen}
+      <SearchOverlay search={app.search} onclose={() => (ui.searchOpen = false)} />
+    {:else}
+      <TabBar open={explore.card ? null : ui.sheet} onselect={selectTab} onsearch={openSearch} />
+    {/if}
   {/if}
 
-  <TabBar open={ui.sheet} onselect={(id) => (ui.sheet === id ? closeSheet() : ui.openSheet(id))} onsearch={() => soon('Search')} />
+  {#if ui.menuOpen}<Menu {app} popover={ui.wide} />{/if}
 {/if}
 
 {#if ui.toast}<Toast toast={ui.toast} ondone={() => ui.hideToast()} />{/if}
@@ -196,6 +346,25 @@
     top: var(--controls-top);
     left: calc(var(--edge) + var(--safe-left));
   }
+  .menu-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  /* online mode on: small status dot (orange without network), spec §3.1 */
+  .status-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px #fff;
+    pointer-events: none;
+  }
+  .status-dot.offline {
+    background: var(--orange);
+  }
   .top-right {
     position: fixed;
     z-index: var(--z-controls);
@@ -203,6 +372,12 @@
     right: calc(var(--edge) + var(--safe-right));
     display: flex;
     gap: 8px;
+  }
+  .compass-slot {
+    position: fixed;
+    z-index: var(--z-controls);
+    top: calc(var(--controls-top) + 56px);
+    right: calc(var(--edge) + var(--safe-right));
   }
   /* mode pill: centred in the width left of the compass column (spec §2.5) */
   .mode-row {
@@ -214,6 +389,14 @@
     display: flex;
     justify-content: center;
     pointer-events: none;
+  }
+  .mode-row.wide {
+    top: 72px;
+    left: calc(12px + var(--panel-w) + 12px);
+    right: 72px;
+  }
+  .mode-row.wide.full {
+    left: 12px;
   }
   .mode-row > :global(*) {
     pointer-events: auto;
@@ -233,19 +416,64 @@
     pointer-events: auto;
   }
   /* at the medium detent the Plan and Locate buttons ride 16 px above the sheet and fade out towards the large
-   * detent (spec §2.9); on wide screens the sheet (max 560 px, centred) leaves them free */
-  @media (max-width: 899px) {
-    .controls.on-sheet {
-      bottom: auto;
-      top: calc(var(--sheet-y, var(--sheet-medium-top)) - 16px - var(--ctl));
-      opacity: calc(1 - 2 * var(--sheet-progress, 0));
-    }
-    .controls.under-large {
-      visibility: hidden;
+   * detent (spec §2.9) */
+  .controls.on-sheet {
+    bottom: auto;
+    top: calc(var(--sheet-y, var(--sheet-medium-top)) - 16px - var(--ctl));
+    opacity: calc(1 - 2 * var(--sheet-progress, 0));
+  }
+  .controls.under-large {
+    visibility: hidden;
+  }
+  /* desktop map toolbar (spec §3.11) */
+  .toolbar {
+    position: fixed;
+    z-index: var(--z-controls);
+    top: 12px;
+    left: calc(12px + var(--panel-w) + 12px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toolbar.full {
+    left: 12px;
+  }
+  .right-column {
+    position: fixed;
+    z-index: var(--z-controls);
+    right: calc(12px + var(--safe-right));
+    bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zoom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 48px;
+    border-radius: var(--r-pill);
+    padding: 2px 0;
+  }
+  .zoom button {
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 22px;
+    background: none;
+    color: inherit;
+    font: 400 24px/1 var(--font);
+    cursor: pointer;
+  }
+  @media (hover: hover) {
+    .zoom button:hover {
+      background: var(--glass-pill);
     }
   }
-  .later {
-    color: var(--label-2);
-    font-size: var(--t-subhead);
+  .zoom .divider {
+    width: 24px;
+    height: 0.5px;
+    background: var(--label-3);
   }
 </style>

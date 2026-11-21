@@ -25,10 +25,12 @@ export function routeFeatures(steps: readonly Pick<RouteStep, 'type' | 'runKind'
   };
 }
 
-/** Chevron pointing along the line, drawn on a canvas (no font needed; old planner arrowImage). */
-export function arrowImage(color = '#1d2329'): ImageData | null {
+/** Chevron pointing along the line, drawn on a canvas (no font needed; old planner arrowImage). `both` draws
+ * "‹ ›" for lifts that run both ways. */
+export function arrowImage(color = '#1d2329', { both = false }: { both?: boolean } = {}): ImageData | null {
+  const width = both ? 64 : 48;
   const c = document.createElement('canvas');
-  c.width = 48;
+  c.width = width;
   c.height = 48;
   const ctx = c.getContext('2d');
   if (!ctx) return null;
@@ -36,9 +38,18 @@ export function arrowImage(color = '#1d2329'): ImageData | null {
   ctx.lineJoin = 'round';
   const path = () => {
     ctx.beginPath();
-    ctx.moveTo(17, 12);
-    ctx.lineTo(31, 24);
-    ctx.lineTo(17, 36);
+    if (both) {
+      ctx.moveTo(24, 12);
+      ctx.lineTo(10, 24);
+      ctx.lineTo(24, 36);
+      ctx.moveTo(40, 12);
+      ctx.lineTo(54, 24);
+      ctx.lineTo(40, 36);
+    } else {
+      ctx.moveTo(17, 12);
+      ctx.lineTo(31, 24);
+      ctx.lineTo(17, 36);
+    }
   };
   path();
   ctx.strokeStyle = '#ffffff';
@@ -48,13 +59,50 @@ export function arrowImage(color = '#1d2329'): ImageData | null {
   ctx.strokeStyle = color;
   ctx.lineWidth = 6;
   ctx.stroke();
-  return ctx.getImageData(0, 0, 48, 48);
+  return ctx.getImageData(0, 0, width, 48);
 }
 
-const LABEL_FONT = ['Noto Sans Medium'];
+/** The id of an arrow image the ski styles ask for ("arrow:#7b1fa2", "arrow-both:#7b1fa2"), or null. */
+export function parseArrowId(id: string): { color: string; both: boolean } | null {
+  const m = String(id).match(/^arrow(-both)?:(#[0-9a-fA-F]{3,8})$/);
+  return m ? { color: m[2], both: !!m[1] } : null;
+}
+
+/** Makes "arrow:<colour>" images on demand (call once per map). */
+export function handleArrowImages(map: MlMap): void {
+  map.on('styleimagemissing', (e: { id: string }) => {
+    const a = parseArrowId(e.id);
+    if (!a || map.hasImage(e.id)) return;
+    const img = arrowImage(a.color, { both: a.both });
+    if (img) map.addImage(e.id, img, { pixelRatio: 2 });
+  });
+}
+
+/**
+ * The ski styles draw one-way and lift direction arrows as the text "›", which sits slightly below the line.
+ * Here they become arrow images in the colour of the run or lift (old planner useArrowImages).
+ */
+export function useArrowImages(map: MlMap): void {
+  const icon = (id: string, image: ExpressionSpecification | string, size: ExpressionSpecification) => {
+    if (!map.getLayer(id)) return;
+    map.setLayoutProperty(id, 'text-field', '');
+    map.setLayoutProperty(id, 'icon-image', image);
+    map.setLayoutProperty(id, 'icon-size', size);
+    map.setLayoutProperty(id, 'icon-rotation-alignment', 'map');
+    map.setLayoutProperty(id, 'icon-keep-upright', false);
+    map.setLayoutProperty(id, 'icon-allow-overlap', true);
+    map.setLayoutProperty(id, 'icon-ignore-placement', true);
+  };
+  icon('ski-runs-oneway', ['concat', 'arrow:', ['get', 'color']], ['interpolate', ['linear'], ['zoom'], 15, 0.75, 18, 1]);
+  icon(
+    'ski-lifts-direction',
+    ['case', ['==', ['get', 'direction'], 'both'], `arrow-both:${LIFT_COLOR}`, `arrow:${LIFT_COLOR}`],
+    ['interpolate', ['linear'], ['zoom'], 13, 0.65, 17, 0.95],
+  );
+}
 
 /** Adds the route sources and layers (line, highlight, arrows, distance markers); call after every style load. */
-export function addRouteLayers(map: MlMap): void {
+export function addRouteLayers(map: MlMap, labelFont: string[] = ['Noto Sans Medium']): void {
   if (map.getSource('route')) return;
   for (const id of ['route', 'route-highlight', 'route-distances']) map.addSource(id, { type: 'geojson', data: EMPTY });
   if (!map.hasImage('route-arrow')) {
@@ -123,7 +171,7 @@ export function addRouteLayers(map: MlMap): void {
     source: 'route-distances',
     layout: {
       'text-field': ['get', 'label'],
-      'text-font': LABEL_FONT,
+      'text-font': labelFont,
       'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 14],
       'text-offset': [0, -1.1],
       'text-anchor': 'bottom',

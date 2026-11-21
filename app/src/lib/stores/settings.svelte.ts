@@ -1,4 +1,4 @@
-// User settings that survive a reload. Phase 3 only has what the skeleton needs.
+// User settings that survive a reload: online mode, solid interface, the open resort.
 import { defaultStorage, loadJson, saveJson, type KeyValue } from './persist.ts';
 
 export interface SettingsData {
@@ -31,6 +31,11 @@ export class Settings {
 
   setOnline(on: boolean): void {
     this.online = on;
+    this.save();
+  }
+
+  setSolid(on: boolean): void {
+    this.solid = on;
     this.save();
   }
 
