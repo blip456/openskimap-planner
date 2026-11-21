@@ -10,7 +10,7 @@
 | 5 PWA + import | done, waiting for commit and the owner's iPhone test (`docs/agents/iphone-test-phase5.md`) |
 | 6 iPhone features | done, waiting for commit and the owner's iPhone test (`docs/agents/iphone-test-phase6.md`) |
 | 7 Liquid Glass UI + responsive | done, waiting for commit and the owner's iPhone review (`docs/agents/iphone-test-phase7.md`) |
-| 8 Docs | to do |
+| 8 Docs | done, waiting for commit |
 | Design | spec done (`docs/design/`) |
 
 ## Handover entries
@@ -533,3 +533,26 @@ or should "Start from my location" replace the current start?
 **Questions for the owner:** none blocking. Is the slightly deeper blue (for readability) fine, or do you prefer the
 exact iOS blue even if it is a bit harder to read?
 
+
+### 2026-11-21 · phase 8 · technical writer · docs
+**Done**
+- `README.md` rewritten for the new structure: two builds (table), requirements, quick start for desktop and PWA, zoom
+  levels with a size table (z12 12.5 MB, default 45.6 MB, z17 estimate 1.6 GB), data file, one table with all 19 npm
+  scripts, online/offline, tests, project layout, troubleshooting, credits (same list as the About screen). The long
+  usage sections (planner, saved routes, search, map, speed, routing, resorts) were kept. No mention of `planner/`.
+- `docs/vercel.md`: import the repo, branch, settings come from `vercel.json`, no env vars, previews, custom domain,
+  how to check service worker updates. States that the data ZIP is not hosted.
+- `docs/iphone-guide.md`: for the end user, all points of the task, plus a "Testing" note that links the three
+  iPhone checklists.
+- `scripts/test/docs.test.mjs` (6 tests): every `npm run X` in README / vercel.md / iphone-guide exists; every script
+  is in the README table and the table lists no missing script; no old `planner/` references; checklists linked.
+
+**How to verify:** `npm test` (green); read the three docs.
+
+**Open issues / notes**
+- Only z12 and the default are measured. z15 and z16 sizes are not known (z17 is an estimate).
+- `z14` is not the default build (basemap 14 instead of 15). Documented.
+- The iOS Settings path for a denied location comes from the app's own message (Safari Websites); the exact name of the
+  entry for a Home Screen app on a real iPhone is not checked. The guide also mentions Motion & Fitness for the
+  compass, which is not verified on a real device.
+- Vercel steps are written from `vercel.json`, not tried on Vercel.
