@@ -341,3 +341,61 @@ the tab bar at the large detent — content needs bottom padding = tab bar heigh
 
 ### Orchestrator review of 4b screenshots
 - The toast ("Data imported") overlaps the large-sheet title (see `phase4b/pwa-iphone-menu.png`). Move toasts below the top safe area plus header, or above the tab bar, when a large sheet is open. Fix in phase 5 or 7.
+
+### 2026-11-21 · phase 5 · senior engineer · PWA + import
+**Done**
+- **Manifest + icons:** `scripts/icons.mjs` (from `ios-app-test`, `npm run icons`) makes favicon, apple-touch-icon
+  (180, full-bleed), 192/512 and a maskable 512 from `app/public/logo.svg`. `index.html` has the iOS meta tags
+  (`apple-mobile-web-app-capable`, `black-translucent`, `viewport-fit=cover`, title "Ski planner"), theme-color for
+  light and dark, apple-touch-icon. Manifest name "Ski route planner", short name "Ski planner".
+- **Service worker** (vite-plugin-pwa 2, PWA build only): precaches the app shell (HTML, JS, MapLibre/routing/import
+  workers, CSS, icons, manifest); online hosts and Nominatim are network only; the data is never cached (OPFS).
+  `src/lib/pwa/register.ts` (workbox-window) + `ui/UpdatePrompt.svelte`: "New version available · Reload", no
+  forced reload; checks for updates when the app comes back to the front. Desktop build: no SW, no manifest.
+- **Import + storage screen** (Menu › Data): installed data (resort, build date, ski data date, zoom levels), size per
+  part from the manifest, storage used/available (`estimate()`) with a bar, "Keep data" (`persisted()`, asked with
+  `persist()` after each import; plain note when Off + "Ask to keep the data"), Import new data file, Delete data with
+  confirmation. First-run screen: plain steps (build ZIP, AirDrop/iCloud Drive → Files, import, do not unzip).
+  Import errors have a code and a title: Wrong file / The file is damaged / Not enough space (incl.
+  `QuotaExceededError`) / Import failed (`ui/ImportErrorBox.svelte`, `lib/data/storage-info.ts`).
+- **Online/offline:** `AppState.onlineUsable` (switch AND `navigator.onLine`) gates online base maps, Mapterhorn
+  terrain, Nominatim and Google short links; quiet fallback (one toast, back by itself when the network returns).
+  The switch was already saved.
+- **Vercel:** `vercel.json` (build `npm run build:pwa`, output `app/dist`, SPA fallback, no-cache for sw.js /
+  index.html / manifest, immutable `assets/`, manifest MIME, `npm ci --ignore-scripts`, no functions).
+- **Scripts:** `npm run preview:pwa` (build + serve with SW on :4174), `npm run dev:pwa -- --phone` and
+  `npm run preview:pwa -- --phone` (`scripts/dev-pwa.mjs`, `scripts/lib/phone-https.mjs`: mkcert certificate for
+  localhost, `<host>.local` and LAN IPs, prints the URLs and the trust steps; clear message when mkcert is missing).
+- **4b review fix:** toasts go above the tab bar while the menu or a large sheet covers the top (`toastPlacement`).
+- README sections (dev/preview/--phone/Vercel/Data page/getting the ZIP onto the phone), decisions, lessons.
+
+**Tests**
+- `npm test`: typecheck + 73 core + 20 script (6 new: icons, phone HTTPS, vercel.json) + 19 server + **139 app**
+  (new `pwa.test.ts`: data parts, storage status/persist with fakes, import error codes incl. QuotaExceededError,
+  online gating in search and `AppState`, saved switch, toast placement, manifest/SW config). Mutation check: removing
+  `&& this.network` from `onlineUsable` fails the test.
+- `npm run test:e2e -- --trace off`: **24 passed**. New `pwa-data.spec.ts` (both PWA projects): offline start (SW
+  controls the page → `setOffline(true)` → reload → map from OPFS, route, local search); wrong file + damaged ZIP
+  errors; data screen, delete (cancel + confirm, OPFS empty, still no data after reload), import again; update
+  prompt (new sw.js → prompt → no auto reload → Reload loads the new version). Desktop spec: no SW registration, no
+  manifest link. `scripts/e2e.mjs` fails if `app/dist-desktop` has sw.js, a manifest or Workbox code.
+- Screenshots: `docs/agents/screenshots/phase5/` (first run, wrong file, damaged, data screen, storage, delete
+  confirm, update prompt, offline route; iPhone + wide).
+
+**How to verify**
+- `npm test`; `npm run test:e2e -- --trace off`.
+- `npm run preview:pwa` → <http://localhost:4174>: import the ZIP, DevTools › Application › Service workers shows
+  `sw.js`; tick "Offline" and reload: the app and map still work. Menu › Data shows the storage screen.
+- Owner on the iPhone: `docs/agents/iphone-test-phase5.md` (the phase 5 review).
+
+**Open issues / notes**
+- mkcert is not installed in the cloud environment: `--phone` was only tried with a fake mkcert (openssl
+  self-signed + `curl -k`). The owner must try `npm run dev:pwa -- --phone` on the Mac (`brew install mkcert`,
+  `mkcert -install`).
+- Not checked on a real iPhone: OPFS sync access handles, `persist()` result in Safari vs Home Screen app, install,
+  offline start, update prompt. The checklist asks for these values.
+- In headless Chromium `persisted()` is false, so the screenshots show "Keep data: Off".
+- `vercel.json` is not tried on Vercel yet (no access from here); the first preview deploy will show it.
+- The update prompt sits at the top and can cover the logo on the first-run screen (small; phase 7 polish).
+
+**Questions for the owner:** none blocking. Is "Ski planner" fine as the name under the home screen icon?
