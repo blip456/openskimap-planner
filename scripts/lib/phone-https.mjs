@@ -1,4 +1,4 @@
-// HTTPS on the local network for testing on the iPhone (`npm run dev:pwa -- --phone`, `npm run preview:pwa -- --phone`).
+// HTTPS on the local network for testing on the iPhone (`npm run dev:pwa -- --phone`, `npm run dev:pwa -- --preview --phone`).
 // Location, storage and the service worker need HTTPS (or localhost, which the phone cannot use for the Mac).
 // The certificate comes from mkcert (https://github.com/FiloSottile/mkcert): it creates a local certificate
 // authority once; the iPhone trusts it after you install its root certificate (see phoneHelp()).

@@ -10,8 +10,10 @@ to the iPhone yourself (see `docs/iphone-guide.md`).
 
 1. Sign in at <https://vercel.com> (a free Hobby account is enough). Use "Continue with GitHub".
 2. Click **Add New › Project**. Pick the GitHub repository `openskimap-planner` (give Vercel access to it if asked).
-3. **Production Branch:** at the moment the work is on the branch `iphone-pwa`. Open the project's **Settings › Git**
-   and set the Production Branch to `iphone-pwa`. When the work is merged, set it to `main`.
+3. **Production Branch:** keep it at `main` (the Vercel default). Changes to `main` are the production release.
+   Every other branch gets a preview link. Until `iphone-pwa` is merged into `main`, use the preview link of
+   `iphone-pwa` for testing on the iPhone. `main` does not have `vercel.json` yet, so do not point production at
+   `main` before the merge.
 4. Leave the build settings alone. They come from `vercel.json` in the repository:
 
    | Setting | Value |
@@ -60,5 +62,5 @@ If no prompt comes, close the app fully (swipe it away) and open it again. See "
 
 ```sh
 npm run build:pwa      # same command as Vercel
-npm run preview:pwa    # serve it with the service worker on http://localhost:4174
+npm run dev:pwa -- --preview    # serve it with the service worker on http://localhost:4174
 ```

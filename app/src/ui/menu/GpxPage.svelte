@@ -41,7 +41,7 @@
     </div>
   {/each}
 </div>
-<p class="grp-f">The tile server must be running (npm start). JPG is a basemap, PNG an overlay.</p>
+<p class="grp-f">The tile server must be running (npm run dev:desktop). JPG is a basemap, PNG an overlay.</p>
 
 <style>
   .intro {

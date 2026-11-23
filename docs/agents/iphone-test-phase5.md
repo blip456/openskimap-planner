@@ -7,7 +7,7 @@ went wrong, with a screenshot if you can).
 
 - The app online with HTTPS. Either:
   - a Vercel preview link of the branch `iphone-pwa` (easiest), or
-  - on your Mac: `npm run preview:pwa -- --phone` (needs mkcert, see the README section "Testing on the iPhone").
+  - on your Mac: `npm run build:pwa` and `npm run dev:pwa -- --preview --phone` (needs mkcert, see the README section "Testing on the iPhone").
     Note: this is the first real test of `--phone`; it could not be tried in the cloud environment.
 - The data file: on the Mac run `npm run build:pwa-data`. You get `build/pwa/openskimap-data-….zip`.
 - iOS 17 or newer (the app needs iOS 16.4 at least).

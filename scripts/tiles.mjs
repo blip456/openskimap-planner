@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// npm run tiles — TileServer GL (port 8080) for the resorts.json map: build/regions/<resort id>/tileserver/config.json.
+// TileServer GL (started by npm run dev:desktop) (port 8080) for the resorts.json map: build/regions/<resort id>/tileserver/config.json.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';

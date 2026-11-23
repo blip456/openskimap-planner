@@ -560,3 +560,11 @@ support on the phone — out of scope, as agreed).
 - A region cannot use that id: the server refuses it (400), the region cleanup and region ZIP delete never treat that
   folder as a region. The id `default` is no longer special.
 - With more than one resort, the folder follows the first resort. Tell the owner if that is not wanted.
+
+## Fewer npm scripts: `start`, `server` and `tiles` removed (chore/cleanup-npm-scripts)
+- **Deviation from the plan (§ scripts table):** `npm start`, `npm run server` and `npm run tiles` are gone
+  (`scripts/start.mjs` deleted). Why: the iPhone app has no matching scripts, and the flow is simpler with one command per
+  app: `npm run dev:desktop` starts the frontend, the desktop server and TileServer GL; `npm run dev:pwa` starts the
+  iPhone app. `dev:desktop` now starts `server/server.mjs` and `scripts/tiles.mjs` directly. `build:desktop` and
+  `build:pwa` are only for packaging. `build:ski` and `preview:pwa` were removed too (owner request). Use `npm run build -- --only=ski`, and `npm run build:pwa` then
+  `npm run dev:pwa -- --preview` to test the service worker.
