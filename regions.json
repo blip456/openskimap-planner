@@ -1,0 +1,19 @@
+{
+  "regions": [
+    {
+      "id": "kleinwalsertal-oberstdorf-high-res",
+      "name": "Kleinwalsertal-Oberstdorf (high-res)",
+      "bbox": [
+        10.07733,
+        47.29947,
+        10.3778,
+        47.43995
+      ],
+      "zoom": {
+        "terrain": 15,
+        "basemap": 15,
+        "ski": 18
+      }
+    }
+  ]
+}
