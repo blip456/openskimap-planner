@@ -294,3 +294,8 @@ wrong assumption. Format:
 - **What happened:** the new Build region spec failed with `browserType.launch: Executable doesn't exist at .../chromium_headless_shell-1243/...`. The pinned `@playwright/test` 1.63.0 wants headless shell build 1243. The preinstalled cache in `~/Library/Caches/ms-playwright/` has `chromium_headless_shell-1228`.
 - **Root cause:** the environment's browser cache is older than the pinned Playwright. `playwright install` is not allowed here (CLAUDE.md).
 - **Prevention:** do not change the pinned version. To run the browser tests here, use a scratch config outside the repo that sets `use.launchOptions.executablePath` to the installed `chrome-headless-shell` (see the handover in `docs/agents/progress.md`). Open question for the owner: should the browser cache be updated on this machine?
+
+## 2026-11-23 · merge to main · saved-sheet Undo test failed in the full run only
+- **What happened:** `npm test` on `iphone-pwa` failed one test in `app/test/saved.test.ts` ("a second delete ... Undo keeps the route"): `expected 0 to be 1`. The same test passed 3 of 3 times when run alone, and the full app suite passed 3 of 3 after the fix.
+- **Root cause:** the test waited a fixed 20 ms after tapping Undo before checking the route count. Undo restores the route in the background (store write, then reload). Under the load of the full run the restore had not finished after 20 ms. This was a test timing problem, not an app bug.
+- **Prevention:** wait for an asynchronous result with `vi.waitFor(() => expect(...))`, never with a fixed `setTimeout`. A fixed delay only works on a fast machine. Rule: if a test waits with `setTimeout` for app state to change, replace it with `vi.waitFor` or `expect.poll`.

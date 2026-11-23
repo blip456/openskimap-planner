@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { IDBFactory } from 'fake-indexeddb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { BrowserRouteStore, DB_NAME, DB_STORE, DEFAULT_FOLDER, ServerRouteStore, type SavedRoute } from '../src/lib/saved/stores.ts';
 import { SavedState } from '../src/lib/stores/saved.svelte.ts';
 import { RouteState } from '../src/lib/stores/route.svelte.ts';
@@ -261,7 +261,7 @@ describe('saved sheet logic', () => {
     await Promise.all([saved.delete(a), saved.delete(a)]); // full swipe + the click that can follow it
     expect(toasts.filter((t) => t.text === 'Route deleted')).toHaveLength(1);
     toasts.at(-1)!.action!.run();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(saved.count).toBe(1);
+    // Undo restores in the background; wait for it instead of a fixed delay (a fixed delay is flaky under load)
+    await vi.waitFor(() => expect(saved.count).toBe(1));
   });
 });
