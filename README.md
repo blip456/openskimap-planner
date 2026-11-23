@@ -11,7 +11,7 @@ There is one app and two builds:
 | For | iPhone (and any modern browser), installed to the Home Screen | Your computer |
 | Where the map data lives | In the browser storage of the phone. You import one ZIP file. | In the `build/` folder, served by a small local server |
 | Works without internet | Yes, after the first visit and the import | Yes, after `npm run build` |
-| Hosting | Any static host, for example Vercel (`docs/vercel.md`) | `npm start` on your computer |
+| Hosting | Any static host, for example Vercel (`docs/vercel.md`) | `npm run dev:desktop` on your computer |
 | Online mode (extra maps and search) | Off by default | On by default |
 | gpx.studio tile links | No | Yes (TileServer GL) |
 
@@ -39,52 +39,34 @@ Guides:
 
 Run `npm install` once.
 
-## Quick start: desktop
+## The flow at a glance
+
+```sh
+npm install                    # once
+npm run build                  # 1. fetch and build the map data (needs internet, about 1 minute)
+npm run dev:desktop            # 2. desktop app: starts everything it needs (frontend and backend)
+npm run dev:pwa                # 3. iPhone app: starts everything it needs
+npm run build:pwa-map-data     # 4. pack the map data into one ZIP to import in the iPhone app
+npm run build:desktop          # 5. package the apps for release
+npm run build:pwa
+npm test                       # 6. check your work
+```
+
+Step 1 comes first. Steps 2 and 3 are the two apps, use the one you need. All scripts are listed in
+[npm scripts](#npm-scripts).
+
+## 1. Fetch and build the map data
 
 ```sh
 npm run build        # about 1 minute: filter ski data, download extracts, build tiles and planner data
-npm start            # tile server on :8080, planner on :8081 (builds the desktop app first)
 ```
 
-- Planner: <http://localhost:8081>
-- Tile server overview: <http://localhost:8080> (only needed for the gpx.studio links)
+This is the only step that needs internet (apart from the optional online mode). Both apps use its result, in
+`build/regions/<resort id>/`. Run it again when you want newer data.
 
-You can set the zoom level: `npm run build z12` (see "Zoom levels" below).
+- **Add or change a resort:** see [Adding resorts](#adding-resorts).
 
-For development, `npm run dev:desktop` starts the desktop server, the tile server and a Vite dev server with hot
-reload on <http://localhost:5173>.
-
-## Quick start: iPhone app (PWA)
-
-```sh
-npm run build                 # once, if build/ does not exist yet
-npm run build:pwa-map-data        # packs the resorts.json map (build/regions/oberstdorf-kleinwalsertal/) into one ZIP: build/pwa-map-data/openskimap-data-YYYY-MM-DD-z14.zip
-npm run build:pwa-map-data z12    # or: smaller ZIP at zoom 12 (builds the data first if needed)
-npm run dev:pwa               # app on http://localhost:5174, no service worker (hot reload)
-npm run preview:pwa           # builds the real PWA and serves it on http://localhost:4174 with the service worker
-npm run dev:pwa -- --phone    # HTTPS on your Wi-Fi, to open it on the iPhone
-```
-
-- In `dev:pwa` the data comes from the browser storage. Import the ZIP, or press *Load data from build/*.
-- Use `preview:pwa` to test install, offline start and the update prompt. `npm run preview:pwa -- --phone` does the
-  same over HTTPS.
-- To put the app on the internet, see `docs/vercel.md`. The data ZIP is never hosted. You move it to the phone
-  yourself (see `docs/iphone-guide.md`).
-
-### Testing on the iPhone from your Mac (`--phone`)
-
-The iPhone needs HTTPS for storage, location and the service worker. `--phone` uses a certificate from
-[mkcert](https://github.com/FiloSottile/mkcert):
-
-1. Once on the Mac: `brew install mkcert` and `mkcert -install`.
-2. `npm run dev:pwa -- --phone`. It prints the addresses to open on the iPhone (same Wi-Fi), for example
-   `https://your-mac.local:5174/`, and where mkcert's `rootCA.pem` is.
-3. Once on the iPhone: AirDrop `rootCA.pem` to the iPhone, install the profile (Settings › General › VPN & Device
-   Management), then turn on full trust for it (Settings › General › About › Certificate Trust Settings).
-
-The certificate is kept in `build/certs/` and made again when your Mac's addresses change.
-
-## Zoom levels
+### Zoom levels
 
 You can build the map sharper or smaller. Add `z<N>` to the build command:
 
@@ -128,69 +110,113 @@ Sizes of the data ZIP for the Oberstdorf resort (the ZIP file name has the terra
 - The desktop build uses whatever was built last. The iPhone app uses the ZIP you imported. The Menu › Data page
   shows its zoom levels.
 
-## Data file for the iPhone
+### Updating the data
+
+- `npm run build`: downloads OpenSkiData again only if the local copy is older than 24 hours **and** a newer build
+  exists (OpenSkiData allows at most one automated download per day).
+- `npm run build -- --refresh-basemap`: get the latest Protomaps basemap, terrain and contours again.
+- `npm run build -- --refresh`: force a new OpenSkiData download (respect the once-per-day rule).
+- After a new build, run `npm run build:pwa-map-data` and import the new ZIP on the iPhone.
+
+## 2. Run the desktop app
+
+```sh
+npm run dev:desktop
+```
+
+This starts everything the desktop app needs: the frontend (Vite, with hot reload), the backend (the desktop server
+that serves your map data) and TileServer GL (for the gpx.studio links). Ctrl+C stops all three.
+
+- Planner: <http://localhost:5173>
+- Tile server overview: <http://localhost:8080> (only needed for the gpx.studio links)
+
+## 3. Run the iPhone app (PWA)
+
+```sh
+npm run dev:pwa               # app on http://localhost:5174, hot reload, no service worker
+npm run dev:pwa -- --phone    # the same over HTTPS on your Wi-Fi, to open it on the iPhone
+```
+
+The map data of the iPhone app comes from the browser storage. Import the ZIP from step 4, or press *Load data from
+build/* (development only).
+
+- **Try the real installed app:** `npm run build:pwa`, then `npm run dev:pwa -- --preview` serves the production PWA
+  **with** the service worker on <http://localhost:4174>, so you can test install, offline start and the update
+  prompt. Without `--preview`, `dev:pwa` is for writing code (hot reload, no service worker). `--preview` and
+  `--phone` can be used together.
+- **On the internet:** see `docs/vercel.md`. The data ZIP is never hosted. You move it to the phone yourself (see
+  `docs/iphone-guide.md`).
+
+### Testing on the iPhone from your Mac (`--phone`)
+
+The iPhone needs HTTPS for storage, location and the service worker. `--phone` uses a certificate from
+[mkcert](https://github.com/FiloSottile/mkcert):
+
+1. Once on the Mac: `brew install mkcert` and `mkcert -install`.
+2. `npm run dev:pwa -- --phone` (or `npm run build:pwa` and `npm run dev:pwa -- --preview --phone`). It prints the addresses to open on the iPhone
+   (same Wi-Fi), for example `https://your-mac.local:5174/`, and where mkcert's `rootCA.pem` is.
+3. Once on the iPhone: AirDrop `rootCA.pem` to the iPhone, install the profile (Settings › General › VPN & Device
+   Management), then turn on full trust for it (Settings › General › About › Certificate Trust Settings).
+
+The certificate is kept in `build/certs/` and made again when your Mac's addresses change.
+
+## 4. Make the data file for the iPhone
+
+```sh
+npm run build:pwa-map-data        # packs the map into one ZIP: build/pwa-map-data/openskimap-data-YYYY-MM-DD-z14.zip
+npm run build:pwa-map-data z12    # or: smaller ZIP at zoom 12 (builds the data first if needed)
+```
+
+### The data file
 
 `npm run build:pwa-map-data` creates `build/pwa-map-data/openskimap-data-YYYY-MM-DD-z<terrain zoom>.zip`. It holds the map files,
 the planner data (with the search index and ski areas already computed), the fonts the labels need and the icons. The
 ZIP is not compressed, so the phone can copy the big files straight out of it. `manifest.json` inside the ZIP lists
-the zoom levels, the data dates and a SHA-256 for each file.
+the zoom levels, the data dates and a SHA-256 for each file. It works offline and needs no download.
 
 To get it onto the iPhone: AirDrop the ZIP (it lands in Files › Downloads) or save it in iCloud Drive. In the app, tap
 **Import data file** and pick it. Do not unzip it. The app checks every file. If something is wrong you get a clear
 message and your old data stays. The full steps are in `docs/iphone-guide.md`.
 
+## 5. Package the apps
+
+```sh
+npm run build:desktop         # desktop app into app/dist-desktop (no service worker)
+npm run build:pwa             # iPhone app into app/dist-pwa (service worker and manifest). This is what Vercel runs.
+npm run icons                 # only when app/public/logo.svg changes: makes all app icons again
+```
+
+## 6. Check your work
+
+```sh
+npm test                      # typecheck and all unit tests (core, scripts, server, app). Run it before every handover.
+npm run test:e2e              # browser tests of both builds in Chromium
+```
+
+- `test:e2e` needs `npm run build` and `npm run build:pwa-map-data` first. It builds both apps itself. Add
+  `-- --trace off` to keep the output small.
+- Some things only a real iPhone can show. The checklists are listed in `docs/iphone-guide.md` under "Testing".
+
 ## npm scripts
 
-The scripts are grouped by topic. The order in `package.json` follows the same groups.
+All scripts, in the order of the steps above. The order in `package.json` is the same.
 
-**1. Map data** (needs internet for the first download; run once, then again when the data changes)
-
-| Script | What it does |
-| --- | --- |
-| `npm run build` | Builds the map data for the desktop and the phone in `build/regions/<resort id>/` (the id of the first resort in `resorts.json`, today `oberstdorf-kleinwalsertal`). Accepts `z<N>` and the `--terrain-zoom`, `--basemap-zoom`, `--ski-zoom`, `--yes`, `--only=ski`, `--refresh`, `--refresh-basemap` options. |
-| `npm run build:ski` | Only rebuilds ski tiles, styles and planner data from the local download (seconds). Same as `build -- --only=ski`. |
-| `npm run build:pwa-map-data` | Packs the resorts.json map (`build/regions/<resort id>/`) into the data ZIP for the iPhone. Accepts `z<N>`. Offline, no download. |
-
-**2. Development** (hot reload, for changing the code)
-
-| Script | What it does |
-| --- | --- |
-| `npm run dev:desktop` | Desktop app on http://localhost:5173 with hot reload. Also starts the desktop server (:8081) and TileServer GL (:8080). |
-| `npm run dev:pwa` | iPhone app on http://localhost:5174 with hot reload, no service worker. Add `-- --phone` for HTTPS on your Wi-Fi. |
-
-**3. Run without hot reload** (the built app, as the user gets it)
-
-| Script | What it does |
-| --- | --- |
-| `npm start` | Desktop: builds the desktop app, then starts TileServer GL (:8080) and the desktop server (:8081). Ctrl+C stops both. |
-| `npm run server` | Only the desktop server (:8081). |
-| `npm run tiles` | Only TileServer GL (:8080), for the gpx.studio links. |
-| `npm run preview:pwa` | Builds the PWA and serves it with the service worker on :4174, to test install, offline start and updates. Add `-- --phone` for HTTPS. |
-
-**4. Production builds** (the output goes to `app/dist-pwa` or `app/dist-desktop`)
-
-| Script | What it does |
-| --- | --- |
-| `npm run build:pwa` | Production build of the iPhone app into `app/dist-pwa` (with service worker and manifest). This is what Vercel runs. |
-| `npm run build:desktop` | Production build of the desktop app into `app/dist-desktop`. No service worker. |
-
-**5. Assets**
-
-| Script | What it does |
-| --- | --- |
-| `npm run icons` | Makes all app icons from `app/public/logo.svg`. |
-
-**6. Checks and tests** (`npm test` before every handover)
-
-| Script | What it does |
-| --- | --- |
-| `npm test` | Runs `typecheck` and all the unit tests below, in this order. |
-| `npm run typecheck` | TypeScript and Svelte checks for all packages. |
-| `npm run test:core` | Unit tests of `packages/core`. |
-| `npm run test:scripts` | Tests of the build scripts. |
-| `npm run test:server` | Tests of the desktop server. |
-| `npm run test:app` | Vitest tests of the app. |
-| `npm run test:e2e` | Browser tests (Playwright, Chromium) of both builds. Builds both apps first and fails if dev-only code is in a production bundle. |
+| Script | Step | What it does |
+| --- | --- | --- |
+| `npm run build` | 1 | Builds the map data for the desktop and the phone in `build/regions/<resort id>/` (the id of the first resort in `resorts.json`, today `oberstdorf-kleinwalsertal`). Needs internet for the first download. Accepts `z<N>` and the `--terrain-zoom`, `--basemap-zoom`, `--ski-zoom`, `--yes`, `--refresh`, `--refresh-basemap` options. |
+| `npm run dev:desktop` | 2 | Desktop app on http://localhost:5173 with hot reload. Starts the Vite dev server, the desktop server (:8081) and TileServer GL (:8080). |
+| `npm run dev:pwa` | 3 | iPhone app on http://localhost:5174 with hot reload, no service worker. Add `-- --phone` for HTTPS on your Wi-Fi. Add `-- --preview` (after `npm run build:pwa`) to serve the built PWA with the service worker on :4174 instead. |
+| `npm run build:pwa-map-data` | 4 | Packs the map (`build/regions/<resort id>/`) into the data ZIP for the iPhone. Accepts `z<N>`. Offline, no download. |
+| `npm run build:desktop` | 5 | Production build of the desktop app into `app/dist-desktop`. No service worker. |
+| `npm run build:pwa` | 5 | Production build of the iPhone app into `app/dist-pwa` (with service worker and manifest). This is what Vercel runs. |
+| `npm run icons` | 5 | Makes all app icons from `app/public/logo.svg`. |
+| `npm test` | 6 | Runs `typecheck` and all the unit tests below, in this order. |
+| `npm run typecheck` | 6 | TypeScript and Svelte checks for all packages. |
+| `npm run test:core` | 6 | Unit tests of `packages/core`. |
+| `npm run test:scripts` | 6 | Tests of the build scripts. |
+| `npm run test:server` | 6 | Tests of the desktop server. |
+| `npm run test:app` | 6 | Vitest tests of the app. |
+| `npm run test:e2e` | 6 | Browser tests (Playwright, Chromium) of both builds. Builds both apps first and fails if dev-only code is in a production bundle. |
 
 ## Online and offline mode
 
@@ -205,12 +231,6 @@ Switch it in **Menu › Online mode**. The default is off in the iPhone app and 
 If the phone has no network in online mode, the app shows a note and uses the offline map. The app itself is always
 cached by the service worker, so it starts without a network in both modes.
 
-## Tests
-
-- `npm test`: typecheck and all unit tests (core, scripts, server, app). Run it before every handover.
-- `npm run test:e2e`: browser tests of both builds in Chromium. It needs `npm run build` and `npm run build:pwa-map-data`
-  first. Add `-- --trace off` to keep the output small.
-- Some things only a real iPhone can show. The checklists are listed in `docs/iphone-guide.md` under "Testing".
 
 ## Using the tiles in gpx.studio (desktop build)
 
@@ -309,7 +329,7 @@ default *My routes*). Saved routes are listed by folder:
 Each saved route also keeps the GPX made when saving, so it stays downloadable after the map data is updated.
 
 **Turning the project folder off:** start the desktop server with `PLANNER_SERVER_ROUTES=0` (for example
-`PLANNER_SERVER_ROUTES=0 npm run server`). The *Project folder* option then disappears and the `/api/routes`
+`PLANNER_SERVER_ROUTES=0 npm run dev:desktop`). The *Project folder* option then disappears and the `/api/routes`
 endpoints are turned off.
 
 ### Info cards
@@ -463,7 +483,7 @@ that exist more than once). The build stops with suggestions if a name is not fo
 ```
 
 Then run `npm run build`. The basemap, terrain and contours are re-extracted automatically because the region
-changed. Restart `npm start` so the servers pick up the new files, and pick the resort in **Settings › Resort**. For
+changed. Restart `npm run dev:desktop` so the servers pick up the new files, and pick the resort in **Settings › Resort**. For
 the iPhone, build a new data file (`npm run build:pwa-map-data`) and import it.
 
 Settings in `resorts.json`:
@@ -480,16 +500,6 @@ Raster tiles can be requested at **any zoom** (e.g. z18–z20). Vector data is o
 only needs a higher `terrainMaxZoom` if you want sharper hillshading.
 
 
-## Updating the data
-
-- `npm run build`: downloads OpenSkiData again only if the local copy is older than 24 hours **and** a newer build
-  exists (OpenSkiData allows at most one automated download per day).
-- `npm run build -- --only=ski` (or `npm run build:ski`): rebuild only ski tiles, styles and planner data from the
-  local download (seconds).
-- `npm run build -- --refresh-basemap`: get the latest Protomaps basemap, terrain and contours again.
-- `npm run build -- --refresh`: force a new OpenSkiData download (respect the once-per-day rule).
-- After a new build, run `npm run build:pwa-map-data` and import the new ZIP on the iPhone.
-
 ## Project layout
 
 ```
@@ -501,10 +511,10 @@ app/                      the planner app (Vite + Svelte 5 + TypeScript), one co
   src/ui/                 components (map, sheets, desktop panel, menu, search, info cards)
   public/                 logo and icons (made by `npm run icons`)
   test/, e2e/             Vitest tests and Playwright tests
-  dist/, dist-desktop/    build output of the PWA and the desktop build (not in git)
+  dist-pwa/, dist-desktop/  build output of the PWA and the desktop build (not in git)
 server/                   desktop server: the desktop build, the files of build/, project-folder routes,
                           Google Maps short links
-scripts/                  build.mjs (data build), build-pwa-map-data.mjs (the ZIP), start.mjs, dev-desktop.mjs,
+scripts/                  build.mjs (data build), build-pwa-map-data.mjs (the ZIP), tiles.mjs, dev-desktop.mjs,
                           dev-pwa.mjs, icons.mjs, e2e.mjs, measure-perf.mjs; lib/ and test/
 docs/                     guides (iphone-guide.md, vercel.md), the plan, design spec, notes of the agents
 vercel.json               settings for hosting the PWA on Vercel
@@ -517,7 +527,7 @@ build/                    everything the builds create (not in git)
   tileserver/fonts, sprites/  fonts and sprites, shared by every map build
   downloads/              OpenSkiData downloads (kept to respect the once-per-day download rule)
   work/                   shared caches (basemap, terrain and contour extracts per zoom)
-  pwa/                    the data ZIP files for the iPhone (the main one and one per region)
+  pwa-map-data/           the data ZIP files for the iPhone (the main one and one per region)
   certs/                  mkcert certificate for `--phone`
 ```
 
@@ -528,9 +538,9 @@ Deleting `build/` is safe: `npm run build` recreates it (the OpenSkiData downloa
 - **`npm` cache errors (root-owned files):** fix the global cache with `sudo chown -R $(id -u):$(id -g) ~/.npm`.
 - **`objc[…]: Class GNotificationCenterDelegate is implemented in both …`:** harmless warning from two native image
   libraries in TileServer GL on macOS.
-- **The app says "The desktop server has no map data":** run `npm run build` first, then `npm start` again.
-- **gpx.studio links do not load:** the tile server is not running. Use `npm start`, or `npm run tiles` in a second
-  terminal.
+- **The app says "The desktop server has no map data":** run `npm run build` first, then start the server again.
+- **gpx.studio links do not load:** the tile server is not running. Start the desktop app with `npm run dev:desktop`,
+  which starts it too.
 - **Node fails with `Library not loaded: …dylib` after a Homebrew update:** run `brew upgrade node`.
 - **`--phone` says mkcert is missing:** `brew install mkcert`, then `mkcert -install`.
 - iPhone problems (data gone, import fails, map blank, location): see `docs/iphone-guide.md`.

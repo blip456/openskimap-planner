@@ -734,3 +734,16 @@ The existing ZIPs were moved, not rebuilt. `npm run build:pwa-map-data` writes t
 **Open issues:**
 - `saved.test.ts` delete/undo timing: flaky under load. Not investigated yet.
 - Dev servers started before the move must be restarted (they still read the old folder).
+
+### 2026-11-23 · chore/cleanup-npm-scripts · npm scripts grouped by workflow (owner request)
+
+**Done:** the scripts in `package.json` and the README follow one order: 1 fetch and build the map data, 2 run the desktop
+app (`dev:desktop`), 3 run the iPhone app (`dev:pwa`; `dev:pwa -- --preview` serves the built PWA), 4 make the iPhone data file
+(`build:pwa-map-data`), 5 package the apps (`build:desktop`, `build:pwa`, `icons`), 6 check (`test*`). `npm start`,
+`npm run server`, `npm run tiles`, `build:ski` and `preview:pwa` were removed (see decisions.md); `dev:desktop` starts everything the desktop app needs.
+The README has a flow-at-a-glance block, one section per step and one script table in the same order. The duplicate
+"Tests" section was removed. Two wrong names in "Project layout" were fixed.
+
+**How to verify:** `npm test` (the docs check compares the README table with `package.json`). `npm run dev:desktop` starts all three processes.
+
+**Open issues:** none.

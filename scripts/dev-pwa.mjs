@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // npm run dev:pwa [-- --phone]      Vite dev server of the PWA (http://localhost:5174). No service worker.
-// npm run preview:pwa [-- --phone]  builds the PWA, then serves app/dist-pwa with the service worker (http://localhost:4174).
+// npm run dev:pwa -- --preview [--phone]  serves the built PWA (npm run build:pwa first) from app/dist-pwa with the
+//                                          service worker (http://localhost:4174).
 //
 // --phone: HTTPS on the local network with a certificate from mkcert, so the iPhone can open it (plan §2.1).
 // Other arguments go to Vite.
@@ -36,7 +37,7 @@ if (phone) {
   env.PWA_HTTPS_KEY = files.key;
   viteArgs.push('--host', '0.0.0.0');
   console.log(phoneHelp({ port, hosts, caRoot: mkcertCaRoot() }));
-  if (!preview) console.log('Note: the service worker is off in dev:pwa. Use "npm run preview:pwa -- --phone" to test install and offline.\n');
+  if (!preview) console.log('Note: the service worker is off in dev:pwa. Use "npm run dev:pwa -- --preview --phone" (after npm run build:pwa) to test install and offline.\n');
 }
 
 const child = spawn(process.execPath, [path.join(ROOT, 'node_modules/vite/bin/vite.js'), ...viteArgs], { cwd: ROOT, env, stdio: 'inherit' });

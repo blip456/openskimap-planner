@@ -209,7 +209,7 @@ export function createServer({
 
       // the app (desktop build)
       if (!fs.existsSync(path.join(appDir, 'index.html'))) {
-        return send(res, 503, 'The desktop app is not built yet. Run npm run build:desktop (npm start does it for you).', 'text/plain; charset=utf-8');
+        return send(res, 503, 'The desktop app is not built yet. Run npm run build:desktop (or start npm run dev:desktop).', 'text/plain; charset=utf-8');
       }
       const file = safeJoin(appDir, pathname === '/' ? 'index.html' : pathname);
       if (!file) throw new HttpError(404, 'Not found');

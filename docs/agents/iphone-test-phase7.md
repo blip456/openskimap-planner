@@ -6,7 +6,7 @@ Write down what you see at each step: OK, or what looks wrong (a screenshot help
 ## What you need
 
 - The app from the branch `iphone-pwa` on HTTPS: a Vercel preview link, or on the Mac
-  `npm run preview:pwa -- --phone` (see the README section "Testing on the iPhone").
+  `npm run build:pwa` and `npm run dev:pwa -- --preview --phone` (see the README section "Testing on the iPhone").
 - The app on the Home Screen, with the data imported (see `iphone-test-phase5.md`).
 - For comparison: the screenshots in `docs/agents/screenshots/phase7/` and the mockups in `docs/design/mockups/`.
 

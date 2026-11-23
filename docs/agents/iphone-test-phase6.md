@@ -7,7 +7,7 @@ GPS works well. Write down what you see at each step (OK, or what went wrong, wi
 ## What you need
 
 - The app with HTTPS (location only works on https): a Vercel preview link of the branch `iphone-pwa`, or on the Mac
-  `npm run preview:pwa -- --phone` (see the README section "Testing on the iPhone").
+  `npm run build:pwa` and `npm run dev:pwa -- --preview --phone` (see the README section "Testing on the iPhone").
 - The app installed on the Home Screen and the data imported (see `iphone-test-phase5.md`).
 - For step 4 you need to be at the ski resort of your data, or at least within 400 m of a run or lift. If you are
   not, do step 4b only.
